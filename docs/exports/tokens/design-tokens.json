@@ -1,0 +1,148 @@
+{
+  "name": "CoreTet Complete Design System",
+  "version": "1.0.0",
+  "description": "Complete design token system for the CoreTet music collaboration app",
+  "colors": {
+    "primary": {
+      "blue": "#0088cc",
+      "blueHover": "#006ba6",
+      "blueLight": "#e8f4f8",
+      "blueUltraLight": "#f5fafe"
+    },
+    "neutral": {
+      "white": "#ffffff",
+      "offWhite": "#fafbfc",
+      "lightGray": "#f4f5f7",
+      "gray": "#9da7b0",
+      "darkGray": "#586069",
+      "charcoal": "#1e252b"
+    },
+    "functional": {
+      "border": "#e1e4e8",
+      "divider": "#f0f1f3",
+      "shadow": "rgba(0, 0, 0, 0.08)"
+    },
+    "accent": {
+      "teal": "#17a2b8",
+      "amber": "#ffc107",
+      "green": "#28a745",
+      "coral": "#fd7e14"
+    },
+    "system": {
+      "error": "#dc3545",
+      "errorBackground": "#f8d7da",
+      "errorBorder": "#f5c6cb",
+      "warning": "#ffc107",
+      "success": "#28a745",
+      "info": "#17a2b8"
+    }
+  },
+  "typography": {
+    "fontFamily": {
+      "primary": "SF Pro Display, -apple-system, BlinkMacSystemFont, sans-serif"
+    },
+    "fontWeights": {
+      "ultralight": 200,
+      "light": 300,
+      "normal": 400,
+      "medium": 500,
+      "semibold": 600,
+      "bold": 700
+    },
+    "styles": {
+      "giant": {
+        "fontSize": 40,
+        "lineHeight": 48,
+        "fontWeight": 200,
+        "letterSpacing": -1
+      },
+      "h1": {
+        "fontSize": 32,
+        "lineHeight": 40,
+        "fontWeight": 300,
+        "letterSpacing": -0.5
+      },
+      "h2": {
+        "fontSize": 24,
+        "lineHeight": 32,
+        "fontWeight": 400,
+        "letterSpacing": 0
+      },
+      "h3": {
+        "fontSize": 20,
+        "lineHeight": 28,
+        "fontWeight": 500,
+        "letterSpacing": 0
+      },
+      "body": {
+        "fontSize": 16,
+        "lineHeight": 24,
+        "fontWeight": 400,
+        "letterSpacing": 0
+      },
+      "bodySmall": {
+        "fontSize": 14,
+        "lineHeight": 20,
+        "fontWeight": 400,
+        "letterSpacing": 0
+      },
+      "caption": {
+        "fontSize": 12,
+        "lineHeight": 16,
+        "fontWeight": 400,
+        "letterSpacing": 0
+      },
+      "button": {
+        "fontSize": 14,
+        "lineHeight": 20,
+        "fontWeight": 600,
+        "letterSpacing": 0.5,
+        "textTransform": "uppercase"
+      }
+    }
+  },
+  "spacing": {
+    "scale": {
+      "xs": 4,
+      "sm": 8,
+      "md": 12,
+      "lg": 16,
+      "xl": 24,
+      "xxl": 32,
+      "xxxl": 48
+    },
+    "dimensions": {
+      "mobile": {
+        "width": 375,
+        "height": 812
+      },
+      "trackCard": {
+        "width": 343,
+        "height": 64
+      },
+      "button": {
+        "height": 44,
+        "heightSmall": 28
+      },
+      "icon": {
+        "default": 24,
+        "small": 16
+      }
+    },
+    "borderRadius": {
+      "card": 8,
+      "button": 20,
+      "input": 6,
+      "modal": 12
+    }
+  },
+  "shadows": {
+    "default": "0px 2px 6px rgba(0, 0, 0, 0.08)",
+    "elevated": "0px 4px 12px rgba(0, 0, 0, 0.12)"
+  },
+  "breakpoints": {
+    "mobile": 375,
+    "tablet": 768,
+    "desktop": 1024
+  }
+}

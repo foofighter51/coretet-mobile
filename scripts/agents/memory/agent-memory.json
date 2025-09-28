@@ -1,0 +1,54 @@
+{
+  "version": "1.0.0",
+  "created": "2025-09-09T03:38:13.132Z",
+  "entries": [
+    {
+      "id": "mem-1757389093137-o31nz9blu",
+      "timestamp": "2025-09-09T03:38:13.137Z",
+      "type": "execution",
+      "data": {
+        "fileName": "src/components/audio/PlayBar.tsx",
+        "changeType": "comprehensive-review",
+        "workflowId": "codeReview-1757389093133",
+        "timestamp": "2025-09-09T03:38:13.137Z",
+        "success": true,
+        "agents": [],
+        "results": null
+      },
+      "context": {
+        "fileName": "src/components/audio/PlayBar.tsx",
+        "changeType": "comprehensive-review",
+        "workflowId": "codeReview-1757389093133",
+        "timestamp": "2025-09-09T03:38:13.137Z"
+      },
+      "relevanceScore": 10
+    },
+    {
+      "id": "mem-1757389128128-vxzpw6hl7",
+      "timestamp": "2025-09-09T03:38:48.128Z",
+      "type": "execution",
+      "data": {
+        "fileName": "src/components/audio/PlayBar.tsx",
+        "changeType": "comprehensive-review",
+        "workflowId": "codeReview-1757389128124",
+        "timestamp": "2025-09-09T03:38:48.128Z",
+        "success": true,
+        "agents": [],
+        "results": null
+      },
+      "context": {
+        "fileName": "src/components/audio/PlayBar.tsx",
+        "changeType": "comprehensive-review",
+        "workflowId": "codeReview-1757389128124",
+        "timestamp": "2025-09-09T03:38:48.128Z"
+      },
+      "relevanceScore": 10
+    }
+  ],
+  "metadata": {
+    "totalExecutions": 0,
+    "lastCleanup": "2025-09-09T03:38:13.132Z",
+    "lastUpdate": "2025-09-09T03:38:48.138Z",
+    "totalEntries": 2
+  }
+}

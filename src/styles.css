@@ -1,0 +1,10 @@
+/* Hide scrollbars for webkit browsers */
+*::-webkit-scrollbar {
+  display: none;
+}
+
+/* Ensure scrolling still works */
+* {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
