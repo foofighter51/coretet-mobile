@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CoreTet Mobile UX Preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <style>
+    /* Import CoreTet CSS (inline for demo) */
+    :root {
+      --primary: #0088cc;
+      --primary-hover: #006ba6;
+      --background: #ffffff;
+      --background-off: #fafbfc;
+      --text-primary: #1e252b;
+      --text-secondary: #9da7b0;
+      --border-color: #e1e4e8;
+      --mobile-width: 375px;
+      --mobile-height: 812px;
+      --track-card-width: 343px;
+      --track-card-height: 64px;
+      --button-height: 44px;
+      --font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: var(--font-family);
+      background: var(--background-off);
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+    }
+
+    .mobile-frame {
+      width: var(--mobile-width);
+      height: var(--mobile-height);
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+      overflow: hidden;
+      position: relative;
+      border: 8px solid #333;
+    }
+
+    .status-bar {
+      height: 44px;
+      background: var(--background);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 20px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .screen-content {
+      height: calc(100% - 44px);
+      background: var(--background-off);
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .nav-header {
+      height: 88px;
+      background: white;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: flex-end;
+      padding: 0 16px 12px;
+    }
+
+    .nav-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .content-area {
+      padding: 24px 16px;
+    }
+
+    .search-section {
+      margin-bottom: 24px;
+    }
+
+    .search-container {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .search-input-wrapper {
+      flex: 1;
+      position: relative;
+      min-width: 0;
+    }
+
+    .search-input {
+      width: 100%;
+      height: 44px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 0 12px 0 44px;
+      font-size: 16px;
+      background: white;
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-secondary);
+    }
+
+    .filter-btn {
+      height: 28px;
+      padding: 0 8px;
+      background: transparent;
+      border: 1px solid var(--primary);
+      border-radius: 4px;
+      color: var(--primary);
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+
+    .track-list {
+      margin-bottom: 24px;
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-size: 24px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .track-count {
+      background: var(--background-off);
+      color: var(--text-secondary);
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .track-card {
+      width: var(--track-card-width);
+      height: var(--track-card-height);
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.1s ease, box-shadow 0.1s ease;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    .track-card:active {
+      transform: scale(0.98);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.16);
+    }
+
+    .play-btn {
+      width: 40px;
+      height: 40px;
+      border: none;
+      background: transparent;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 12px;
+      color: var(--primary);
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    .play-btn:hover {
+      background: rgba(0, 136, 204, 0.1);
+    }
+
+    .track-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .track-title {
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--text-primary);
+      margin: 0 0 2px 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .track-meta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+
+    .pull-refresh-demo {
+      text-align: center;
+      padding: 20px;
+      background: white;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      border: 2px dashed var(--primary);
+    }
+
+    .demo-instruction {
+      color: var(--primary);
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+
+    .demo-note {
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+
+    .tab-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 83px;
+      background: white;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      align-items: flex-start;
+      padding-top: 8px;
+    }
+
+    .tab {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 4px;
+      color: var(--text-secondary);
+      text-decoration: none;
+    }
+
+    .tab.active {
+      color: var(--primary);
+    }
+
+    .tab-icon {
+      width: 24px;
+      height: 24px;
+      margin-bottom: 2px;
+    }
+
+    .tab-label {
+      font-size: 10px;
+      font-weight: 500;
+      text-transform: uppercase;
+    }
+
+    @media (max-width: 480px) {
+      .filter-btn span {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="mobile-frame">
+    <!-- Status Bar -->
+    <div class="status-bar">
+      <span>9:41</span>
+      <span>🔋 100%</span>
+    </div>
+
+    <!-- Screen Content -->
+    <div class="screen-content">
+      <!-- Navigation Header -->
+      <div class="nav-header">
+        <div class="nav-title">CoreTet</div>
+      </div>
+
+      <!-- Content Area -->
+      <div class="content-area">
+        <!-- Pull-to-Refresh Demo -->
+        <div class="pull-refresh-demo">
+          <div class="demo-instruction">📱 Mobile UX Improvements</div>
+          <div class="demo-note">
+            • Pull-to-refresh implemented<br>
+            • Responsive search bar<br>
+            • Touch feedback on all interactions<br>
+            • Swipe gestures for track rating<br>
+            • Proper navigation stack
+          </div>
+        </div>
+
+        <!-- Search Section -->
+        <div class="search-section">
+          <div class="search-container">
+            <div class="search-input-wrapper">
+              <div class="search-icon">🔍</div>
+              <input
+                type="text"
+                class="search-input"
+                placeholder="Search..."
+              />
+            </div>
+            <button class="filter-btn">
+              ⚙️ <span>FILTER</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Track List -->
+        <div class="track-list">
+          <div class="section-header">
+            <h2 class="section-title">Your Tracks</h2>
+            <span class="track-count">5 tracks</span>
+          </div>
+
+          <!-- Track Cards -->
+          <div class="track-card" onclick="this.style.background='#f0f9ff'; setTimeout(() => this.style.background='white', 200)">
+            <button class="play-btn">▶️</button>
+            <div class="track-info">
+              <h4 class="track-title">Summer Nights</h4>
+              <div class="track-meta">
+                <span>👍</span>
+                <span>3:42</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="track-card" onclick="this.style.background='#f0f9ff'; setTimeout(() => this.style.background='white', 200)">
+            <button class="play-btn">▶️</button>
+            <div class="track-info">
+              <h4 class="track-title">Digital Dreams</h4>
+              <div class="track-meta">
+                <span>❤️</span>
+                <span>4:15</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="track-card" onclick="this.style.background='#f0f9ff'; setTimeout(() => this.style.background='white', 200)">
+            <button class="play-btn">▶️</button>
+            <div class="track-info">
+              <h4 class="track-title">Midnight Jazz</h4>
+              <div class="track-meta">
+                <span>5:28</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="track-card" onclick="this.style.background='#f0f9ff'; setTimeout(() => this.style.background='white', 200)">
+            <button class="play-btn">▶️</button>
+            <div class="track-info">
+              <h4 class="track-title">Electric Pulse</h4>
+              <div class="track-meta">
+                <span>3:21</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="track-card" onclick="this.style.background='#f0f9ff'; setTimeout(() => this.style.background='white', 200)">
+            <button class="play-btn">▶️</button>
+            <div class="track-info">
+              <h4 class="track-title">Acoustic Memories</h4>
+              <div class="track-meta">
+                <span>👍</span>
+                <span>4:03</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Bar -->
+      <div class="tab-bar">
+        <a href="#" class="tab">
+          <div class="tab-icon">🏠</div>
+          <span class="tab-label">Bands</span>
+        </a>
+        <a href="#" class="tab active">
+          <div class="tab-icon">🎵</div>
+          <span class="tab-label">Tracks</span>
+        </a>
+        <a href="#" class="tab">
+          <div class="tab-icon">👥</div>
+          <span class="tab-label">People</span>
+        </a>
+        <a href="#" class="tab">
+          <div class="tab-icon">➕</div>
+          <span class="tab-label">Add</span>
+        </a>
+        <a href="#" class="tab">
+          <div class="tab-icon">👤</div>
+          <span class="tab-label">Profile</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Add some interactive functionality
+    document.addEventListener('DOMContentLoaded', function() {
+      // Simulate search bar responsiveness
+      const searchInput = document.querySelector('.search-input');
+      const filterBtn = document.querySelector('.filter-btn');
+
+      function updateSearchBar() {
+        if (window.innerWidth <= 480) {
+          searchInput.placeholder = 'Search...';
+          filterBtn.querySelector('span').style.display = 'none';
+        } else {
+          searchInput.placeholder = 'Search tracks, collaborators...';
+          filterBtn.querySelector('span').style.display = 'inline';
+        }
+      }
+
+      window.addEventListener('resize', updateSearchBar);
+      updateSearchBar();
+
+      // Add touch feedback
+      document.querySelectorAll('.track-card, .play-btn, .filter-btn').forEach(el => {
+        el.addEventListener('touchstart', function() {
+          this.style.transform = 'scale(0.98)';
+        });
+
+        el.addEventListener('touchend', function() {
+          this.style.transform = '';
+        });
+      });
+
+      // Simulate pull-to-refresh
+      let pullStart = 0;
+      let pullCurrent = 0;
+      const screenContent = document.querySelector('.screen-content');
+
+      screenContent.addEventListener('touchstart', function(e) {
+        if (screenContent.scrollTop === 0) {
+          pullStart = e.touches[0].clientY;
+        }
+      });
+
+      screenContent.addEventListener('touchmove', function(e) {
+        if (screenContent.scrollTop === 0 && pullStart > 0) {
+          pullCurrent = e.touches[0].clientY;
+          const pullDistance = pullCurrent - pullStart;
+
+          if (pullDistance > 0) {
+            e.preventDefault();
+            const resistance = Math.min(pullDistance * 0.5, 60);
+            screenContent.style.transform = `translateY(${resistance}px)`;
+
+            if (pullDistance > 60) {
+              // Visual feedback that refresh will trigger
+              screenContent.style.background = '#f0f9ff';
+            }
+          }
+        }
+      });
+
+      screenContent.addEventListener('touchend', function() {
+        if (pullCurrent - pullStart > 60) {
+          // Simulate refresh
+          const demo = document.querySelector('.pull-refresh-demo');
+          demo.innerHTML = '<div class="demo-instruction">🔄 Refreshing...</div>';
+
+          setTimeout(() => {
+            demo.innerHTML = `
+              <div class="demo-instruction">✅ Refreshed!</div>
+              <div class="demo-note">Pull-to-refresh working perfectly</div>
+            `;
+          }, 1000);
+        }
+
+        screenContent.style.transform = '';
+        screenContent.style.background = '';
+        pullStart = 0;
+        pullCurrent = 0;
+      });
+
+      console.log('🎵 CoreTet Mobile Preview Ready!');
+      console.log('📱 Features to test:');
+      console.log('   • Resize window to see responsive search');
+      console.log('   • Pull down on mobile to test refresh');
+      console.log('   • Tap track cards for feedback');
+    });
+  </script>
+</body>
+</html>

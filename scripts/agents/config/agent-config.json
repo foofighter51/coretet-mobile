@@ -1,0 +1,356 @@
+{
+  "version": "1.0.0",
+  "system": {
+    "name": "CoreTet AI Agent System",
+    "description": "Multi-agent system for code review and quality assurance",
+    "maxConcurrentAgents": 5,
+    "defaultTimeout": 300000,
+    "logLevel": "info"
+  },
+  "agents": {
+    "validator": {
+      "enabled": true,
+      "type": "quality-assurance",
+      "priority": 1,
+      "timeout": 120000,
+      "retryAttempts": 2,
+      "dependencies": [
+        "command:tsc",
+        "command:eslint",
+        "file:tsconfig.json",
+        "file:package.json"
+      ],
+      "config": {
+        "checks": {
+          "typescript": true,
+          "eslint": true,
+          "prettier": true,
+          "tests": true,
+          "performance": true,
+          "security": true
+        },
+        "thresholds": {
+          "testCoverage": 80,
+          "complexity": 10,
+          "duplicateLines": 5
+        },
+        "exclusions": [
+          "node_modules/**",
+          "dist/**",
+          ".next/**",
+          "coverage/**"
+        ]
+      }
+    },
+    "guardian": {
+      "enabled": true,
+      "type": "architectural-enforcement",
+      "priority": 1,
+      "timeout": 90000,
+      "retryAttempts": 1,
+      "dependencies": [
+        "file:src/",
+        "env:NEXT_PUBLIC_SUPABASE_URL"
+      ],
+      "config": {
+        "rules": {
+          "enforceComponentStructure": true,
+          "preventDirectDbAccess": true,
+          "validateApiRoutes": true,
+          "enforceAuthPatterns": true,
+          "checkSecurityPatterns": true
+        },
+        "patterns": {
+          "componentNaming": "PascalCase",
+          "hookNaming": "camelCase with 'use' prefix",
+          "apiRoutes": "RESTful patterns",
+          "fileStructure": "domain-based organization"
+        },
+        "security": {
+          "requireInputValidation": true,
+          "preventSqlInjection": true,
+          "enforceAuth": true,
+          "validateFileUploads": true
+        }
+      }
+    },
+    "memory": {
+      "enabled": true,
+      "type": "knowledge-management",
+      "priority": 0,
+      "timeout": 30000,
+      "retryAttempts": 3,
+      "dependencies": [],
+      "config": {
+        "storage": {
+          "maxExecutions": 1000,
+          "maxAge": "7d",
+          "persistToDisk": true,
+          "compressionEnabled": true
+        },
+        "learning": {
+          "patternRecognition": true,
+          "performanceTracking": true,
+          "errorAnalysis": true,
+          "successPatterns": true
+        },
+        "retrieval": {
+          "contextRelevance": true,
+          "timeDecay": true,
+          "frequencyBoost": true
+        }
+      }
+    },
+    "sentinel": {
+      "enabled": false,
+      "type": "monitoring",
+      "priority": 2,
+      "timeout": 60000,
+      "retryAttempts": 1,
+      "dependencies": [
+        "file:package.json"
+      ],
+      "config": {
+        "monitoring": {
+          "buildPerformance": true,
+          "codeQuality": true,
+          "errorRates": true,
+          "dependencyHealth": true
+        },
+        "alerts": {
+          "qualityRegression": true,
+          "performanceDegradation": true,
+          "securityIssues": true,
+          "buildFailures": true
+        },
+        "thresholds": {
+          "buildTime": 180,
+          "bundleSize": 2048,
+          "errorRate": 0.05,
+          "testFailureRate": 0.02
+        }
+      }
+    },
+    "observer": {
+      "enabled": false,
+      "type": "continuous-improvement",
+      "priority": 3,
+      "timeout": 180000,
+      "retryAttempts": 1,
+      "dependencies": [],
+      "config": {
+        "analysis": {
+          "patternMining": true,
+          "performanceAnalysis": true,
+          "failureAnalysis": true,
+          "optimizationOpportunities": true
+        },
+        "learning": {
+          "strategyRefinement": true,
+          "promptOptimization": true,
+          "workflowImprovement": true
+        },
+        "reporting": {
+          "weeklyInsights": true,
+          "monthlyOptimizations": true,
+          "quarterlyReview": true
+        }
+      }
+    },
+    "strategist": {
+      "enabled": false,
+      "type": "meta-orchestration",
+      "priority": 0,
+      "timeout": 300000,
+      "retryAttempts": 1,
+      "dependencies": [],
+      "config": {
+        "orchestration": {
+          "dynamicWorkflows": true,
+          "loadBalancing": true,
+          "resourceOptimization": true,
+          "conflictResolution": true
+        },
+        "planning": {
+          "taskDecomposition": true,
+          "dependencyAnalysis": true,
+          "riskAssessment": true,
+          "timelineEstimation": true
+        }
+      }
+    },
+    "planner": {
+      "enabled": false,
+      "type": "strategic-planning",
+      "priority": 2,
+      "timeout": 240000,
+      "retryAttempts": 2,
+      "dependencies": [
+        "file:docs/",
+        "file:README.md"
+      ],
+      "config": {
+        "decomposition": {
+          "featureBreakdown": true,
+          "dependencyMapping": true,
+          "effortEstimation": true,
+          "riskAnalysis": true
+        },
+        "templates": {
+          "userStories": true,
+          "technicalSpecs": true,
+          "testPlans": true,
+          "deploymentPlans": true
+        }
+      }
+    },
+    "executor": {
+      "enabled": false,
+      "type": "code-generation",
+      "priority": 4,
+      "timeout": 180000,
+      "retryAttempts": 2,
+      "dependencies": [
+        "file:src/",
+        "command:prettier"
+      ],
+      "config": {
+        "generation": {
+          "componentBoilerplate": true,
+          "testScaffolding": true,
+          "apiRoutes": true,
+          "typeDefinitions": true
+        },
+        "patterns": {
+          "reactComponents": true,
+          "nextjsPages": true,
+          "apiHandlers": true,
+          "customHooks": true
+        },
+        "quality": {
+          "immediateValidation": true,
+          "patternCompliance": true,
+          "bestPractices": true
+        }
+      }
+    }
+  },
+  "workflows": {
+    "quickReview": {
+      "description": "Fast code quality check",
+      "agents": ["validator", "memory"],
+      "parallel": true,
+      "timeout": 120000,
+      "triggers": ["git-commit", "file-save"]
+    },
+    "codeReview": {
+      "description": "Comprehensive code review",
+      "agents": ["validator", "guardian", "memory"],
+      "parallel": false,
+      "timeout": 180000,
+      "triggers": ["pull-request", "manual"]
+    },
+    "architectureReview": {
+      "description": "Architectural pattern validation",
+      "agents": ["guardian", "validator", "memory"],
+      "parallel": false,
+      "timeout": 240000,
+      "triggers": ["major-changes", "manual"]
+    },
+    "fullAnalysis": {
+      "description": "Complete system analysis",
+      "agents": ["validator", "guardian", "sentinel", "observer", "memory"],
+      "parallel": true,
+      "timeout": 600000,
+      "triggers": ["release-preparation", "manual"]
+    },
+    "continuousMonitoring": {
+      "description": "Ongoing quality monitoring",
+      "agents": ["sentinel", "observer", "memory"],
+      "parallel": true,
+      "timeout": 300000,
+      "triggers": ["scheduled", "threshold-breach"]
+    }
+  },
+  "execution": {
+    "parallelExecution": true,
+    "maxRetryAttempts": 2,
+    "defaultTimeout": 180000,
+    "gracefulShutdown": true,
+    "errorHandling": {
+      "continueOnFailure": true,
+      "escalateAfterRetries": true,
+      "notifyOnCriticalFailure": true
+    },
+    "performance": {
+      "enableCaching": true,
+      "cacheTimeout": 300000,
+      "memoryLimit": "512MB",
+      "cpuLimit": "2cores"
+    }
+  },
+  "communication": {
+    "protocol": "event-driven",
+    "messageTimeout": 30000,
+    "maxQueueSize": 1000,
+    "persistMessages": true,
+    "compression": true,
+    "encryption": false
+  },
+  "logging": {
+    "level": "info",
+    "enableAgentLogs": true,
+    "enableMetrics": true,
+    "logRotation": true,
+    "maxLogSize": "10MB",
+    "retentionDays": 30,
+    "outputs": [
+      {
+        "type": "console",
+        "level": "info"
+      },
+      {
+        "type": "file",
+        "level": "debug",
+        "path": "logs/agents.log"
+      }
+    ]
+  },
+  "integrations": {
+    "gemini": {
+      "enabled": true,
+      "model": "gemini-1.5-pro",
+      "temperature": 0.2,
+      "maxTokens": 8192,
+      "rateLimiting": {
+        "requestsPerMinute": 60,
+        "tokensPerMinute": 100000
+      }
+    },
+    "github": {
+      "enabled": false,
+      "webhooks": false,
+      "prComments": false,
+      "statusChecks": false
+    },
+    "vscode": {
+      "enabled": false,
+      "diagnostics": false,
+      "quickFixes": false,
+      "codeActions": false
+    },
+    "slack": {
+      "enabled": false,
+      "notifications": false,
+      "summaries": false
+    }
+  },
+  "security": {
+    "sanitizePrompts": true,
+    "redactSensitiveData": true,
+    "validateInputs": true,
+    "encryptStorage": false,
+    "auditLogging": true,
+    "accessControl": false
+  }
+}

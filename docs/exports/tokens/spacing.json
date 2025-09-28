@@ -1,0 +1,91 @@
+{
+  "name": "CoreTet Spacing System",
+  "version": "1.0.0",
+  "xs": 4,
+  "sm": 8,
+  "md": 12,
+  "lg": 16,
+  "xl": 24,
+  "xxl": 32,
+  "xxxl": 48,
+  "dimensions": {
+    "mobile": {
+      "width": 375,
+      "height": 812
+    },
+    "trackCard": {
+      "width": 343,
+      "height": 64
+    },
+    "tabBar": {
+      "height": 83,
+      "contentHeight": 49
+    },
+    "topNav": {
+      "height": 88,
+      "contentHeight": 44
+    },
+    "albumArt": {
+      "small": 56,
+      "large": 280
+    },
+    "button": {
+      "height": 44,
+      "heightSmall": 28
+    },
+    "icon": {
+      "default": 24,
+      "small": 16
+    },
+    "avatar": 40,
+    "statusBar": 44,
+    "navigationBar": 44
+  },
+  "layout": {
+    "screenPaddingHorizontal": 16,
+    "screenPaddingTop": 24,
+    "contentPaddingHorizontal": 16,
+    "contentPaddingTop": 24,
+    "sectionSpacing": 24,
+    "cardMarginHorizontal": 16,
+    "cardMarginVertical": 8,
+    "cardPadding": 12,
+    "elementGap": 8,
+    "cardSpacing": 8
+  },
+  "button": {
+    "paddingHorizontal": 16,
+    "paddingHorizontalSmall": 8,
+    "paddingVertical": 12
+  },
+  "input": {
+    "height": 44,
+    "paddingHorizontal": 12,
+    "labelMarginBottom": 4,
+    "errorMarginTop": 4
+  },
+  "borderRadius": {
+    "card": 8,
+    "albumArt": 4,
+    "button": 20,
+    "input": 6,
+    "modal": 12
+  },
+  "listView": {
+    "cardSpacing": 8,
+    "firstCardTop": 16,
+    "lastCardBottom": 16,
+    "pullRefreshPosition": -60,
+    "emptyStatePosition": "40%"
+  },
+  "ensembleGrid": {
+    "columns": 2,
+    "gap": 12,
+    "cardHeight": 120
+  },
+  "memberList": {
+    "rowHeight": 56,
+    "avatarSize": 40,
+    "separatorHeight": 1
+  }
+}
