@@ -2,6 +2,7 @@ import { supabase } from '../../lib/supabase';
 import { normalizePhoneNumber } from './phoneNumber';
 import { ErrorHandler, ErrorInfo } from './errorMessages';
 import UserAccessService, { AccessCheckResult } from './userAccessService';
+import { AuthErrorHandler } from './authErrorHandler';
 
 export interface AuthUser {
   id: string;
@@ -58,7 +59,10 @@ export class SupabaseAuthService {
 
       // Check user access before sending verification code
       const accessService = UserAccessService.getInstance();
-      const accessCheck = await accessService.checkUserAccess(email.trim());
+      const accessCheck = await AuthErrorHandler.withRetry(
+        () => accessService.checkUserAccess(email.trim()),
+        { maxAttempts: 2 }
+      );
 
       console.log('🔐 Access check result:', accessCheck);
 
@@ -73,18 +77,23 @@ export class SupabaseAuthService {
 
       console.log('📧 Sending verification code to:', email);
 
-      const { data, error } = await supabase.auth.signInWithOtp({
-        email: email.trim(),
-        options: {
-          shouldCreateUser: true
-        }
-      });
+      // Use retry mechanism for sending OTP
+      const { data, error } = await AuthErrorHandler.withRetry(
+        () => supabase.auth.signInWithOtp({
+          email: email.trim(),
+          options: {
+            shouldCreateUser: true
+          }
+        }),
+        { maxAttempts: 3 }
+      );
 
       if (error) {
-        console.error('❌ Failed to send verification code:', error);
+        console.error('❌ Failed to send verification code:', AuthErrorHandler.getLogMessage(error));
+        const authError = AuthErrorHandler.parseAuthError(error);
         return {
           success: false,
-          error: ErrorHandler.parseError(error.message, 'phoneVerification'),
+          error: AuthErrorHandler.toErrorInfo(authError),
           message: error.message
         };
       }
@@ -98,10 +107,11 @@ export class SupabaseAuthService {
       };
 
     } catch (error) {
-      console.error('❌ Error sending verification code:', error);
+      console.error('❌ Error sending verification code:', AuthErrorHandler.getLogMessage(error));
+      const authError = AuthErrorHandler.parseAuthError(error);
       return {
         success: false,
-        error: ErrorHandler.parseError(error, 'phoneVerification')
+        error: AuthErrorHandler.toErrorInfo(authError)
       };
     }
   }
@@ -145,6 +155,7 @@ export class SupabaseAuthService {
 
       console.log('🔐 Verifying code for:', email);
 
+      // OTP verification typically shouldn't be retried as codes expire quickly
       const { data, error } = await supabase.auth.verifyOtp({
         email: email.trim(),
         token: code.trim(),
@@ -152,10 +163,11 @@ export class SupabaseAuthService {
       });
 
       if (error) {
-        console.error('❌ Failed to verify code:', error);
+        console.error('❌ Failed to verify code:', AuthErrorHandler.getLogMessage(error));
+        const authError = AuthErrorHandler.parseAuthError(error);
         return {
           success: false,
-          error: ErrorHandler.parseError(error.message, 'codeVerification'),
+          error: AuthErrorHandler.toErrorInfo(authError),
           message: error.message
         };
       }
@@ -186,10 +198,11 @@ export class SupabaseAuthService {
       };
 
     } catch (error) {
-      console.error('❌ Error verifying code:', error);
+      console.error('❌ Error verifying code:', AuthErrorHandler.getLogMessage(error));
+      const authError = AuthErrorHandler.parseAuthError(error);
       return {
         success: false,
-        error: ErrorHandler.parseError(error, 'codeVerification')
+        error: AuthErrorHandler.toErrorInfo(authError)
       };
     }
   }
