@@ -5,6 +5,9 @@
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$SCRIPT_DIR"
 
+# Unset any existing ANTHROPIC_API_KEY from shell to force using .env file
+unset ANTHROPIC_API_KEY
+
 # Activate virtual environment
 source venv/bin/activate
 

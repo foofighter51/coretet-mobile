@@ -6,12 +6,16 @@ Run this to start working with your AI development team
 import sys
 import os
 from dotenv import load_dotenv
+from pathlib import Path
 
-# Load .env file
-load_dotenv()
+# Get the directory of this file
+SCRIPT_DIR = Path(__file__).parent.resolve()
+
+# Load .env file from the orchestra directory explicitly
+load_dotenv(SCRIPT_DIR / ".env")
 
 # Ensure we can import from current directory
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, str(SCRIPT_DIR))
 
 try:
     from coretet_orchestrator import CoreTetOrchestrator

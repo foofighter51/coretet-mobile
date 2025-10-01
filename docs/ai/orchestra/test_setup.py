@@ -5,9 +5,13 @@ Test if CoreTet Orchestra setup is working
 import os
 import sys
 from dotenv import load_dotenv
+from pathlib import Path
 
-# Load .env file
-load_dotenv()
+# Get the directory of this file
+SCRIPT_DIR = Path(__file__).parent.resolve()
+
+# Load .env file from the orchestra directory explicitly
+load_dotenv(SCRIPT_DIR / ".env")
 
 print("🔍 CoreTet Orchestra - Setup Test\n")
 print("="*60)

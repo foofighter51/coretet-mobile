@@ -3,6 +3,13 @@ Simple Claude API client for CoreTet Orchestra
 """
 import os
 from typing import List, Dict, Tuple, Optional
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Load .env file from parent directory (orchestra directory)
+UTILS_DIR = Path(__file__).parent.resolve()
+ORCHESTRA_DIR = UTILS_DIR.parent
+load_dotenv(ORCHESTRA_DIR / ".env")
 
 try:
     from anthropic import Anthropic
@@ -18,6 +25,9 @@ class ClaudeClient:
         self.api_key = api_key or os.environ.get('ANTHROPIC_API_KEY')
         if not self.api_key:
             raise ValueError("ANTHROPIC_API_KEY not found in environment")
+
+        # Debug: Print key info
+        print(f"[DEBUG] API key loaded: {self.api_key[:20]}... (length: {len(self.api_key)})")
 
         if Anthropic is None:
             raise ImportError("anthropic package required. Run: pip install anthropic")
