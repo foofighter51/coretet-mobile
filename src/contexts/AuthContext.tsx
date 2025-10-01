@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useCallback, useEffect, Rea
 import SupabaseAuthService, { AuthUser } from '../utils/supabaseAuthService';
 import { ErrorHandler, ErrorInfo } from '../utils/errorMessages';
 
-export type ScreenId = 'welcome' | 'phone' | 'verify' | 'onboarding' | 'bandAction' | 'bandCreation' | 'bandJoining' | 'waitlist' | 'main';
+export type ScreenId = 'welcome' | 'phone' | 'verify' | 'onboarding' | 'bandAction' | 'bandCreation' | 'bandJoining' | 'waitlist' | 'main' | 'passwordReset' | 'forgotPassword' | 'devLogin';
 
 interface AuthContextType {
   // User state
@@ -11,6 +11,7 @@ interface AuthContextType {
 
   // Form state
   email: string; // Changed from phoneNumber for testing
+  password: string;
   verificationCode: string;
   userName: string;
 
@@ -24,15 +25,21 @@ interface AuthContextType {
 
   // Actions
   setEmail: (email: string) => void; // Changed from setPhoneNumber
+  setPassword: (password: string) => void;
   setVerificationCode: (code: string) => void;
   setUserName: (name: string) => void;
   setCurrentScreen: (screen: ScreenId) => void;
   setCurrentError: (error: ErrorInfo | null) => void;
 
   // Auth operations
+  signUp: () => Promise<void>;
+  signIn: () => Promise<void>;
   sendVerificationCode: () => Promise<void>;
   verifyCode: () => Promise<void>;
   completeOnboarding: () => Promise<void>;
+  sendPasswordReset: () => Promise<void>;
+  devSignUp: () => Promise<void>;
+  login: (user: AuthUser) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -49,6 +56,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   // Form state
   const [email, setEmail] = useState(''); // Changed from phoneNumber
+  const [password, setPassword] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
   const [userName, setUserName] = useState('');
 
@@ -63,34 +71,160 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // Initialize auth service
   const authService = SupabaseAuthService.getInstance();
 
+  const login = useCallback(async (user: AuthUser) => {
+    try {
+      console.log('🔧 Login function called with user:', user);
+      setCurrentUser(user);
+      // Navigate based on profile completeness
+      if (!user.name || user.name.trim() === '') {
+        console.log('🔧 User has no name, navigating to onboarding');
+        setCurrentScreen('onboarding');
+      } else {
+        console.log('🔧 User has name, navigating to main');
+        setCurrentScreen('main');
+      }
+      setCurrentError(null);
+      console.log('✅ User logged in:', user.email);
+    } catch (error) {
+      console.error('❌ Error during login:', error);
+      setCurrentError(ErrorHandler.parseError(error, 'authentication'));
+    }
+  }, []);
+
   // Check for existing auth session on mount
   useEffect(() => {
     const checkAuthSession = async () => {
+      // Check if this is a password reset flow
+      const urlParams = new URLSearchParams(window.location.search);
+      const accessToken = urlParams.get('access_token');
+      const refreshToken = urlParams.get('refresh_token');
+      const type = urlParams.get('type');
+
+      if (type === 'recovery' && accessToken && refreshToken) {
+        console.log('🔄 Password reset flow detected');
+        setCurrentScreen('passwordReset');
+        return;
+      }
+
       const user = await authService.getCurrentUser();
       if (user) {
-        setCurrentUser(user);
-        if (!user.name || user.name.trim() === '') {
-          setCurrentScreen('onboarding');
-        } else {
-          setCurrentScreen('main');
-        }
+        login(user);
       }
     };
 
     checkAuthSession();
 
-    // Listen for auth state changes
+    // Listen for auth state changes (simplified to avoid circular calls)
     const { data: { subscription } } = authService.onAuthStateChange((user) => {
-      setCurrentUser(user);
+      console.log('🔄 Auth context handling user change:', user?.email);
+
       if (!user) {
+        console.log('🔧 No user, setting screen to phone');
+        setCurrentUser(null);
         setCurrentScreen('phone');
+        setCurrentError(null);
+      } else {
+        console.log('🔧 User found, setting state directly');
+        // Set user state directly without calling login() to avoid circular calls
+        setCurrentUser(user);
+        setCurrentError(null);
+
+        // Navigate based on profile completeness
+        if (!user.name || user.name.trim() === '') {
+          console.log('🔧 User has no name, navigating to onboarding');
+          setCurrentScreen('onboarding');
+        } else {
+          console.log('🔧 User has name, navigating to main');
+          setCurrentScreen('main');
+        }
+
+        console.log('✅ User authenticated:', user.email);
       }
     });
 
     return () => {
       subscription?.unsubscribe();
     };
-  }, [authService]);
+  }, [authService, login]);
+
+  const signUp = useCallback(async () => {
+    if (!email.trim()) {
+      setCurrentError(ErrorHandler.phoneVerification.emptyPhone());
+      return;
+    }
+
+    if (!password.trim()) {
+      setCurrentError(ErrorHandler.parseError('Password is required', 'authentication'));
+      return;
+    }
+
+    setAuthLoading(true);
+    setCurrentError(null);
+
+    try {
+      console.log('🔧 Calling signUpWithPassword for:', email);
+      const result = await authService.signUpWithPassword(email, password);
+      console.log('🔧 SignUp result:', result);
+
+      if (result.success) {
+        console.log('✅ Account created successfully - check email for confirmation');
+        // For email/password, user needs to confirm email before signing in
+        // Show verification screen with instructions
+        setCurrentScreen('verify');
+      } else {
+        // Check if this is a waitlist response
+        if (result.accessCheck && !result.accessCheck.allowed) {
+          setWaitlistPosition(result.accessCheck.waitlist_position);
+          setWaitlistMessage(result.accessCheck.message || 'You have been added to the waitlist');
+          setCurrentScreen('waitlist');
+        } else if (result.error) {
+          setCurrentError(result.error);
+        } else {
+          setCurrentError(ErrorHandler.parseError(result.message || 'Unknown error', 'authentication'));
+        }
+      }
+    } catch (error) {
+      console.error('Failed to create account:', error);
+      setCurrentError(ErrorHandler.parseError(error, 'authentication'));
+    } finally {
+      setAuthLoading(false);
+    }
+  }, [email, password, authService, login]);
+
+  const signIn = useCallback(async () => {
+    if (!email.trim()) {
+      setCurrentError(ErrorHandler.phoneVerification.emptyPhone());
+      return;
+    }
+
+    if (!password.trim()) {
+      setCurrentError(ErrorHandler.parseError('Password is required', 'authentication'));
+      return;
+    }
+
+    setAuthLoading(true);
+    setCurrentError(null);
+
+    try {
+      const result = await authService.signInWithPassword(email, password);
+
+      if (result.success && result.user) {
+        console.log('✅ Signed in successfully');
+        await login(result.user);
+      } else {
+        if (result.error) {
+          setCurrentError(result.error);
+        } else {
+          setCurrentError(ErrorHandler.parseError(result.message || 'Unknown error', 'authentication'));
+        }
+      }
+    } catch (error) {
+      console.error('Failed to sign in:', error);
+      setCurrentError(ErrorHandler.parseError(error, 'authentication'));
+    } finally {
+      setAuthLoading(false);
+    }
+  }, [email, password, authService, login]);
 
   const sendVerificationCode = useCallback(async () => {
     if (!email.trim()) {
@@ -194,6 +328,78 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, [userName, authService]);
 
+  const sendPasswordReset = useCallback(async () => {
+    if (!email.trim()) {
+      setCurrentError(ErrorHandler.phoneVerification.emptyPhone());
+      return;
+    }
+
+    setAuthLoading(true);
+    setCurrentError(null);
+
+    try {
+      console.log('🔄 Sending password reset email to:', email);
+      const result = await authService.sendPasswordResetEmail(email);
+
+      if (result.success) {
+        console.log('✅ Password reset email sent successfully');
+        setCurrentScreen('verify');
+      } else {
+        if (result.error) {
+          setCurrentError(result.error);
+        } else {
+          setCurrentError(ErrorHandler.parseError(result.message || 'Failed to send password reset email', 'authentication'));
+        }
+      }
+    } catch (error) {
+      console.error('Failed to send password reset email:', error);
+      setCurrentError(ErrorHandler.parseError(error, 'authentication'));
+    } finally {
+      setAuthLoading(false);
+    }
+  }, [email, authService]);
+
+  const devSignUp = useCallback(async () => {
+    if (!email.trim()) {
+      setCurrentError(ErrorHandler.phoneVerification.emptyPhone());
+      return;
+    }
+
+    if (!password.trim()) {
+      setCurrentError(ErrorHandler.parseError('Password is required', 'authentication'));
+      return;
+    }
+
+    setAuthLoading(true);
+    setCurrentError(null);
+
+    try {
+      console.log('🔧 DEV: Force creating account for:', email);
+      const result = await authService.signUpWithPassword(email, password, true); // Skip access check
+
+      if (result.success) {
+        console.log('✅ DEV: Account created successfully');
+        if (result.user) {
+          await login(result.user);
+        } else {
+          // Email confirmation required
+          setCurrentScreen('verify');
+        }
+      } else {
+        if (result.error) {
+          setCurrentError(result.error);
+        } else {
+          setCurrentError(ErrorHandler.parseError(result.message || 'Unknown error', 'authentication'));
+        }
+      }
+    } catch (error) {
+      console.error('Failed to create dev account:', error);
+      setCurrentError(ErrorHandler.parseError(error, 'authentication'));
+    } finally {
+      setAuthLoading(false);
+    }
+  }, [email, password, authService, login]);
+
   const logout = useCallback(async () => {
     setAuthLoading(true);
     try {
@@ -219,6 +425,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     // Form state
     email,
+    password,
     verificationCode,
     userName,
 
@@ -232,15 +439,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     // Actions
     setEmail,
+    setPassword,
     setVerificationCode,
     setUserName,
     setCurrentScreen,
     setCurrentError,
 
     // Auth operations
+    signUp,
+    signIn,
     sendVerificationCode,
     verifyCode,
     completeOnboarding,
+    sendPasswordReset,
+    devSignUp,
+    login,
     logout
   };
 

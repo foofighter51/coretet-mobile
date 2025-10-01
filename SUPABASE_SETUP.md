@@ -421,38 +421,23 @@ CREATE TRIGGER update_comments_updated_at BEFORE UPDATE ON comments
    - **Target roles**: `authenticated`
    - **Policy definition**:
    ```sql
-   bucket_id = 'audio-files'
-   AND auth.uid()::text = (storage.foldername(name))[1]
+   y
    ```
 
    Click "Review" then "Save policy" for each one.
 
 ### 4. Authentication Setup
 
-**Option A: Simple Testing (Recommended for MVP)**
-
-For initial testing without SMS costs, we'll use manual test codes:
-
 1. Go to **Authentication** → **Settings** → **Auth Providers**
 2. **Enable Phone authentication**:
    - ✅ Enable phone signups
-   - ❌ Disable phone confirmations (for testing)
-   - ❌ Disable "Confirm phone change" (for testing)
+   - ✅ Enable phone confirmations
+   - Set message template (optional)
 
-3. **Manual Test Codes Setup**:
-   - Create a simple mapping of test phone numbers to 6-digit codes
-   - Example: `+1234567890` → `123456`, `+1234567891` → `234567`
-   - Store these in your app's environment or hardcode for testing
-
-**Option B: Full Twilio Integration (Production)**
-
-When ready for real SMS:
-
-1. **Twilio Integration**:
-   - Get Twilio Account SID and Auth Token from [twilio.com](https://twilio.com)
+3. **Twilio Integration** (for SMS):
+   - Get Twilio Account SID and Auth Token
    - Go to **Authentication** → **Settings** → **SMS Auth**
    - Add Twilio credentials
-   - ✅ Enable phone confirmations
 
 ### 5. Environment Variables
 
@@ -464,14 +449,10 @@ VITE_SUPABASE_URL=https://your-project-ref.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key-here
 VITE_SUPABASE_SERVICE_ROLE_KEY=your-service-role-key-here
 
-# Test Authentication (for MVP testing)
-VITE_AUTH_MODE=test
-VITE_TEST_CODES="+1234567890:123456,+1234567891:234567,+1234567892:345678"
-
-# Twilio SMS Configuration (only needed for production)
-# VITE_TWILIO_ACCOUNT_SID=your-twilio-account-sid
-# VITE_TWILIO_AUTH_TOKEN=your-twilio-auth-token
-# VITE_TWILIO_PHONE_NUMBER=+1234567890
+# Twilio SMS Configuration (optional)
+VITE_TWILIO_ACCOUNT_SID=your-twilio-account-sid
+VITE_TWILIO_AUTH_TOKEN=your-twilio-auth-token
+VITE_TWILIO_PHONE_NUMBER=+1234567890
 ```
 
 **Where to find these values:**

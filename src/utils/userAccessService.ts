@@ -77,7 +77,7 @@ export class UserAccessService {
         return {
           allowed: false,
           reason: 'waitlist',
-          message: `Added to waitlist. You're #${newUserAccess.waitlist_position} in line.`,
+          message: `Added to waitlist. You are #${newUserAccess.waitlist_position} in line.`,
           waitlist_position: newUserAccess.waitlist_position,
           user_access: newUserAccess
         };
@@ -97,7 +97,7 @@ export class UserAccessService {
           return {
             allowed: false,
             reason: 'waitlist',
-            message: `You're #${userAccess.waitlist_position} on the waitlist. We'll notify you when it's your turn!`,
+            message: `You are #${userAccess.waitlist_position} on the waitlist. We will notify you when it is your turn!`,
             waitlist_position: userAccess.waitlist_position,
             user_access: userAccess
           };

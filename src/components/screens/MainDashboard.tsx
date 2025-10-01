@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { Search, Filter, Plus, Music, Users } from 'lucide-react';
+import { useUser, useClerk } from '@clerk/clerk-react';
 import { designTokens } from '../../design/designTokens';
-import { useAuth } from '../../contexts/AuthContext';
 import { useBand } from '../../contexts/BandContext';
 import { BandCard } from '../molecules/BandCard';
 import { TrackRowWithPlayer } from '../molecules/TrackRowWithPlayer';
@@ -19,11 +19,21 @@ const baseStyle = {
 };
 
 export function MainDashboard() {
-  const { currentUser, logout } = useAuth();
+  const { user } = useUser();
+  const { signOut } = useClerk();
   const { bands, currentBand, fetchUserBands, setCurrentBand } = useBand();
+
+  // Convert Clerk user to our format for compatibility
+  const currentUser = user ? {
+    id: user.id,
+    email: user.primaryEmailAddress?.emailAddress || '',
+    phoneNumber: user.primaryPhoneNumber?.phoneNumber || '',
+    name: `${user.firstName || ''} ${user.lastName || ''}`.trim()
+  } : null;
   const [activeTab, setActiveTab] = useState<TabId>('playlists');
   const [playingTrack, setPlayingTrack] = useState<string | null>(null);
   const [tracks, setTracks] = useState<Track[]>([]);
+  const [playlists, setPlaylists] = useState<any[]>([]);
 
   useEffect(() => {
     fetchUserBands();
@@ -55,71 +65,166 @@ export function MainDashboard() {
         <div style={{
           padding: `0 ${designTokens.spacing.lg} ${designTokens.spacing.lg}`
         }}>
+          {/* Header with Create Playlist button */}
           <div style={{
             display: 'flex',
+            justifyContent: 'space-between',
             alignItems: 'center',
-            gap: designTokens.spacing.md,
             marginBottom: designTokens.spacing.lg
           }}>
-            <div style={{
-              position: 'relative',
-              flex: 1
+            <h2 style={{
+              fontSize: designTokens.typography.fontSizes.h3,
+              fontWeight: designTokens.typography.fontWeights.semibold,
+              margin: 0,
+              color: designTokens.colors.neutral.charcoal
             }}>
-              <Search
-                size={20}
-                style={{
-                  position: 'absolute',
-                  left: designTokens.spacing.md,
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  color: designTokens.colors.neutral.gray
-                }}
-              />
-              <input
-                type="text"
-                placeholder="Search tracks..."
-                style={{
-                  width: '100%',
-                  padding: `${designTokens.spacing.sm} ${designTokens.spacing.md} ${designTokens.spacing.sm} 48px`,
-                  border: 'none',
-                  borderRadius: '24px',
-                  backgroundColor: designTokens.colors.neutral.lightGray,
-                  fontSize: designTokens.typography.fontSizes.body,
-                  outline: 'none',
-                  boxSizing: 'border-box'
-                }}
-              />
-            </div>
-            <Filter
-              size={24}
-              style={{ color: designTokens.colors.neutral.gray, cursor: 'pointer' }}
+              My Playlists
+            </h2>
+            <button
+              onClick={() => {
+                // TODO: Implement create playlist
+                console.log('Create playlist clicked');
+              }}
+              style={{
+                padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
+                border: 'none',
+                borderRadius: '20px',
+                backgroundColor: designTokens.colors.primary.blue,
+                color: designTokens.colors.neutral.white,
+                fontSize: designTokens.typography.fontSizes.bodySmall,
+                fontWeight: designTokens.typography.fontWeights.semibold,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: designTokens.spacing.xs
+              }}
+            >
+              <Plus size={16} />
+              Create
+            </button>
+          </div>
+
+          {/* Search bar */}
+          <div style={{
+            position: 'relative',
+            marginBottom: designTokens.spacing.lg
+          }}>
+            <Search
+              size={20}
+              style={{
+                position: 'absolute',
+                left: designTokens.spacing.md,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                color: designTokens.colors.neutral.gray
+              }}
+            />
+            <input
+              type="text"
+              placeholder="Search playlists..."
+              style={{
+                width: '100%',
+                padding: `${designTokens.spacing.sm} ${designTokens.spacing.md} ${designTokens.spacing.sm} 48px`,
+                border: 'none',
+                borderRadius: '24px',
+                backgroundColor: designTokens.colors.neutral.lightGray,
+                fontSize: designTokens.typography.fontSizes.body,
+                outline: 'none',
+                boxSizing: 'border-box'
+              }}
             />
           </div>
 
+          {/* Playlists list */}
           <div style={{
             display: 'flex',
             flexDirection: 'column',
-            gap: designTokens.spacing.xs
+            gap: designTokens.spacing.md
           }}>
-            {filteredTracks.length === 0 ? (
+            {playlists.length === 0 ? (
               <div style={{
                 textAlign: 'center',
                 padding: designTokens.spacing.xxxl,
                 color: designTokens.colors.neutral.gray
               }}>
                 <Music size={48} style={{ marginBottom: designTokens.spacing.md, opacity: 0.3 }} />
-                <p style={{ margin: 0, fontSize: designTokens.typography.fontSizes.body }}>
-                  No tracks yet. Upload your first track!
+                <h3 style={{
+                  margin: `0 0 ${designTokens.spacing.sm} 0`,
+                  fontSize: designTokens.typography.fontSizes.h4,
+                  fontWeight: designTokens.typography.fontWeights.semibold
+                }}>
+                  No playlists yet
+                </h3>
+                <p style={{
+                  margin: `0 0 ${designTokens.spacing.lg} 0`,
+                  fontSize: designTokens.typography.fontSizes.body
+                }}>
+                  Create your first playlist to organize your tracks
                 </p>
+                <button
+                  onClick={() => {
+                    // TODO: Implement create playlist
+                    console.log('Create first playlist clicked');
+                  }}
+                  style={{
+                    padding: `${designTokens.spacing.md} ${designTokens.spacing.lg}`,
+                    border: `2px solid ${designTokens.colors.primary.blue}`,
+                    borderRadius: '24px',
+                    backgroundColor: 'transparent',
+                    color: designTokens.colors.primary.blue,
+                    fontSize: designTokens.typography.fontSizes.body,
+                    fontWeight: designTokens.typography.fontWeights.semibold,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: designTokens.spacing.sm,
+                    margin: '0 auto'
+                  }}
+                >
+                  <Plus size={20} />
+                  Create Your First Playlist
+                </button>
               </div>
             ) : (
-              filteredTracks.map((track) => (
-                <TrackRowWithPlayer
-                  key={track.id}
-                  track={track}
-                  onPlay={() => handlePlay(track)}
-                  onRatingChange={(rating) => handleRatingChange(track, rating)}
-                />
+              playlists.map((playlist) => (
+                <div
+                  key={playlist.id}
+                  style={{
+                    padding: designTokens.spacing.lg,
+                    backgroundColor: designTokens.colors.neutral.white,
+                    border: `1px solid ${designTokens.colors.neutral.lightGray}`,
+                    borderRadius: '12px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onClick={() => {
+                    // TODO: Navigate to playlist detail
+                    console.log('Playlist clicked:', playlist.name);
+                  }}
+                >
+                  <h3 style={{
+                    margin: `0 0 ${designTokens.spacing.xs} 0`,
+                    fontSize: designTokens.typography.fontSizes.h4,
+                    fontWeight: designTokens.typography.fontWeights.semibold,
+                    color: designTokens.colors.neutral.charcoal
+                  }}>
+                    {playlist.name}
+                  </h3>
+                  <p style={{
+                    margin: `0 0 ${designTokens.spacing.sm} 0`,
+                    fontSize: designTokens.typography.fontSizes.body,
+                    color: designTokens.colors.neutral.darkGray
+                  }}>
+                    {playlist.description || 'No description'}
+                  </p>
+                  <p style={{
+                    margin: 0,
+                    fontSize: designTokens.typography.fontSizes.bodySmall,
+                    color: designTokens.colors.neutral.gray
+                  }}>
+                    {playlist.trackCount || 0} tracks
+                  </p>
+                </div>
               ))
             )}
           </div>
@@ -225,41 +330,34 @@ export function MainDashboard() {
             </p>
           </div>
 
-          {/* Upload Options */}
+          {/* Audio Upload */}
+          <div style={{
+            marginBottom: designTokens.spacing.lg
+          }}>
+            <AudioUploader
+              currentUser={currentUser}
+              multiple={true}
+              onUploadComplete={(results) => {
+                console.log('✅ Upload completed:', results);
+                // TODO: Refresh tracks list or handle successful upload
+              }}
+              onUploadError={(error) => {
+                console.error('❌ Upload failed:', error);
+                // TODO: Show error message to user
+              }}
+              options={{
+                ensembleId: currentBand?.id,
+                versionType: 'other'
+              }}
+            />
+          </div>
+
+          {/* Additional Upload Options */}
           <div style={{
             display: 'flex',
             flexDirection: 'column',
             gap: designTokens.spacing.md
           }}>
-            <button
-              onClick={() => {
-                // TODO: Implement device upload
-                console.log('Upload from device clicked');
-              }}
-              style={{
-                width: '100%',
-                padding: designTokens.spacing.lg,
-                border: `2px solid ${designTokens.colors.primary.blue}`,
-                borderRadius: '12px',
-                backgroundColor: designTokens.colors.neutral.white,
-                textAlign: 'center',
-                fontSize: designTokens.typography.fontSizes.body,
-                fontWeight: designTokens.typography.fontWeights.semibold,
-                color: designTokens.colors.primary.blue,
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = designTokens.colors.primary.blue;
-                e.currentTarget.style.color = designTokens.colors.neutral.white;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = designTokens.colors.neutral.white;
-                e.currentTarget.style.color = designTokens.colors.primary.blue;
-              }}
-            >
-              Upload from Device
-            </button>
 
             <button
               onClick={() => {
@@ -454,39 +552,6 @@ export function MainDashboard() {
             </button>
           </div>
 
-          {/* Logout Section */}
-          <div style={{
-            marginTop: designTokens.spacing.lg,
-            paddingTop: designTokens.spacing.lg,
-            borderTop: `1px solid ${designTokens.colors.neutral.lightGray}`
-          }}>
-            <button
-              onClick={logout}
-              style={{
-                width: '100%',
-                padding: designTokens.spacing.md,
-                border: `1px solid ${designTokens.colors.accent.red}`,
-                borderRadius: '12px',
-                backgroundColor: 'transparent',
-                textAlign: 'center',
-                fontSize: designTokens.typography.fontSizes.body,
-                fontWeight: designTokens.typography.fontWeights.semibold,
-                color: designTokens.colors.accent.red,
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = designTokens.colors.accent.red;
-                e.currentTarget.style.color = designTokens.colors.neutral.white;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent';
-                e.currentTarget.style.color = designTokens.colors.accent.red;
-              }}
-            >
-              Log Out
-            </button>
-          </div>
 
           {/* App Info */}
           <div style={{
@@ -517,33 +582,14 @@ export function MainDashboard() {
         borderBottom: `1px solid ${designTokens.colors.neutral.lightGray}`,
         marginBottom: designTokens.spacing.lg
       }}>
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: designTokens.spacing.lg
+        <h1 style={{
+          fontSize: designTokens.typography.fontSizes.h2,
+          fontWeight: designTokens.typography.fontWeights.semibold,
+          margin: `0 0 ${designTokens.spacing.lg} 0`,
+          color: designTokens.colors.neutral.charcoal
         }}>
-          <h1 style={{
-            fontSize: designTokens.typography.fontSizes.h2,
-            fontWeight: designTokens.typography.fontWeights.semibold,
-            margin: 0,
-            color: designTokens.colors.neutral.charcoal
-          }}>
-            Hello, {currentUser?.name || 'User'}!
-          </h1>
-          <button
-            onClick={logout}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: designTokens.colors.neutral.gray,
-              fontSize: designTokens.typography.fontSizes.bodySmall,
-              cursor: 'pointer'
-            }}
-          >
-            Logout
-          </button>
-        </div>
+          Hello, {currentUser?.name || 'User'}!
+        </h1>
       </div>
 
       {/* Content */}

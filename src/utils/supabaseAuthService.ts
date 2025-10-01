@@ -32,7 +32,188 @@ export class SupabaseAuthService {
   }
 
   /**
-   * Send verification code to email using Supabase Auth
+   * Sign up with email and password
+   */
+  async signUpWithPassword(email: string, password: string, skipAccessCheck = false): Promise<AuthResult> {
+    try {
+      // Check for offline mode
+      if (import.meta.env.VITE_OFFLINE_MODE === 'true') {
+        console.log('🔧 Offline mode: Creating mock user');
+        const mockUser: AuthUser = {
+          id: `offline-${Date.now()}`,
+          phoneNumber: '',
+          email: email.trim(),
+          name: undefined
+        };
+        return {
+          success: true,
+          user: mockUser,
+          message: 'Offline mode: User created successfully'
+        };
+      }
+
+      if (!email.trim() || !email.includes('@')) {
+        return {
+          success: false,
+          error: ErrorHandler.phoneVerification.invalidFormat()
+        };
+      }
+
+      if (!password || password.length < 6) {
+        return {
+          success: false,
+          error: ErrorHandler.parseError('Password must be at least 6 characters', 'authentication')
+        };
+      }
+
+      // Skip access check in development or when explicitly requested
+      let accessCheck = { allowed: true, reason: 'dev_bypass' };
+
+      if (!skipAccessCheck) {
+        const accessService = UserAccessService.getInstance();
+        accessCheck = await accessService.checkUserAccess(email.trim());
+
+        if (!accessCheck.allowed) {
+          return {
+            success: false,
+            message: accessCheck.message,
+            accessCheck
+          };
+        }
+      }
+
+      console.log('👤 Creating account for:', email);
+
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password: password
+      });
+
+      if (error) {
+        console.error('❌ Failed to create account:', AuthErrorHandler.getLogMessage(error));
+        const authError = AuthErrorHandler.parseAuthError(error);
+        return {
+          success: false,
+          error: AuthErrorHandler.toErrorInfo(authError),
+          message: error.message
+        };
+      }
+
+      if (data.user) {
+        console.log('✅ Account created successfully');
+
+        // Check if user was immediately signed in (rare) or needs email confirmation
+        if (data.session) {
+          console.log('🎉 User signed in immediately');
+          const authUser = await this.convertToAuthUser(data.user);
+          return {
+            success: true,
+            user: authUser,
+            message: 'Account created successfully',
+            accessCheck
+          };
+        } else {
+          console.log('📧 User needs to confirm email');
+          return {
+            success: true,
+            message: 'Account created! Please check your email for a confirmation link.',
+            accessCheck
+          };
+        }
+      }
+
+      return {
+        success: false,
+        error: ErrorHandler.parseError('Unknown error during signup', 'authentication')
+      };
+
+    } catch (error) {
+      console.error('❌ Signup error:', error);
+      return {
+        success: false,
+        error: ErrorHandler.parseError(error, 'authentication')
+      };
+    }
+  }
+
+  /**
+   * Sign in with email and password
+   */
+  async signInWithPassword(email: string, password: string): Promise<AuthResult> {
+    try {
+      // Check for offline mode
+      if (import.meta.env.VITE_OFFLINE_MODE === 'true') {
+        console.log('🔧 Offline mode: Mock sign in');
+        const mockUser: AuthUser = {
+          id: `offline-${Date.now()}`,
+          phoneNumber: '',
+          email: email.trim(),
+          name: 'Test User'
+        };
+        return {
+          success: true,
+          user: mockUser,
+          message: 'Offline mode: Signed in successfully'
+        };
+      }
+
+      if (!email.trim() || !email.includes('@')) {
+        return {
+          success: false,
+          error: ErrorHandler.phoneVerification.invalidFormat()
+        };
+      }
+
+      if (!password) {
+        return {
+          success: false,
+          error: ErrorHandler.parseError('Password is required', 'authentication')
+        };
+      }
+
+      console.log('🔐 Signing in:', email);
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password: password
+      });
+
+      if (error) {
+        console.error('❌ Failed to sign in:', AuthErrorHandler.getLogMessage(error));
+        const authError = AuthErrorHandler.parseAuthError(error);
+        return {
+          success: false,
+          error: AuthErrorHandler.toErrorInfo(authError),
+          message: error.message
+        };
+      }
+
+      if (data.user) {
+        console.log('✅ Signed in successfully');
+        const authUser = await this.convertToAuthUser(data.user);
+        return {
+          success: true,
+          user: authUser,
+          message: 'Signed in successfully'
+        };
+      }
+
+      return {
+        success: false,
+        error: ErrorHandler.parseError('Unknown error during signin', 'authentication')
+      };
+
+    } catch (error) {
+      console.error('❌ Signin error:', error);
+      return {
+        success: false,
+        error: ErrorHandler.parseError(error, 'authentication')
+      };
+    }
+  }
+
+  /**
+   * Send verification code to email using Supabase Auth (legacy - keeping for compatibility)
    * TODO: Switch back to SMS when Twilio is configured
    */
   async sendVerificationCode(email: string): Promise<AuthResult> {
@@ -59,10 +240,7 @@ export class SupabaseAuthService {
 
       // Check user access before sending verification code
       const accessService = UserAccessService.getInstance();
-      const accessCheck = await AuthErrorHandler.withRetry(
-        () => accessService.checkUserAccess(email.trim()),
-        { maxAttempts: 2 }
-      );
+      const accessCheck = await accessService.checkUserAccess(email.trim());
 
       console.log('🔐 Access check result:', accessCheck);
 
@@ -78,6 +256,8 @@ export class SupabaseAuthService {
       console.log('📧 Sending verification code to:', email);
 
       // Use retry mechanism for sending OTP
+      // Note: Supabase sends magic links by default. To get OTP codes,
+      // you need to configure email templates in Supabase Dashboard
       const { data, error } = await AuthErrorHandler.withRetry(
         () => supabase.auth.signInWithOtp({
           email: email.trim(),
@@ -232,6 +412,22 @@ export class SupabaseAuthService {
   }
 
   /**
+   * Convert Supabase user to AuthUser
+   */
+  private async convertToAuthUser(supabaseUser: any): Promise<AuthUser> {
+    // For email/password signups, skip profile lookup during auth to avoid RLS issues
+    // Profile will be created later during onboarding
+    const authUser: AuthUser = {
+      id: supabaseUser.id,
+      phoneNumber: supabaseUser.phone || '',
+      email: supabaseUser.email || '',
+      name: undefined // Will be set during onboarding
+    };
+
+    return authUser;
+  }
+
+  /**
    * Get user profile from profiles table
    */
   private async getUserProfile(userId: string): Promise<{ name?: string } | null> {
@@ -259,6 +455,22 @@ export class SupabaseAuthService {
    */
   async updateUserProfile(name: string): Promise<AuthResult> {
     try {
+      // Check for offline mode
+      if (import.meta.env.VITE_OFFLINE_MODE === 'true') {
+        console.log('🔧 Offline mode: Mock profile update');
+        const mockUser: AuthUser = {
+          id: `offline-${Date.now()}`,
+          phoneNumber: '',
+          email: 'test@offline.com',
+          name: name.trim()
+        };
+        return {
+          success: true,
+          user: mockUser,
+          message: 'Offline mode: Profile updated successfully'
+        };
+      }
+
       // Check for placeholder credentials - return mock success for development
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       if (supabaseUrl?.includes('placeholder')) {
@@ -291,7 +503,7 @@ export class SupabaseAuthService {
         .upsert({
           id: user.id,
           name: name.trim(),
-          phone_number: user.phone,
+          phone_number: user.phone || user.email || '', // Use email as fallback since phone_number is required
           updated_at: new Date().toISOString()
         });
 
@@ -329,6 +541,51 @@ export class SupabaseAuthService {
   }
 
   /**
+   * Send password reset email
+   */
+  async sendPasswordResetEmail(email: string): Promise<AuthResult> {
+    try {
+      if (!email.trim() || !email.includes('@')) {
+        return {
+          success: false,
+          error: ErrorHandler.phoneVerification.invalidFormat()
+        };
+      }
+
+      console.log('📧 Sending password reset email to:', email);
+
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: `${window.location.origin}?type=recovery`
+      });
+
+      if (error) {
+        console.error('❌ Failed to send password reset email:', AuthErrorHandler.getLogMessage(error));
+        const authError = AuthErrorHandler.parseAuthError(error);
+        return {
+          success: false,
+          error: AuthErrorHandler.toErrorInfo(authError),
+          message: error.message
+        };
+      }
+
+      console.log('✅ Password reset email sent successfully');
+
+      return {
+        success: true,
+        message: 'Password reset email sent successfully'
+      };
+
+    } catch (error) {
+      console.error('❌ Error sending password reset email:', AuthErrorHandler.getLogMessage(error));
+      const authError = AuthErrorHandler.parseAuthError(error);
+      return {
+        success: false,
+        error: AuthErrorHandler.toErrorInfo(authError)
+      };
+    }
+  }
+
+  /**
    * Sign out user
    */
   async signOut(): Promise<void> {
@@ -352,17 +609,21 @@ export class SupabaseAuthService {
       console.log('🔄 Auth state changed:', event);
 
       if (session?.user) {
-        const userProfile = await this.getUserProfile(session.user.id);
+        console.log('🔧 Creating auth user without profile lookup (temporary fix)');
 
+        // Skip profile lookup for now to avoid RLS issues
+        // Profile name will be set during onboarding
         const authUser: AuthUser = {
           id: session.user.id,
           phoneNumber: session.user.phone || '', // Keep for future SMS implementation
           email: session.user.email || '',
-          name: userProfile?.name
+          name: undefined // Will be set during onboarding
         };
 
+        console.log('🔧 Calling callback with authUser:', authUser);
         callback(authUser);
       } else {
+        console.log('🔧 No session user, calling callback with null');
         callback(null);
       }
     });

@@ -53,7 +53,7 @@ export function WaitlistScreen({ waitlistPosition, message }: WaitlistScreenProp
         margin: `0 0 ${designTokens.spacing.md} 0`,
         color: designTokens.colors.neutral.charcoal
       }}>
-        {waitlistPosition ? `You're #${waitlistPosition}` : 'You\'re on the list!'}
+        {waitlistPosition ? `You are #${waitlistPosition}` : 'You are on the list!'}
       </h1>
 
       {/* Subtitle */}

@@ -12,6 +12,7 @@ interface AudioUploaderProps {
   multiple?: boolean;
   disabled?: boolean;
   className?: string;
+  currentUser?: { id: string; email: string; phoneNumber: string; name: string };
 }
 
 export const AudioUploader: React.FC<AudioUploaderProps> = ({
@@ -20,7 +21,8 @@ export const AudioUploader: React.FC<AudioUploaderProps> = ({
   options = {},
   multiple = false,
   disabled = false,
-  className = ''
+  className = '',
+  currentUser
 }) => {
   const [isDragOver, setIsDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -43,7 +45,7 @@ export const AudioUploader: React.FC<AudioUploaderProps> = ({
 
   // Use mock service when Supabase isn't configured
   const uploadService = isSupabaseConfigured
-    ? new AudioUploadService(handleProgress)
+    ? new AudioUploadService(handleProgress, currentUser)
     : new MockAudioUploadService(handleProgress);
 
   const handleFileSelection = useCallback(async (files: FileList | null) => {

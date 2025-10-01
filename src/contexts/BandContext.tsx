@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
-import { db } from '../../lib/supabase';
+import { supabase, db } from '../../lib/supabase';
 import { ErrorHandler, ErrorInfo } from '../utils/errorMessages';
-import { useAuth } from './AuthContext';
+import { AuthUser } from '../utils/supabaseAuthService';
+import { ClerkSupabaseSync } from '../utils/clerkSupabaseSync';
 
 interface Band {
   id: string;
@@ -43,10 +44,10 @@ const BandContext = createContext<BandContextType | undefined>(undefined);
 
 interface BandProviderProps {
   children: ReactNode;
+  currentUser: AuthUser | null;
 }
 
-export function BandProvider({ children }: BandProviderProps) {
-  const { currentUser } = useAuth();
+export function BandProvider({ children, currentUser }: BandProviderProps) {
 
   // State
   const [bands, setBands] = useState<Band[]>([]);
@@ -194,21 +195,24 @@ export function BandProvider({ children }: BandProviderProps) {
     setError(null);
 
     try {
-      console.log('Fetching user bands...');
+      const supabaseUserId = ClerkSupabaseSync.generateUUIDFromClerkId(currentUser.id);
+      console.log('Fetching user bands for Clerk user:', currentUser.id, '→ Supabase UUID:', supabaseUserId);
 
-      const { data, error: supabaseError } = await db.ensembles.getByUser();
+      // Query Supabase with the deterministic UUID (bypass Supabase auth)
+      const { data, error: supabaseError } = await supabase
+        .from('ensemble_members')
+        .select(`
+          ensembles (
+            *,
+            ensemble_members (
+              id
+            )
+          )
+        `)
+        .eq('user_id', supabaseUserId);
 
       if (supabaseError) {
         console.error('Failed to fetch bands:', supabaseError);
-
-        // For test authentication, if not authenticated just set empty bands
-        if (supabaseError.message?.includes('Not authenticated')) {
-          console.log('📝 Test user - starting with empty bands list');
-          setBands([]);
-          setLoading(false);
-          return;
-        }
-
         const errorInfo = ErrorHandler.parseError(supabaseError, 'bandJoining');
         setError(errorInfo);
         return;
@@ -227,19 +231,13 @@ export function BandProvider({ children }: BandProviderProps) {
         if (userBands.length > 0 && !currentBand) {
           setCurrentBand(userBands[0]);
         }
+      } else {
+        console.log('📝 No bands found for user, starting with empty bands list');
+        setBands([]);
       }
 
     } catch (error) {
       console.error('Failed to fetch user bands:', error);
-
-      // For test authentication, if not authenticated just set empty bands
-      if (error instanceof Error && error.message?.includes('Not authenticated')) {
-        console.log('📝 Test user - starting with empty bands list');
-        setBands([]);
-        setLoading(false);
-        return;
-      }
-
       const errorInfo = ErrorHandler.parseError(error, 'bandJoining');
       setError(errorInfo);
     } finally {

@@ -1,0 +1,12 @@
+{
+  "app_metadata": {},
+  "aud": "authenticated",
+  "email": "{{user.primary_email_address}}",
+  "role": "authenticated",
+  "user_metadata": {
+    "email": "{{user.primary_email_address}}",
+    "phone": "{{user.primary_phone_number}}",
+    "name": "{{user.first_name}} {{user.last_name}}",
+    "clerk_user_id": "{{user.id}}"
+  }
+}

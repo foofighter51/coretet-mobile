@@ -21,16 +21,50 @@ export const supabase = (() => {
   if (!_supabaseClient) {
     _supabaseClient = createClient<Database>(supabaseUrl, supabaseAnonKey, {
       auth: {
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: true,
-        storage: typeof window !== 'undefined' ? window.localStorage : undefined,
-        storageKey: 'coretet-auth',
+        autoRefreshToken: false, // We'll handle token refresh via Clerk
+        persistSession: false, // Clerk manages the session
+        detectSessionInUrl: false,
       },
     });
   }
   return _supabaseClient;
 })();
+
+/**
+ * Update Supabase session with Clerk JWT token
+ * This allows Supabase RLS policies to work with Clerk authentication
+ */
+export async function setSupabaseAuthWithClerkToken(clerkToken: string) {
+  try {
+    const { data, error } = await supabase.auth.setSession({
+      access_token: clerkToken,
+      refresh_token: clerkToken, // Clerk manages refresh, so we use same token
+    });
+
+    if (error) {
+      console.error('❌ Failed to set Supabase session with Clerk token:', error);
+      return { success: false, error };
+    }
+
+    console.log('✅ Supabase session set with Clerk JWT');
+    return { success: true, data };
+  } catch (error) {
+    console.error('❌ Error setting Supabase session:', error);
+    return { success: false, error };
+  }
+}
+
+/**
+ * Clear Supabase session (on logout)
+ */
+export async function clearSupabaseAuth() {
+  try {
+    await supabase.auth.signOut();
+    console.log('✅ Supabase session cleared');
+  } catch (error) {
+    console.error('❌ Error clearing Supabase session:', error);
+  }
+}
 
 // Note: Admin operations should be handled server-side through Supabase Edge Functions
 // or Row Level Security (RLS) policies, not through client-side admin clients
@@ -402,7 +436,21 @@ export const storage = {
     return { data, error };
   },
 
-  // Get public URL for file
+  // Get signed URL for private file (expires in 1 hour)
+  async getSignedUrl(path: string, expiresIn: number = 3600) {
+    const { data, error } = await supabase.storage
+      .from('audio-files')
+      .createSignedUrl(path, expiresIn);
+
+    if (error) {
+      console.error('Error creating signed URL:', error);
+      return null;
+    }
+
+    return data.signedUrl;
+  },
+
+  // Get public URL for file (for public buckets only)
   getPublicUrl(path: string) {
     const { data } = supabase.storage
       .from('audio-files')

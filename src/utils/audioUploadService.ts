@@ -1,5 +1,6 @@
 import { supabase, storage, db } from '../../lib/supabase';
 import AudioProcessor, { AudioProcessingOptions, ProcessedAudio } from './audioProcessor';
+import { ClerkSupabaseSync } from './clerkSupabaseSync';
 import { v4 as uuidv4 } from 'uuid';
 
 export interface UploadProgress {
@@ -27,10 +28,12 @@ export interface UploadResult {
 export class AudioUploadService {
   private audioProcessor: AudioProcessor;
   private onProgress?: (progress: UploadProgress) => void;
+  private currentUser?: { id: string; email: string; phoneNumber: string; name: string };
 
-  constructor(onProgress?: (progress: UploadProgress) => void) {
+  constructor(onProgress?: (progress: UploadProgress) => void, currentUser?: { id: string; email: string; phoneNumber: string; name: string }) {
     this.audioProcessor = new AudioProcessor();
     this.onProgress = onProgress;
+    this.currentUser = currentUser;
   }
 
   /**
@@ -80,23 +83,36 @@ export class AudioUploadService {
 
       this.updateProgress('uploading', 85, 'Upload complete');
 
-      // Step 5: Get public URL
-      const publicUrl = storage.getPublicUrl(filePath);
+      // Step 5: Get signed URL for private bucket
+      const signedUrl = await storage.getSignedUrl(filePath, 31536000); // 1 year expiry
 
       // Step 6: Save metadata to database
       this.updateProgress('saving', 90, 'Saving metadata...');
 
+      // Use Clerk user ID converted to Supabase UUID for uploaded_by
+      if (!this.currentUser) {
+        throw new Error('User authentication required for upload');
+      }
+
+      const supabaseUserId = ClerkSupabaseSync.generateUUIDFromClerkId(this.currentUser.id);
+
       const versionData = {
         title: options.title || file.name.replace(/\.[^/.]+$/, ''), // Remove extension
-        file_url: publicUrl,
+        file_url: signedUrl,
         file_size: processedAudio.compressedSize,
         duration_seconds: Math.round(processedAudio.metadata.duration),
         version_type: options.versionType || 'other',
         song_id: options.songId || null,
         recording_date: options.recordingDate?.toISOString().split('T')[0] || null,
+        uploaded_by: supabaseUserId,
       };
 
-      const { data: version, error: dbError } = await db.versions.create(versionData);
+      // Insert directly to bypass Supabase auth
+      const { data: version, error: dbError } = await supabase
+        .from('versions')
+        .insert(versionData)
+        .select()
+        .single();
 
       if (dbError) {
         // Cleanup uploaded file if database save fails
@@ -113,7 +129,7 @@ export class AudioUploadService {
 
       return {
         versionId: version.id,
-        fileUrl: publicUrl,
+        fileUrl: signedUrl || filePath, // Use signed URL or fallback to path
         metadata: processedAudio.metadata,
         compressionSavings
       };

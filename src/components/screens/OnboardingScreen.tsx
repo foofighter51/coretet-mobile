@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useUser } from '@clerk/clerk-react';
 import { designTokens } from '../../design/designTokens';
-import { useAuth } from '../../contexts/AuthContext';
 import { ErrorDisplay } from '../molecules/ErrorDisplay';
 
 const baseStyle = {
@@ -13,13 +13,40 @@ const baseStyle = {
 };
 
 export function OnboardingScreen() {
-  const {
-    userName,
-    setUserName,
-    currentError,
-    setCurrentError,
-    completeOnboarding
-  } = useAuth();
+  const { user } = useUser();
+  const [userName, setUserName] = useState('');
+  const [currentError, setCurrentError] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const completeOnboarding = async () => {
+    if (!userName.trim()) return;
+
+    setIsLoading(true);
+    setCurrentError(null);
+
+    try {
+      // Split the name into first and last name
+      const nameParts = userName.trim().split(' ');
+      const firstName = nameParts[0];
+      const lastName = nameParts.slice(1).join(' ');
+
+      // Update the user's profile in Clerk
+      await user?.update({
+        firstName,
+        lastName: lastName || undefined
+      });
+
+      // The App component will automatically detect the name change and navigate away
+    } catch (error) {
+      console.error('Error updating user profile:', error);
+      setCurrentError({
+        message: 'Failed to update profile. Please try again.',
+        type: 'onboarding'
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div style={{
@@ -92,36 +119,36 @@ export function OnboardingScreen() {
       {/* Button */}
       <button
         onClick={completeOnboarding}
-        disabled={!userName.trim()}
+        disabled={!userName.trim() || isLoading}
         style={{
           width: '100%',
           height: '56px',
           borderRadius: '28px',
           border: 'none',
-          backgroundColor: userName.trim()
+          backgroundColor: userName.trim() && !isLoading
             ? designTokens.colors.primary.blue
             : designTokens.colors.neutral.gray,
           color: designTokens.colors.neutral.white,
           fontSize: designTokens.typography.fontSizes.body,
           fontWeight: designTokens.typography.fontWeights.semibold,
-          cursor: userName.trim() ? 'pointer' : 'not-allowed',
+          cursor: userName.trim() && !isLoading ? 'pointer' : 'not-allowed',
           textTransform: 'uppercase',
           letterSpacing: '0.5px',
           transition: 'background-color 0.2s ease',
           flexShrink: 0
         }}
         onMouseEnter={(e) => {
-          if (userName.trim()) {
+          if (userName.trim() && !isLoading) {
             e.currentTarget.style.backgroundColor = designTokens.colors.primary.blueHover;
           }
         }}
         onMouseLeave={(e) => {
-          if (userName.trim()) {
+          if (userName.trim() && !isLoading) {
             e.currentTarget.style.backgroundColor = designTokens.colors.primary.blue;
           }
         }}
       >
-        CONTINUE
+        {isLoading ? 'SAVING...' : 'CONTINUE'}
       </button>
     </div>
   );

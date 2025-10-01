@@ -78,7 +78,7 @@ export function PhoneVerificationScreen() {
           textAlign: 'center',
           margin: '0'
         }}>
-          We'll text you a verification code
+          We'll email you a verification link
         </p>
       </div>
 
