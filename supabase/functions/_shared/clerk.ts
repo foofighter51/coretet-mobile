@@ -105,23 +105,13 @@ export async function verifyClerkSession(request: Request): Promise<{
 }
 
 /**
- * Generate deterministic UUID from Clerk user ID
- * Must match the client-side implementation
+ * Use Clerk user ID directly as Supabase profile ID
+ * No need to generate UUIDs - Clerk IDs are already unique and secure
+ * This eliminates collision risk from hash-based UUID generation
  */
 export function generateSupabaseUUID(clerkUserId: string): string {
-  // Use the same algorithm as client-side for consistency
-  let hash = 0;
-  for (let i = 0; i < clerkUserId.length; i++) {
-    const char = clerkUserId.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32-bit integer
-  }
-
-  // Convert to a valid UUID format (version 4 style)
-  const hex = Math.abs(hash).toString(16).padStart(8, '0');
-  const uuid = `${hex.substring(0, 8)}-${hex.substring(0, 4)}-4${hex.substring(1, 4)}-a${hex.substring(2, 5)}-${clerkUserId.replace(/[^a-f0-9]/gi, '').substring(0, 12).padEnd(12, '0')}`;
-
-  return uuid;
+  // Simply return the Clerk ID - it's already a unique identifier
+  return clerkUserId;
 }
 
 /**

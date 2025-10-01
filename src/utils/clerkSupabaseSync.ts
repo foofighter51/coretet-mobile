@@ -3,24 +3,13 @@ import type { User } from '@clerk/clerk-react';
 
 export class ClerkSupabaseSync {
   /**
-   * Generate a deterministic UUID from Clerk user ID
-   * This ensures the same Clerk user always gets the same UUID
+   * Use Clerk user ID directly as Supabase profile ID
+   * No need to generate UUIDs - Clerk IDs are already unique and secure
    */
   static generateUUIDFromClerkId(clerkId: string): string {
-    // Create a deterministic UUID based on the Clerk ID
-    // Using a simple hash to ensure consistency
-    let hash = 0;
-    for (let i = 0; i < clerkId.length; i++) {
-      const char = clerkId.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32-bit integer
-    }
-
-    // Convert to a valid UUID format (version 4 style)
-    const hex = Math.abs(hash).toString(16).padStart(8, '0');
-    const uuid = `${hex.substring(0, 8)}-${hex.substring(0, 4)}-4${hex.substring(1, 4)}-a${hex.substring(2, 5)}-${clerkId.replace(/[^a-f0-9]/gi, '').substring(0, 12).padEnd(12, '0')}`;
-
-    return uuid;
+    // Simply return the Clerk ID - it's already a unique identifier
+    // This is secure and eliminates collision risk from hash-based UUIDs
+    return clerkId;
   }
 
   /**
