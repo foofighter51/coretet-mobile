@@ -204,8 +204,10 @@ export default function App() {
     <BrowserRouter>
       <DeepLinkHandler />
       <Routes>
-        {/* Public playlist view - accessible without auth */}
-        <Route path="/playlist/:shareCode" element={<PublicPlaylistView />} />
+        {/* Playlist view - REQUIRES AUTHENTICATION (private WIP songs - NOT PUBLIC) */}
+        <Route path="/playlist/:shareCode" element={
+          user ? <PublicPlaylistView /> : (Capacitor.isNativePlatform() ? <PhoneAuthScreen /> : <LandingPage />)
+        } />
 
         {/* Feedback board - requires authentication */}
         <Route path="/feedback" element={

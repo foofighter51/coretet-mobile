@@ -103,8 +103,8 @@ export function LandingPage() {
             margin: 0,
             lineHeight: '1.6',
           }}>
-            If you have a playlist link from a friend, you can view it in your browser
-            or open it in the CoreTet app if you're a beta tester.
+            CoreTet is currently available exclusively to invited TestFlight beta testers.
+            All content is private and requires authentication to access.
           </p>
         </div>
 
