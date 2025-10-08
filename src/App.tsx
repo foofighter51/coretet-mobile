@@ -99,6 +99,7 @@ function AppContent({ user }: { user: User }) {
 // Deep link handler component
 function DeepLinkHandler() {
   const navigate = useNavigate();
+  const hasProcessedLaunchUrl = React.useRef(false);
 
   React.useEffect(() => {
     // Initialize deep linking on native platforms
@@ -121,35 +122,38 @@ function DeepLinkHandler() {
 
       DeepLinkService.addListener(handleDeepLink);
 
-      // Check if app was launched from a deep link
-      DeepLinkService.getLaunchUrl().then(url => {
-        if (url) {
-          console.log('📲 App launched from deep link:', url);
-          try {
-            const parsedUrl = new URL(url);
-            let path = parsedUrl.pathname;
+      // Check if app was launched from a deep link - ONLY ONCE
+      if (!hasProcessedLaunchUrl.current) {
+        DeepLinkService.getLaunchUrl().then(url => {
+          if (url) {
+            hasProcessedLaunchUrl.current = true;
+            console.log('📲 App launched from deep link:', url);
+            try {
+              const parsedUrl = new URL(url);
+              let path = parsedUrl.pathname;
 
-            // Handle coretet:// scheme - pathname might be empty, use host + pathname
-            if (url.startsWith('coretet://')) {
-              // For coretet://playlist/ABC123, host="playlist", pathname="/ABC123"
-              // We need to combine them: /playlist/ABC123
-              const host = parsedUrl.host || parsedUrl.hostname;
-              path = host ? `/${host}${path}` : path;
+              // Handle coretet:// scheme - pathname might be empty, use host + pathname
+              if (url.startsWith('coretet://')) {
+                // For coretet://playlist/ABC123, host="playlist", pathname="/ABC123"
+                // We need to combine them: /playlist/ABC123
+                const host = parsedUrl.host || parsedUrl.hostname;
+                path = host ? `/${host}${path}` : path;
+              }
+
+              console.log('📲 Extracted path:', path);
+              console.log('📲 Will navigate to:', path);
+
+              // Navigate to the deep link path with longer delay for auth
+              setTimeout(() => {
+                console.log('📲 Navigating now to:', path);
+                navigate(path, { replace: true });
+              }, 500);
+            } catch (error) {
+              console.error('❌ Failed to parse deep link URL:', error, url);
             }
-
-            console.log('📲 Extracted path:', path);
-            console.log('📲 Will navigate to:', path);
-
-            // Navigate to the deep link path with longer delay for auth
-            setTimeout(() => {
-              console.log('📲 Navigating now to:', path);
-              navigate(path, { replace: true });
-            }, 500);
-          } catch (error) {
-            console.error('❌ Failed to parse deep link URL:', error, url);
           }
-        }
-      });
+        });
+      }
 
       // Cleanup
       return () => {
