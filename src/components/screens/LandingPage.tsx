@@ -1,8 +1,56 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Music } from 'lucide-react';
 import { designTokens } from '../../design/designTokens';
+import { auth } from '../../../lib/supabase';
+import { useNavigate } from 'react-router-dom';
 
 export function LandingPage() {
+  const navigate = useNavigate();
+  const [showAdminLogin, setShowAdminLogin] = useState(false);
+  const [phone, setPhone] = useState('');
+  const [code, setCode] = useState('');
+  const [codeSent, setCodeSent] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSendCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      const { error } = await auth.signUpWithPhone(phone);
+      if (error) {
+        setError(error.message);
+      } else {
+        setCodeSent(true);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to send code');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      const { error } = await auth.verifyOtp(phone, code);
+      if (error) {
+        setError(error.message);
+      } else {
+        navigate('/admin/feedback');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to verify code');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div style={{
       minHeight: '100vh',
@@ -107,6 +155,223 @@ export function LandingPage() {
             All content is private and requires authentication to access.
           </p>
         </div>
+
+        {/* Admin Login Toggle */}
+        {!showAdminLogin && (
+          <button
+            onClick={() => setShowAdminLogin(true)}
+            style={{
+              marginTop: '32px',
+              padding: '12px 24px',
+              backgroundColor: 'transparent',
+              border: `1px solid ${designTokens.colors.neutral.lightGray}`,
+              borderRadius: '8px',
+              color: designTokens.colors.neutral.darkGray,
+              fontSize: '14px',
+              cursor: 'pointer',
+              fontFamily: designTokens.typography.fontFamily,
+            }}
+          >
+            Admin Login
+          </button>
+        )}
+
+        {/* Admin Login Form */}
+        {showAdminLogin && (
+          <div style={{
+            marginTop: '32px',
+            padding: '24px',
+            backgroundColor: '#ffffff',
+            borderRadius: '12px',
+            border: '1px solid #e2e8f0',
+            textAlign: 'left',
+          }}>
+            <h3 style={{
+              fontSize: '18px',
+              fontWeight: '600',
+              color: designTokens.colors.neutral.charcoal,
+              margin: '0 0 16px 0',
+              textAlign: 'center',
+            }}>
+              Admin Access
+            </h3>
+
+            {!codeSent ? (
+              <form onSubmit={handleSendCode}>
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{
+                    display: 'block',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    color: designTokens.colors.neutral.charcoal,
+                    marginBottom: '6px',
+                  }}>
+                    Phone Number
+                  </label>
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="+1234567890"
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      fontFamily: designTokens.typography.fontFamily,
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                </div>
+
+                {error && (
+                  <div style={{
+                    padding: '12px',
+                    backgroundColor: '#fef2f2',
+                    border: '1px solid #fecaca',
+                    borderRadius: '6px',
+                    color: '#dc2626',
+                    fontSize: '14px',
+                    marginBottom: '16px',
+                  }}>
+                    {error}
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={loading || !phone}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    backgroundColor: loading || !phone ? '#e2e8f0' : designTokens.colors.primary.blue,
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: loading || !phone ? 'not-allowed' : 'pointer',
+                    fontFamily: designTokens.typography.fontFamily,
+                  }}
+                >
+                  {loading ? 'Sending...' : 'Send Verification Code'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowAdminLogin(false)}
+                  style={{
+                    width: '100%',
+                    marginTop: '8px',
+                    padding: '12px',
+                    backgroundColor: 'transparent',
+                    color: designTokens.colors.neutral.darkGray,
+                    border: 'none',
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    fontFamily: designTokens.typography.fontFamily,
+                  }}
+                >
+                  Cancel
+                </button>
+              </form>
+            ) : (
+              <form onSubmit={handleVerifyCode}>
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{
+                    display: 'block',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    color: designTokens.colors.neutral.charcoal,
+                    marginBottom: '6px',
+                  }}>
+                    Verification Code
+                  </label>
+                  <input
+                    type="text"
+                    value={code}
+                    onChange={(e) => setCode(e.target.value)}
+                    placeholder="123456"
+                    required
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      fontFamily: designTokens.typography.fontFamily,
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                  <p style={{
+                    fontSize: '12px',
+                    color: designTokens.colors.neutral.darkGray,
+                    margin: '6px 0 0 0',
+                  }}>
+                    Code sent to {phone}
+                  </p>
+                </div>
+
+                {error && (
+                  <div style={{
+                    padding: '12px',
+                    backgroundColor: '#fef2f2',
+                    border: '1px solid #fecaca',
+                    borderRadius: '6px',
+                    color: '#dc2626',
+                    fontSize: '14px',
+                    marginBottom: '16px',
+                  }}>
+                    {error}
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={loading || !code}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    backgroundColor: loading || !code ? '#e2e8f0' : designTokens.colors.primary.blue,
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: loading || !code ? 'not-allowed' : 'pointer',
+                    fontFamily: designTokens.typography.fontFamily,
+                  }}
+                >
+                  {loading ? 'Verifying...' : 'Verify & Login'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCodeSent(false);
+                    setCode('');
+                    setError('');
+                  }}
+                  style={{
+                    width: '100%',
+                    marginTop: '8px',
+                    padding: '12px',
+                    backgroundColor: 'transparent',
+                    color: designTokens.colors.neutral.darkGray,
+                    border: 'none',
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                    fontFamily: designTokens.typography.fontFamily,
+                  }}
+                >
+                  Back
+                </button>
+              </form>
+            )}
+          </div>
+        )}
 
         {/* Footer */}
         <p style={{
