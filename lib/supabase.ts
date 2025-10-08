@@ -552,6 +552,49 @@ export const db = {
 
       return { error };
     },
+
+    async archive(feedbackId: string) {
+      const { data, error } = await supabase
+        .from('feedback')
+        .update({ archived: true, archived_at: new Date().toISOString() })
+        .eq('id', feedbackId)
+        .select()
+        .single();
+
+      return { data, error };
+    },
+
+    async unarchive(feedbackId: string) {
+      const { data, error } = await supabase
+        .from('feedback')
+        .update({ archived: false, archived_at: null })
+        .eq('id', feedbackId)
+        .select()
+        .single();
+
+      return { data, error };
+    },
+
+    async getAllIncludingArchived(includeArchived: boolean = false) {
+      let query = supabase
+        .from('feedback')
+        .select(`
+          *,
+          profiles (
+            name
+          ),
+          feedback_votes (count),
+          feedback_comments (count)
+        `);
+
+      if (!includeArchived) {
+        query = query.eq('archived', false);
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false });
+
+      return { data, error };
+    },
   },
 
   feedbackVotes: {
@@ -604,6 +647,7 @@ export const db = {
       feedback_id: string;
       user_id: string;
       content: string;
+      is_admin_response?: boolean;
     }) {
       const { data, error } = await supabase
         .from('feedback_comments')
@@ -617,6 +661,15 @@ export const db = {
         .single();
 
       return { data, error };
+    },
+
+    async createAdminResponse(feedbackId: string, userId: string, content: string) {
+      return this.create({
+        feedback_id: feedbackId,
+        user_id: userId,
+        content,
+        is_admin_response: true,
+      });
     },
 
     async getByFeedback(feedbackId: string) {

@@ -14,6 +14,7 @@ import DeepLinkService from './utils/deepLinkHandler';
 import { Capacitor } from '@capacitor/core';
 import { auth, db } from '../lib/supabase';
 import { designTokens } from './design/designTokens';
+import './utils/feedbackCLI';
 
 // User type from Supabase auth
 interface User {
