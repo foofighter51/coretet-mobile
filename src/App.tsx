@@ -8,6 +8,7 @@ import { PublicPlaylistView } from './components/screens/PublicPlaylistView';
 import { PhoneAuthScreen } from './components/screens/PhoneAuthScreen';
 import { FeedbackBoard } from './components/screens/FeedbackBoard';
 import { FeedbackDashboard } from './components/screens/FeedbackDashboard';
+import { LandingPage } from './components/screens/LandingPage';
 import { Spinner } from './components/atoms/Spinner';
 import DeepLinkService from './utils/deepLinkHandler';
 import { Capacitor } from '@capacitor/core';
@@ -212,10 +213,20 @@ export default function App() {
         {/* Feedback dashboard - for admins to view/manage feedback */}
         <Route path="/admin/feedback" element={<FeedbackDashboard />} />
 
-        {/* Main app - requires auth */}
-        <Route path="/*" element={
+        {/* App routes - only accessible on native app or when authenticated */}
+        <Route path="/app/*" element={
           user ? <AppContent user={user} /> : <PhoneAuthScreen />
         } />
+
+        {/* Landing page for web visitors */}
+        <Route path="/" element={
+          Capacitor.isNativePlatform()
+            ? (user ? <AppContent user={user} /> : <PhoneAuthScreen />)
+            : <LandingPage />
+        } />
+
+        {/* Catch-all redirects to landing */}
+        <Route path="*" element={<LandingPage />} />
       </Routes>
     </BrowserRouter>
   );
