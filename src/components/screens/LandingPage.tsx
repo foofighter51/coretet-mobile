@@ -37,10 +37,12 @@ export function LandingPage() {
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
-      justifyContent: 'center',
+      justifyContent: 'flex-start',
       padding: '20px',
+      paddingTop: '40px',
       backgroundColor: '#ffffff',
       fontFamily: designTokens.typography.fontFamily,
+      overflowY: 'auto',
     }}>
       <div style={{
         maxWidth: '600px',
