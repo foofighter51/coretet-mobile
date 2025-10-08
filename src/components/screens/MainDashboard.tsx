@@ -203,8 +203,6 @@ const baseStyle = {
   display: 'flex',
   flexDirection: 'column' as const,
   overflow: 'hidden' as const,
-  paddingTop: 'env(safe-area-inset-top)',
-  paddingBottom: 'env(safe-area-inset-bottom)',
   boxSizing: 'border-box' as const,
 };
 
@@ -1096,15 +1094,16 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                         onClick={async (e) => {
                           e.stopPropagation();
 
-                          // Always use production URL for sharing (works for all users)
-                          const shareUrl = `https://coretet.app/playlist/${playlist.share_code}`;
+                          // Use custom app scheme for direct app opening
+                          const shareUrl = `coretet://playlist/${playlist.share_code}`;
 
                           // On native platforms, use native share sheet
                           if (Capacitor.isNativePlatform()) {
                             try {
+                              // Just share the URL - iOS Share "Copy" will copy the text field
                               await Share.share({
                                 title: `Check out ${playlist.title} on CoreTet`,
-                                text: `Listen to ${playlist.title} on CoreTet`,
+                                text: shareUrl,
                                 url: shareUrl,
                                 dialogTitle: 'Share Playlist',
                               });
@@ -1497,6 +1496,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
         flex: 1,
         overflowY: 'auto' as const,
         overflowX: 'hidden' as const,
+        paddingBottom: '88px', // Space for fixed TabBar (60px height + 28px padding)
       }}>
         {renderContent()}
       </div>

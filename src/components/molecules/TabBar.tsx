@@ -18,11 +18,17 @@ export const TabBar = memo(function TabBar({ activeTab, onTabChange }: TabBarPro
   return (
     <nav
       style={{
-        flexShrink: 0,
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        zIndex: 100,
         backgroundColor: designTokens.colors.neutral.white,
         borderTop: `1px solid ${designTokens.colors.neutral.lightGray}`,
         padding: `${designTokens.spacing.xs} 0`,
-        paddingBottom: 'calc(var(--safe-area-inset-bottom, 0px) + 8px)',
+        paddingBottom: '20px',
+        minHeight: '60px',
+        width: '100%',
       }}
       role="tablist"
       aria-label="Main navigation"
