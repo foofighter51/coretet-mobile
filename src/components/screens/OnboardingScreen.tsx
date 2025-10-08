@@ -1,155 +1,134 @@
 import React, { useState } from 'react';
-import { useUser } from '@clerk/clerk-react';
+import { db, auth } from '../../../lib/supabase';
 import { designTokens } from '../../design/designTokens';
-import { ErrorDisplay } from '../molecules/ErrorDisplay';
-
-const baseStyle = {
-  fontFamily: designTokens.typography.fontFamily,
-  width: '100%',
-  maxWidth: '425px',
-  minHeight: '100vh',
-  margin: '0 auto',
-  position: 'relative' as const
-};
 
 export function OnboardingScreen() {
-  const { user } = useUser();
   const [userName, setUserName] = useState('');
-  const [currentError, setCurrentError] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const completeOnboarding = async () => {
-    if (!userName.trim()) return;
+    if (!userName.trim()) {
+      setError('Please enter your name');
+      return;
+    }
 
     setIsLoading(true);
-    setCurrentError(null);
+    setError(null);
 
     try {
-      // Split the name into first and last name
-      const nameParts = userName.trim().split(' ');
-      const firstName = nameParts[0];
-      const lastName = nameParts.slice(1).join(' ');
+      const { user } = await auth.getCurrentUser();
+      if (!user) {
+        setError('User not found');
+        setIsLoading(false);
+        return;
+      }
 
-      // Update the user's profile in Clerk
-      await user?.update({
-        firstName,
-        lastName: lastName || undefined
-      });
+      // Update profile with name
+      const { data, error: updateError } = await db.profiles.update(user.id, { name: userName.trim() });
 
-      // The App component will automatically detect the name change and navigate away
-    } catch (error) {
-      console.error('Error updating user profile:', error);
-      setCurrentError({
-        message: 'Failed to update profile. Please try again.',
-        type: 'onboarding'
-      });
-    } finally {
+      if (updateError) {
+        setError(updateError.message || 'Failed to save name');
+        setIsLoading(false);
+        return;
+      }
+
+      // Verify the update succeeded
+      if (!data || data.name !== userName.trim()) {
+        setError('Failed to verify name update. Please try again.');
+        setIsLoading(false);
+        return;
+      }
+
+      // Success - reload to refresh auth state and exit onboarding
+      window.location.reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save name');
       setIsLoading(false);
     }
   };
 
   return (
     <div style={{
-      ...baseStyle,
-      backgroundColor: designTokens.colors.neutral.white,
-      padding: designTokens.spacing.xxxl,
+      height: '100vh',
       display: 'flex',
       flexDirection: 'column',
-      justifyContent: 'space-between',
-      minHeight: '100vh',
-      boxSizing: 'border-box'
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: '24px',
+      backgroundColor: '#ffffff',
+      fontFamily: designTokens.typography.fontFamily,
     }}>
-      {/* Top spacing */}
-      <div style={{ flex: '1' }} />
-
-      {/* Content */}
-      <div>
+      <div style={{
+        width: '100%',
+        maxWidth: '375px',
+      }}>
         <h1 style={{
           fontSize: '28px',
-          fontWeight: designTokens.typography.fontWeights.normal,
-          textAlign: 'center',
-          margin: `0 0 ${designTokens.spacing.xxxl} 0`,
+          fontWeight: '600',
           color: designTokens.colors.neutral.charcoal,
-          lineHeight: '1.3'
+          margin: '0 0 8px 0',
         }}>
-          What's your name?
+          Welcome to CoreTet
         </h1>
-
-        <div style={{ marginBottom: designTokens.spacing.lg }}>
-          <input
-            type="text"
-            placeholder="Enter your full name"
-            value={userName}
-            onChange={(e) => setUserName(e.target.value)}
-            style={{
-              width: '100%',
-              padding: designTokens.spacing.md,
-              border: userName
-                ? `2px solid ${designTokens.colors.primary.blue}`
-                : `2px solid ${designTokens.colors.neutral.lightGray}`,
-              borderRadius: '12px',
-              fontSize: designTokens.typography.fontSizes.body,
-              outline: 'none',
-              backgroundColor: designTokens.colors.neutral.white,
-              fontFamily: designTokens.typography.fontFamily,
-              boxSizing: 'border-box'
-            }}
-            aria-label="Full name input"
-          />
-        </div>
-
         <p style={{
-          fontSize: designTokens.typography.fontSizes.body,
+          fontSize: '16px',
           color: designTokens.colors.neutral.darkGray,
-          textAlign: 'center',
-          margin: '0'
+          margin: '0 0 32px 0',
         }}>
-          This is how other band members will see you
+          What should we call you?
         </p>
+
+        <input
+          type="text"
+          placeholder="Your name"
+          value={userName}
+          onChange={(e) => setUserName(e.target.value)}
+          disabled={isLoading}
+          style={{
+            width: '100%',
+            padding: '14px',
+            fontSize: '16px',
+            border: `1px solid ${designTokens.colors.neutral.lightGray}`,
+            borderRadius: '8px',
+            marginBottom: '16px',
+            fontFamily: designTokens.typography.fontFamily,
+          }}
+        />
+
+        {error && (
+          <div style={{
+            padding: '12px',
+            backgroundColor: '#fee',
+            border: '1px solid #fcc',
+            borderRadius: '8px',
+            color: '#c00',
+            fontSize: '14px',
+            marginBottom: '16px',
+          }}>
+            {error}
+          </div>
+        )}
+
+        <button
+          onClick={completeOnboarding}
+          disabled={isLoading || !userName.trim()}
+          style={{
+            width: '100%',
+            padding: '14px',
+            backgroundColor: designTokens.colors.primary.blue,
+            color: '#ffffff',
+            border: 'none',
+            borderRadius: '8px',
+            fontSize: '16px',
+            fontWeight: '600',
+            cursor: (isLoading || !userName.trim()) ? 'not-allowed' : 'pointer',
+            opacity: (isLoading || !userName.trim()) ? 0.6 : 1,
+          }}
+        >
+          {isLoading ? 'Saving...' : 'Continue'}
+        </button>
       </div>
-
-      <ErrorDisplay
-        error={currentError}
-        onDismiss={() => setCurrentError(null)}
-      />
-
-      {/* Bottom spacing */}
-      <div style={{ flex: '1' }} />
-
-      {/* Button */}
-      <button
-        onClick={completeOnboarding}
-        disabled={!userName.trim() || isLoading}
-        style={{
-          width: '100%',
-          height: '56px',
-          borderRadius: '28px',
-          border: 'none',
-          backgroundColor: userName.trim() && !isLoading
-            ? designTokens.colors.primary.blue
-            : designTokens.colors.neutral.gray,
-          color: designTokens.colors.neutral.white,
-          fontSize: designTokens.typography.fontSizes.body,
-          fontWeight: designTokens.typography.fontWeights.semibold,
-          cursor: userName.trim() && !isLoading ? 'pointer' : 'not-allowed',
-          textTransform: 'uppercase',
-          letterSpacing: '0.5px',
-          transition: 'background-color 0.2s ease',
-          flexShrink: 0
-        }}
-        onMouseEnter={(e) => {
-          if (userName.trim() && !isLoading) {
-            e.currentTarget.style.backgroundColor = designTokens.colors.primary.blueHover;
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (userName.trim() && !isLoading) {
-            e.currentTarget.style.backgroundColor = designTokens.colors.primary.blue;
-          }
-        }}
-      >
-        {isLoading ? 'SAVING...' : 'CONTINUE'}
-      </button>
     </div>
   );
 }

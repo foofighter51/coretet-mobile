@@ -101,15 +101,37 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
     }
   }, [playbackState.isPlaying]);
 
-  const handleSeek = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
+  const handleSeek = useCallback((clientX: number) => {
     if (!playerManagerRef.current || !progressBarRef.current) return;
 
     const rect = progressBarRef.current.getBoundingClientRect();
-    const percent = (event.clientX - rect.left) / rect.width;
+    const percent = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
     const seekTime = percent * playbackState.duration;
 
     playerManagerRef.current.seek(seekTime);
   }, [playbackState.duration]);
+
+  const handleProgressClick = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    handleSeek(event.clientX);
+  }, [handleSeek]);
+
+  const handleProgressTouchStart = useCallback((event: React.TouchEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.touches.length > 0) {
+      handleSeek(event.touches[0].clientX);
+    }
+  }, [handleSeek]);
+
+  const handleProgressTouchMove = useCallback((event: React.TouchEvent<HTMLDivElement>) => {
+    event.preventDefault(); // Prevent scrolling while seeking
+    event.stopPropagation();
+    if (event.touches.length > 0) {
+      handleSeek(event.touches[0].clientX);
+    }
+  }, [handleSeek]);
 
   const handleVolumeChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const volume = parseFloat(event.target.value);
@@ -179,7 +201,9 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
         <div style={{ marginBottom: designTokens.spacing.sm }}>
           <div
             ref={progressBarRef}
-            onClick={handleSeek}
+            onClick={handleProgressClick}
+            onTouchStart={handleProgressTouchStart}
+            onTouchMove={handleProgressTouchMove}
             style={{
               width: '100%',
               height: '6px',
@@ -187,7 +211,8 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
               borderRadius: '3px',
               cursor: 'pointer',
               position: 'relative',
-              overflow: 'hidden'
+              overflow: 'hidden',
+              touchAction: 'none' // Prevent default touch behaviors
             }}
           >
             <div style={{

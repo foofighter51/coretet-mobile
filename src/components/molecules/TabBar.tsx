@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { Users, Music, Plus } from 'lucide-react';
+import { Users, Music, List } from 'lucide-react';
 import { designTokens } from '../../design/designTokens';
 import { TabId, TabItem } from '../../types';
 
@@ -9,8 +9,8 @@ interface TabBarProps {
 }
 
 const tabs: TabItem[] = [
-  { id: 'playlists', label: 'Playlists', icon: Music },
-  { id: 'add', label: 'Add', icon: Plus },
+  { id: 'playlists', label: 'Playlists', icon: List },
+  { id: 'tracks', label: 'Tracks', icon: Music },
   { id: 'profile', label: 'Profile', icon: Users }
 ];
 
@@ -18,16 +18,11 @@ export const TabBar = memo(function TabBar({ activeTab, onTabChange }: TabBarPro
   return (
     <nav
       style={{
-        position: 'fixed',
-        bottom: 0,
-        left: '50%',
-        transform: 'translateX(-50%)',
-        width: '100%',
-        maxWidth: '375px',
+        flexShrink: 0,
         backgroundColor: designTokens.colors.neutral.white,
         borderTop: `1px solid ${designTokens.colors.neutral.lightGray}`,
         padding: `${designTokens.spacing.xs} 0`,
-        zIndex: 1000
+        paddingBottom: 'calc(var(--safe-area-inset-bottom, 0px) + 8px)',
       }}
       role="tablist"
       aria-label="Main navigation"

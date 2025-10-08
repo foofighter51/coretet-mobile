@@ -311,14 +311,21 @@ export class AudioProcessor {
     const maxSize = 100 * 1024 * 1024; // 100MB limit
     const allowedTypes = [
       'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/wave',
-      'audio/aac', 'audio/m4a', 'audio/flac', 'audio/ogg'
+      'audio/aac', 'audio/m4a', 'audio/x-m4a', 'audio/flac', 'audio/ogg',
+      'audio/mp4' // Some browsers report m4a as audio/mp4
     ];
+    const allowedExtensions = ['.mp3', '.wav', '.aac', '.m4a', '.flac', '.ogg'];
 
     if (file.size > maxSize) {
       return { valid: false, error: 'File size must be less than 100MB' };
     }
 
-    if (!allowedTypes.includes(file.type)) {
+    // Check both MIME type and file extension for better compatibility
+    const fileName = file.name.toLowerCase();
+    const hasValidExtension = allowedExtensions.some(ext => fileName.endsWith(ext));
+    const hasValidType = allowedTypes.includes(file.type);
+
+    if (!hasValidType && !hasValidExtension) {
       return { valid: false, error: 'Unsupported audio format. Please use MP3, WAV, AAC, M4A, FLAC, or OGG.' };
     }
 

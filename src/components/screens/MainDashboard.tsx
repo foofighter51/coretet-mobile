@@ -1,601 +1,1523 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { Search, Filter, Plus, Music, Users } from 'lucide-react';
-import { useUser, useClerk } from '@clerk/clerk-react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Search, Filter, Plus, Music, Share2, ArrowLeft, Play, Pause, X, Check, MessageSquare, MoreVertical, Edit2, Trash2 } from 'lucide-react';
 import { designTokens } from '../../design/designTokens';
-import { useBand } from '../../contexts/BandContext';
-import { BandCard } from '../molecules/BandCard';
+import { usePlaylist } from '../../contexts/PlaylistContext';
 import { TrackRowWithPlayer } from '../molecules/TrackRowWithPlayer';
 import { TabBar } from '../molecules/TabBar';
 import { AudioUploader } from '../molecules/AudioUploader';
-import { Band, Track, TabId } from '../../types';
+import { PlaybackBar } from '../molecules/PlaybackBar';
+import { SwipeableTrackRow } from '../molecules/SwipeableTrackRow';
+import { Track, TabId } from '../../types';
+import { db, auth } from '../../../lib/supabase';
+import { Capacitor } from '@capacitor/core';
+import { Share } from '@capacitor/share';
+import DeepLinkService from '../../utils/deepLinkHandler';
+
+// Track Selector Modal Component
+function TrackSelectorModal({ tracks, existingTrackIds, onAddTracks, onCancel }: {
+  tracks: any[];
+  existingTrackIds: string[];
+  onAddTracks: (trackIds: string[]) => void;
+  onCancel: () => void;
+}) {
+  const [selectedTracks, setSelectedTracks] = useState<string[]>([]);
+
+  // Filter out tracks already in playlist
+  const availableTracks = tracks.filter(track => !existingTrackIds.includes(track.id));
+
+  const toggleTrack = (trackId: string) => {
+    setSelectedTracks(prev =>
+      prev.includes(trackId)
+        ? prev.filter(id => id !== trackId)
+        : [...prev, trackId]
+    );
+  };
+
+  return (
+    <div style={{
+      backgroundColor: '#f7fafc',
+      border: '1px solid #e2e8f0',
+      borderRadius: '8px',
+      padding: designTokens.spacing.md,
+      marginBottom: designTokens.spacing.md,
+    }}>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '12px',
+      }}>
+        <h3 style={{
+          fontSize: '16px',
+          fontWeight: '600',
+          color: designTokens.colors.neutral.charcoal,
+          margin: 0,
+        }}>
+          Select Tracks from Library
+        </h3>
+        <button
+          onClick={onCancel}
+          style={{
+            backgroundColor: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+            padding: '4px',
+          }}
+        >
+          <X size={20} color={designTokens.colors.neutral.darkGray} />
+        </button>
+      </div>
+
+      {availableTracks.length === 0 ? (
+        <p style={{
+          fontSize: '14px',
+          color: designTokens.colors.neutral.darkGray,
+          textAlign: 'center',
+          padding: '20px',
+        }}>
+          All your tracks are already in this playlist
+        </p>
+      ) : (
+        <>
+          <div style={{
+            maxHeight: '300px',
+            overflowY: 'auto',
+            marginBottom: '12px',
+            border: '1px solid #e2e8f0',
+            borderRadius: '6px',
+            backgroundColor: '#ffffff',
+          }}>
+            {availableTracks.map(track => {
+              const isSelected = selectedTracks.includes(track.id);
+              return (
+                <div
+                  key={track.id}
+                  onClick={() => toggleTrack(track.id)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '12px',
+                    borderBottom: '1px solid #f7fafc',
+                    cursor: 'pointer',
+                    backgroundColor: isSelected ? '#ebf8ff' : '#ffffff',
+                    transition: 'background-color 0.2s',
+                  }}
+                >
+                  <div style={{
+                    width: '20px',
+                    height: '20px',
+                    borderRadius: '4px',
+                    border: `2px solid ${isSelected ? designTokens.colors.primary.blue : '#cbd5e0'}`,
+                    backgroundColor: isSelected ? designTokens.colors.primary.blue : '#ffffff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}>
+                    {isSelected && <Check size={14} color="#ffffff" />}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      color: designTokens.colors.neutral.charcoal,
+                      margin: 0,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}>
+                      {track.title}
+                    </p>
+                    {track.duration_seconds && (
+                      <p style={{
+                        fontSize: '12px',
+                        color: designTokens.colors.neutral.darkGray,
+                        margin: '2px 0 0 0',
+                      }}>
+                        {Math.floor(track.duration_seconds / 60)}:{String(track.duration_seconds % 60).padStart(2, '0')}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+            <button
+              onClick={onCancel}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: '#e2e8f0',
+                color: '#4a5568',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '14px',
+                cursor: 'pointer',
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => onAddTracks(selectedTracks)}
+              disabled={selectedTracks.length === 0}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: selectedTracks.length > 0 ? designTokens.colors.primary.blue : '#cbd5e0',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '14px',
+                cursor: selectedTracks.length > 0 ? 'pointer' : 'not-allowed',
+              }}
+            >
+              Add {selectedTracks.length > 0 ? `(${selectedTracks.length})` : ''}
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+interface CurrentUser {
+  id: string;
+  email: string;
+  phoneNumber: string;
+  name: string;
+}
+
+interface MainDashboardProps {
+  currentUser: CurrentUser;
+}
 
 const baseStyle = {
   fontFamily: designTokens.typography.fontFamily,
   width: '100%',
   maxWidth: '425px',
-  minHeight: '100vh',
+  height: '100vh',
   margin: '0 auto',
-  position: 'relative' as const
+  position: 'relative' as const,
+  display: 'flex',
+  flexDirection: 'column' as const,
+  overflow: 'hidden' as const,
+  paddingTop: 'env(safe-area-inset-top)',
+  paddingBottom: 'env(safe-area-inset-bottom)',
+  boxSizing: 'border-box' as const,
 };
 
-export function MainDashboard() {
-  const { user } = useUser();
-  const { signOut } = useClerk();
-  const { bands, currentBand, fetchUserBands, setCurrentBand } = useBand();
+export function MainDashboard({ currentUser }: MainDashboardProps) {
+  const navigate = useNavigate();
+  const { playlists, currentPlaylist, createPlaylist, setCurrentPlaylist } = usePlaylist();
 
-  // Convert Clerk user to our format for compatibility
-  const currentUser = user ? {
-    id: user.id,
-    email: user.primaryEmailAddress?.emailAddress || '',
-    phoneNumber: user.primaryPhoneNumber?.phoneNumber || '',
-    name: `${user.firstName || ''} ${user.lastName || ''}`.trim()
-  } : null;
   const [activeTab, setActiveTab] = useState<TabId>('playlists');
-  const [playingTrack, setPlayingTrack] = useState<string | null>(null);
-  const [tracks, setTracks] = useState<Track[]>([]);
-  const [playlists, setPlaylists] = useState<any[]>([]);
+  const [tracks, setTracks] = useState<any[]>([]);
+  const [playlistTracks, setPlaylistTracks] = useState<any[]>([]);
+  const [showCreatePlaylist, setShowCreatePlaylist] = useState(false);
+  const [newPlaylistTitle, setNewPlaylistTitle] = useState('');
+  const [viewMode, setViewMode] = useState<'list' | 'detail'>('list');
+  const [showUploader, setShowUploader] = useState(false);
+  const [showPlaylistUploader, setShowPlaylistUploader] = useState(false);
+  const [showTrackSelector, setShowTrackSelector] = useState(false);
 
-  useEffect(() => {
-    fetchUserBands();
-  }, [fetchUserBands]);
+  // Audio playback state - consolidated
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [currentTrack, setCurrentTrack] = useState<any | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [audioError, setAudioError] = useState<string | null>(null);
 
-  const handlePlay = useCallback((track: Track) => {
-    setPlayingTrack(track.id === playingTrack ? null : track.id);
-  }, [playingTrack]);
+  const [trackRatings, setTrackRatings] = useState<Record<string, 'listened' | 'liked' | 'loved'>>({});
+  const [ratingFilter, setRatingFilter] = useState<'all' | 'listened' | 'liked' | 'loved' | 'unrated'>('all');
+  const [playlistSortBy, setPlaylistSortBy] = useState<'position' | 'name' | 'duration' | 'rating'>('position');
+  const [sortAscending, setSortAscending] = useState(true);
+
+  // Error state
+  const [error, setError] = useState<string | null>(null);
+  const [createPlaylistLoading, setCreatePlaylistLoading] = useState(false);
+
+  // Playlist management state
+  const [showPlaylistMenu, setShowPlaylistMenu] = useState(false);
+  const [editingPlaylistTitle, setEditingPlaylistTitle] = useState<string | null>(null);
+  const [newTitle, setNewTitle] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const handleRatingChange = useCallback((track: Track, rating: 'like' | 'love' | 'none') => {
     console.log(`Rating changed for ${track.title}: ${rating}`);
   }, []);
 
-  const handleBandClick = useCallback((band: Band) => {
-    setCurrentBand(band);
-    setActiveTab('playlists'); // Switch to playlists tab to show tracks for this band
-  }, [setCurrentBand, setActiveTab]);
+  const handleCreatePlaylist = async () => {
+    if (!newPlaylistTitle.trim()) {
+      setError('Please enter a playlist title');
+      return;
+    }
+
+    setCreatePlaylistLoading(true);
+    setError(null);
+
+    try {
+      await createPlaylist(newPlaylistTitle.trim());
+      setNewPlaylistTitle('');
+      setShowCreatePlaylist(false);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to create playlist';
+      console.error('Failed to create playlist:', err);
+      setError(errorMsg + '. Please try again.');
+      // Keep form open so user can retry
+    } finally {
+      setCreatePlaylistLoading(false);
+    }
+  };
+
+  const handlePlaylistClick = async (playlist: any) => {
+    setCurrentPlaylist(playlist);
+    setViewMode('detail');
+
+    // Fetch playlist tracks
+    try {
+      const { data, error } = await db.playlistItems.getByPlaylist(playlist.id);
+      if (error) {
+        console.error('Failed to fetch playlist tracks:', error);
+        return;
+      }
+      setPlaylistTracks(data || []);
+    } catch (error) {
+      console.error('Error fetching playlist tracks:', error);
+    }
+  };
+
+  const handleBackToList = () => {
+    setViewMode('list');
+    setCurrentPlaylist(null);
+    setPlaylistTracks([]);
+    setShowPlaylistMenu(false);
+    setEditingPlaylistTitle(null);
+    setShowDeleteConfirm(false);
+  };
+
+  const handleEditPlaylistTitle = async () => {
+    if (!currentPlaylist || !newTitle.trim()) {
+      setError('Please enter a playlist title');
+      return;
+    }
+
+    try {
+      const { data, error: updateError } = await db.playlists.update(currentPlaylist.id, {
+        title: newTitle.trim(),
+      });
+
+      if (updateError) throw updateError;
+
+      // Update current playlist
+      setCurrentPlaylist({ ...currentPlaylist, title: newTitle.trim() });
+      setEditingPlaylistTitle(null);
+      setShowPlaylistMenu(false);
+      setError(null);
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to update playlist';
+      setError(errorMsg + '. Please try again.');
+    }
+  };
+
+  const handleDeletePlaylist = async () => {
+    if (!currentPlaylist) return;
+
+    try {
+      const { error: deleteError } = await db.playlists.delete(currentPlaylist.id);
+
+      if (deleteError) throw deleteError;
+
+      // Go back to list view
+      handleBackToList();
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to delete playlist';
+      setError(errorMsg + '. Please try again.');
+      setShowDeleteConfirm(false);
+    }
+  };
+
+  const handleSortChange = (newSort: 'position' | 'name' | 'duration' | 'rating') => {
+    if (newSort === playlistSortBy) {
+      // Same sort clicked - toggle direction
+      setSortAscending(!sortAscending);
+    } else {
+      // Different sort clicked - reset to ascending and change sort
+      setSortAscending(true);
+      setPlaylistSortBy(newSort);
+    }
+  };
+
+  const handleAddExistingTracks = async (selectedTrackIds: string[]) => {
+    if (!currentPlaylist || !currentUser?.id) return;
+
+    try {
+      // Get current playlist items to determine starting position
+      const { data: items } = await db.playlistItems.getByPlaylist(currentPlaylist.id);
+      let nextPosition = (items?.length || 0) + 1;
+
+      // Add each selected track to the playlist
+      for (const trackId of selectedTrackIds) {
+        await db.playlistItems.add({
+          playlist_id: currentPlaylist.id,
+          track_id: trackId,
+          added_by: currentUser.id,
+          position: nextPosition++,
+        });
+      }
+
+      // Refresh playlist tracks
+      const { data } = await db.playlistItems.getByPlaylist(currentPlaylist.id);
+      setPlaylistTracks(data || []);
+      setShowTrackSelector(false);
+    } catch (error) {
+      console.error('Error adding tracks to playlist:', error);
+    }
+  };
+
+  const handlePlayPause = async (track?: any) => {
+    try {
+      if (!audioRef.current) {
+        audioRef.current = new Audio();
+
+        // Setup audio event listeners
+        audioRef.current.addEventListener('loadstart', () => setIsLoading(true));
+        audioRef.current.addEventListener('canplay', () => setIsLoading(false));
+        audioRef.current.addEventListener('error', () => {
+          setAudioError('Failed to load audio file');
+          setIsLoading(false);
+          setIsPlaying(false);
+        });
+        audioRef.current.addEventListener('ended', () => {
+          setIsPlaying(false);
+        });
+      }
+
+      // If no track provided, toggle current track
+      const targetTrack = track || currentTrack;
+      if (!targetTrack) return;
+
+      if (currentTrack?.id === targetTrack.id && isPlaying) {
+        // Pause current track
+        audioRef.current.pause();
+        setIsPlaying(false);
+      } else {
+        // Play new or resume track
+        setAudioError(null);
+
+        if (currentTrack?.id !== targetTrack.id) {
+          // New track - load and play
+          setIsLoading(true);
+          audioRef.current.src = targetTrack.file_url;
+          setCurrentTrack(targetTrack);
+        }
+
+        await audioRef.current.play();
+        setIsPlaying(true);
+      }
+    } catch (error) {
+      console.error('Audio playback error:', error);
+      setAudioError('Failed to play audio');
+      setIsPlaying(false);
+      setIsLoading(false);
+    }
+  };
+
+  // Fetch user's tracks and ratings
+  useEffect(() => {
+    const fetchUserTracks = async () => {
+      if (!currentUser?.id) return;
+
+      try {
+        const { data, error } = await db.tracks.getByUser(currentUser.id);
+        if (error) {
+          console.error('Failed to fetch tracks:', error);
+          return;
+        }
+        setTracks(data || []);
+
+        // Fetch user's ratings
+        const { data: ratingsData } = await db.ratings.getByUser(currentUser.id);
+        if (ratingsData) {
+          const ratingsMap: Record<string, 'listened' | 'liked' | 'loved'> = {};
+          ratingsData.forEach((rating: any) => {
+            ratingsMap[rating.track_id] = rating.rating;
+          });
+          setTrackRatings(ratingsMap);
+        }
+      } catch (error) {
+        console.error('Error fetching tracks:', error);
+      }
+    };
+
+    fetchUserTracks();
+  }, [currentUser?.id]);
+
+  const handleRate = async (trackId: string, rating: 'listened' | 'liked' | 'loved') => {
+    if (!currentUser?.id) return;
+
+    try {
+      await db.ratings.upsert(trackId, rating, currentUser.id);
+      setTrackRatings(prev => ({ ...prev, [trackId]: rating }));
+    } catch (error) {
+      console.error('Error rating track:', error);
+    }
+  };
 
   const filteredTracks = useMemo(() => {
-    return tracks.map(track => ({
-      ...track,
-      isPlaying: track.id === playingTrack
-    }));
-  }, [tracks, playingTrack]);
+    return tracks
+      .filter(track => {
+        if (ratingFilter === 'all') return true;
+        if (ratingFilter === 'unrated') return !trackRatings[track.id];
+        return trackRatings[track.id] === ratingFilter;
+      })
+      .map(track => ({
+        ...track,
+        isPlaying: track.id === currentTrack?.id && isPlaying
+      }));
+  }, [tracks, currentTrack, isPlaying, ratingFilter, trackRatings]);
+
+  const filteredPlaylistTracks = useMemo(() => {
+    const filtered = playlistTracks.filter(item => {
+      if (!item.tracks) return false;
+      if (ratingFilter === 'all') return true;
+      if (ratingFilter === 'unrated') return !trackRatings[item.tracks.id];
+      return trackRatings[item.tracks.id] === ratingFilter;
+    });
+
+    // Apply sorting
+    const sorted = [...filtered].sort((a, b) => {
+      if (!a.tracks || !b.tracks) return 0;
+
+      let comparison = 0;
+
+      switch (playlistSortBy) {
+        case 'name':
+          comparison = a.tracks.title.localeCompare(b.tracks.title);
+          break;
+        case 'duration':
+          comparison = (a.tracks.duration_seconds || 0) - (b.tracks.duration_seconds || 0);
+          break;
+        case 'rating': {
+          const ratingOrder = { loved: 3, liked: 2, listened: 1 };
+          const ratingA = trackRatings[a.tracks.id];
+          const ratingB = trackRatings[b.tracks.id];
+          const scoreA = ratingA ? ratingOrder[ratingA] : 0;
+          const scoreB = ratingB ? ratingOrder[ratingB] : 0;
+          comparison = scoreA - scoreB;
+          break;
+        }
+        case 'position':
+        default:
+          comparison = a.position - b.position;
+      }
+
+      // Apply ascending/descending direction
+      return sortAscending ? comparison : -comparison;
+    });
+
+    return sorted;
+  }, [playlistTracks, ratingFilter, trackRatings, playlistSortBy, sortAscending]);
 
   const renderContent = () => {
-    if (activeTab === 'playlists') {
-      return (
-        <div style={{
-          padding: `0 ${designTokens.spacing.lg} ${designTokens.spacing.lg}`
-        }}>
-          {/* Header with Create Playlist button */}
+    switch (activeTab) {
+      case 'tracks':
+        return (
           <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: designTokens.spacing.lg
+            padding: designTokens.spacing.md,
           }}>
-            <h2 style={{
-              fontSize: designTokens.typography.fontSizes.h3,
-              fontWeight: designTokens.typography.fontWeights.semibold,
-              margin: 0,
-              color: designTokens.colors.neutral.charcoal
-            }}>
-              My Playlists
-            </h2>
-            <button
-              onClick={() => {
-                // TODO: Implement create playlist
-                console.log('Create playlist clicked');
-              }}
-              style={{
-                padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
-                border: 'none',
-                borderRadius: '20px',
-                backgroundColor: designTokens.colors.primary.blue,
-                color: designTokens.colors.neutral.white,
-                fontSize: designTokens.typography.fontSizes.bodySmall,
-                fontWeight: designTokens.typography.fontWeights.semibold,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: designTokens.spacing.xs
-              }}
-            >
-              <Plus size={16} />
-              Create
-            </button>
-          </div>
 
-          {/* Search bar */}
-          <div style={{
-            position: 'relative',
-            marginBottom: designTokens.spacing.lg
-          }}>
-            <Search
-              size={20}
-              style={{
-                position: 'absolute',
-                left: designTokens.spacing.md,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                color: designTokens.colors.neutral.gray
-              }}
-            />
-            <input
-              type="text"
-              placeholder="Search playlists..."
-              style={{
-                width: '100%',
-                padding: `${designTokens.spacing.sm} ${designTokens.spacing.md} ${designTokens.spacing.sm} 48px`,
-                border: 'none',
-                borderRadius: '24px',
-                backgroundColor: designTokens.colors.neutral.lightGray,
-                fontSize: designTokens.typography.fontSizes.body,
-                outline: 'none',
-                boxSizing: 'border-box'
-              }}
-            />
-          </div>
+            {showUploader && (
+              <div style={{
+                backgroundColor: '#f7fafc',
+                padding: designTokens.spacing.md,
+                borderRadius: '8px',
+                marginBottom: designTokens.spacing.md,
+              }}>
+                <AudioUploader
+                  multiple={true}
+                  onUploadComplete={(results) => {
+                    console.log('✅ Upload successful:', results);
+                    setShowUploader(false);
+                    // Refresh tracks list
+                    if (currentUser?.id) {
+                      db.tracks.getByUser(currentUser.id).then(({ data }) => {
+                        setTracks(data || []);
+                      });
+                    }
+                  }}
+                  onUploadError={(error) => {
+                    console.error('❌ Upload failed:', error);
+                  }}
+                  currentUser={currentUser ? {
+                    id: currentUser.id,
+                    email: currentUser.email || '',
+                    phoneNumber: currentUser.phoneNumber || '',
+                    name: currentUser.name || 'User'
+                  } : undefined}
+                />
+                <button
+                  onClick={() => setShowUploader(false)}
+                  style={{
+                    marginTop: '8px',
+                    padding: '8px 16px',
+                    backgroundColor: '#e2e8f0',
+                    color: '#4a5568',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
 
-          {/* Playlists list */}
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: designTokens.spacing.md
-          }}>
-            {playlists.length === 0 ? (
+            {tracks.length === 0 ? (
               <div style={{
                 textAlign: 'center',
-                padding: designTokens.spacing.xxxl,
-                color: designTokens.colors.neutral.gray
+                padding: '40px 20px',
+                color: designTokens.colors.neutral.darkGray,
               }}>
-                <Music size={48} style={{ marginBottom: designTokens.spacing.md, opacity: 0.3 }} />
-                <h3 style={{
-                  margin: `0 0 ${designTokens.spacing.sm} 0`,
-                  fontSize: designTokens.typography.fontSizes.h4,
-                  fontWeight: designTokens.typography.fontWeights.semibold
-                }}>
-                  No playlists yet
-                </h3>
-                <p style={{
-                  margin: `0 0 ${designTokens.spacing.lg} 0`,
-                  fontSize: designTokens.typography.fontSizes.body
-                }}>
-                  Create your first playlist to organize your tracks
+                <Music size={48} style={{ margin: '0 auto 16px', opacity: 0.3 }} />
+                <p>No tracks uploaded yet</p>
+                <p style={{ fontSize: '14px', marginTop: '8px' }}>
+                  Upload your first track to get started
                 </p>
-                <button
-                  onClick={() => {
-                    // TODO: Implement create playlist
-                    console.log('Create first playlist clicked');
+              </div>
+            ) : (
+              <div>
+                {/* Rating Filter */}
+                <div style={{
+                  display: 'flex',
+                  gap: '8px',
+                  marginBottom: '16px',
+                  overflowX: 'auto',
+                  paddingBottom: '4px',
+                }}>
+                  {(['all', 'listened', 'liked', 'loved', 'unrated'] as const).map(filter => (
+                    <button
+                      key={filter}
+                      onClick={() => setRatingFilter(filter)}
+                      style={{
+                        padding: '6px 12px',
+                        backgroundColor: ratingFilter === filter ? designTokens.colors.primary.blue : '#f7fafc',
+                        color: ratingFilter === filter ? '#ffffff' : designTokens.colors.neutral.darkGray,
+                        border: ratingFilter === filter ? 'none' : '1px solid #e2e8f0',
+                        borderRadius: '16px',
+                        fontSize: '13px',
+                        fontWeight: '500',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                        transition: 'all 0.2s',
+                      }}
+                    >
+                      {filter.charAt(0).toUpperCase() + filter.slice(1)}
+                    </button>
+                  ))}
+                </div>
+
+                {filteredTracks.map((track) => (
+                  <SwipeableTrackRow
+                    key={track.id}
+                    track={{
+                      id: track.id,
+                      title: track.title,
+                      duration_seconds: track.duration_seconds,
+                      folder_path: track.folder_path
+                    }}
+                    isPlaying={currentTrack?.id === track.id && isPlaying}
+                    currentRating={trackRatings[track.id]}
+                    onPlayPause={() => handlePlayPause(track)}
+                    onRate={(rating) => handleRate(track.id, rating)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        );
+
+      case 'playlists':
+        return (
+          <div style={{
+            padding: designTokens.spacing.md,
+          }}>
+
+            {showCreatePlaylist && (
+              <div style={{
+                backgroundColor: '#f7fafc',
+                padding: designTokens.spacing.md,
+                borderRadius: '8px',
+                marginBottom: designTokens.spacing.md,
+              }}>
+                <input
+                  type="text"
+                  placeholder="Playlist title..."
+                  value={newPlaylistTitle}
+                  onChange={(e) => {
+                    setNewPlaylistTitle(e.target.value);
+                    setError(null);
                   }}
+                  onKeyPress={(e) => e.key === 'Enter' && !createPlaylistLoading && handleCreatePlaylist()}
+                  disabled={createPlaylistLoading}
                   style={{
-                    padding: `${designTokens.spacing.md} ${designTokens.spacing.lg}`,
-                    border: `2px solid ${designTokens.colors.primary.blue}`,
-                    borderRadius: '24px',
-                    backgroundColor: 'transparent',
-                    color: designTokens.colors.primary.blue,
-                    fontSize: designTokens.typography.fontSizes.body,
-                    fontWeight: designTokens.typography.fontWeights.semibold,
+                    width: '100%',
+                    padding: '10px',
+                    border: `1px solid ${error ? '#fc8181' : '#e2e8f0'}`,
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    marginBottom: '8px',
+                  }}
+                  autoFocus
+                />
+                {error && (
+                  <div style={{
+                    padding: '8px 12px',
+                    backgroundColor: '#fee',
+                    border: '1px solid #fcc',
+                    borderRadius: '6px',
+                    color: '#c00',
+                    fontSize: '13px',
+                    marginBottom: '8px',
+                  }}>
+                    {error}
+                  </div>
+                )}
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    onClick={handleCreatePlaylist}
+                    disabled={createPlaylistLoading}
+                    style={{
+                      padding: '8px 16px',
+                      backgroundColor: designTokens.colors.primary.blue,
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      cursor: createPlaylistLoading ? 'not-allowed' : 'pointer',
+                      opacity: createPlaylistLoading ? 0.6 : 1,
+                    }}
+                  >
+                    {createPlaylistLoading ? 'Creating...' : 'Create'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowCreatePlaylist(false);
+                      setNewPlaylistTitle('');
+                      setError(null);
+                    }}
+                    disabled={createPlaylistLoading}
+                    style={{
+                      padding: '8px 16px',
+                      backgroundColor: '#e2e8f0',
+                      color: '#4a5568',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      cursor: createPlaylistLoading ? 'not-allowed' : 'pointer',
+                      opacity: createPlaylistLoading ? 0.6 : 1,
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {viewMode === 'detail' && currentPlaylist ? (
+              <div>
+                {/* Edit title modal */}
+                {editingPlaylistTitle && (
+                  <div style={{
+                    backgroundColor: '#f7fafc',
+                    padding: designTokens.spacing.md,
+                    borderRadius: '8px',
+                    marginBottom: designTokens.spacing.md,
+                  }}>
+                    <h3 style={{ margin: '0 0 12px 0', fontSize: '16px', fontWeight: '600' }}>Edit Playlist Title</h3>
+                    <input
+                      type="text"
+                      value={newTitle}
+                      onChange={(e) => {
+                        setNewTitle(e.target.value);
+                        setError(null);
+                      }}
+                      placeholder="Playlist title..."
+                      style={{
+                        width: '100%',
+                        padding: '10px',
+                        border: `1px solid ${error ? '#fc8181' : '#e2e8f0'}`,
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        marginBottom: '8px',
+                      }}
+                      autoFocus
+                    />
+                    {error && (
+                      <div style={{
+                        padding: '8px 12px',
+                        backgroundColor: '#fee',
+                        border: '1px solid #fcc',
+                        borderRadius: '6px',
+                        color: '#c00',
+                        fontSize: '13px',
+                        marginBottom: '8px',
+                      }}>
+                        {error}
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        onClick={handleEditPlaylistTitle}
+                        style={{
+                          padding: '8px 16px',
+                          backgroundColor: designTokens.colors.primary.blue,
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={() => {
+                          setEditingPlaylistTitle(null);
+                          setError(null);
+                        }}
+                        style={{
+                          padding: '8px 16px',
+                          backgroundColor: '#e2e8f0',
+                          color: '#4a5568',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Delete confirmation modal */}
+                {showDeleteConfirm && (
+                  <div style={{
+                    backgroundColor: '#fff5f5',
+                    padding: designTokens.spacing.md,
+                    borderRadius: '8px',
+                    marginBottom: designTokens.spacing.md,
+                    border: '1px solid #feb2b2',
+                  }}>
+                    <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', fontWeight: '600', color: '#c53030' }}>Delete Playlist?</h3>
+                    <p style={{ margin: '0 0 16px 0', fontSize: '14px', color: '#742a2a' }}>
+                      This will permanently delete "{currentPlaylist.title}" and all its contents. This action cannot be undone.
+                    </p>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        onClick={handleDeletePlaylist}
+                        style={{
+                          padding: '8px 16px',
+                          backgroundColor: '#e53e3e',
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          cursor: 'pointer',
+                          fontWeight: '500',
+                        }}
+                      >
+                        Delete
+                      </button>
+                      <button
+                        onClick={() => setShowDeleteConfirm(false)}
+                        style={{
+                          padding: '8px 16px',
+                          backgroundColor: '#e2e8f0',
+                          color: '#4a5568',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: '14px',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {showTrackSelector && (
+                  <TrackSelectorModal
+                    tracks={tracks}
+                    existingTrackIds={playlistTracks.map(item => item.tracks?.id).filter(Boolean)}
+                    onAddTracks={handleAddExistingTracks}
+                    onCancel={() => setShowTrackSelector(false)}
+                  />
+                )}
+
+                {showPlaylistUploader && (
+                  <div style={{
+                    backgroundColor: '#f7fafc',
+                    padding: designTokens.spacing.md,
+                    borderRadius: '8px',
+                    marginBottom: designTokens.spacing.md,
+                  }}>
+                    <AudioUploader
+                      multiple={true}
+                      onUploadComplete={async (results) => {
+                        console.log('✅ Upload successful:', results);
+                        setShowPlaylistUploader(false);
+
+                        // Add all uploaded tracks to current playlist
+                        if (results.length > 0 && currentPlaylist) {
+                          const { data: items } = await db.playlistItems.getByPlaylist(currentPlaylist.id);
+                          let nextPosition = (items?.length || 0) + 1;
+
+                          // Add each track to the playlist
+                          for (const result of results) {
+                            await db.playlistItems.add({
+                              playlist_id: currentPlaylist.id,
+                              track_id: result.trackId,
+                              added_by: currentUser?.id || '',
+                              position: nextPosition++,
+                            });
+                          }
+
+                          // Refresh playlist tracks
+                          const { data } = await db.playlistItems.getByPlaylist(currentPlaylist.id);
+                          setPlaylistTracks(data || []);
+
+                          // Refresh tracks list
+                          if (currentUser?.id) {
+                            db.tracks.getByUser(currentUser.id).then(({ data }) => {
+                              setTracks(data || []);
+                            });
+                          }
+                        }
+                      }}
+                      onUploadError={(error) => {
+                        console.error('❌ Upload failed:', error);
+                      }}
+                      currentUser={currentUser ? {
+                        id: currentUser.id,
+                        email: currentUser.email || '',
+                        phoneNumber: currentUser.phoneNumber || '',
+                        name: currentUser.name || 'User'
+                      } : undefined}
+                    />
+                    <button
+                      onClick={() => setShowPlaylistUploader(false)}
+                      style={{
+                        marginTop: '8px',
+                        padding: '8px 16px',
+                        backgroundColor: '#e2e8f0',
+                        color: '#4a5568',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '14px',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+
+                {playlistTracks.length === 0 ? (
+                  <div style={{
+                    textAlign: 'center',
+                    padding: '40px 20px',
+                    color: designTokens.colors.neutral.darkGray,
+                  }}>
+                    <Music size={48} style={{ margin: '0 auto 16px', opacity: 0.3 }} />
+                    <p>No tracks in this playlist yet</p>
+                  </div>
+                ) : (
+                  <div>
+                    {/* Sort Options */}
+                    <div style={{
+                      display: 'flex',
+                      gap: '8px',
+                      marginBottom: '12px',
+                      overflowX: 'auto',
+                      paddingBottom: '4px',
+                    }}>
+                      <span style={{
+                        fontSize: '13px',
+                        color: designTokens.colors.neutral.darkGray,
+                        padding: '6px 0',
+                        fontWeight: '500',
+                        whiteSpace: 'nowrap',
+                      }}>Sort:</span>
+                      {(['position', 'name', 'duration', 'rating'] as const).map(sort => {
+                        const isActive = playlistSortBy === sort;
+                        const label = sort === 'position' ? 'Default' : sort.charAt(0).toUpperCase() + sort.slice(1);
+
+                        // Show arrow only for active sort (except position/default)
+                        const showArrow = isActive && sort !== 'position';
+                        const arrow = sortAscending ? ' ↑' : ' ↓';
+
+                        return (
+                          <button
+                            key={sort}
+                            onClick={() => handleSortChange(sort)}
+                            style={{
+                              padding: '6px 12px',
+                              backgroundColor: isActive ? designTokens.colors.primary.blue : '#ffffff',
+                              color: isActive ? '#ffffff' : designTokens.colors.neutral.darkGray,
+                              border: isActive ? 'none' : '1px solid #e2e8f0',
+                              borderRadius: '16px',
+                              fontSize: '13px',
+                              fontWeight: '500',
+                              cursor: 'pointer',
+                              whiteSpace: 'nowrap',
+                              transition: 'all 0.2s',
+                            }}
+                          >
+                            {label}{showArrow ? arrow : ''}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Rating Filter */}
+                    <div style={{
+                      display: 'flex',
+                      gap: '8px',
+                      marginBottom: '16px',
+                      overflowX: 'auto',
+                      paddingBottom: '4px',
+                    }}>
+                      <span style={{
+                        fontSize: '13px',
+                        color: designTokens.colors.neutral.darkGray,
+                        padding: '6px 0',
+                        fontWeight: '500',
+                        whiteSpace: 'nowrap',
+                      }}>Filter:</span>
+                      {(['all', 'listened', 'liked', 'loved', 'unrated'] as const).map(filter => (
+                        <button
+                          key={filter}
+                          onClick={() => setRatingFilter(filter)}
+                          style={{
+                            padding: '6px 12px',
+                            backgroundColor: ratingFilter === filter ? designTokens.colors.primary.blue : '#f7fafc',
+                            color: ratingFilter === filter ? '#ffffff' : designTokens.colors.neutral.darkGray,
+                            border: ratingFilter === filter ? 'none' : '1px solid #e2e8f0',
+                            borderRadius: '16px',
+                            fontSize: '13px',
+                            fontWeight: '500',
+                            cursor: 'pointer',
+                            whiteSpace: 'nowrap',
+                            transition: 'all 0.2s',
+                          }}
+                        >
+                          {filter.charAt(0).toUpperCase() + filter.slice(1)}
+                        </button>
+                      ))}
+                    </div>
+
+                    {filteredPlaylistTracks.map((item: any) => (
+                      item.tracks && (
+                        <SwipeableTrackRow
+                          key={item.id}
+                          track={{
+                            id: item.tracks.id,
+                            title: item.tracks.title,
+                            duration_seconds: item.tracks.duration_seconds,
+                            folder_path: item.tracks.folder_path
+                          }}
+                          isPlaying={currentTrack?.id === item.tracks.id && isPlaying}
+                          currentRating={trackRatings[item.tracks.id]}
+                          onPlayPause={() => handlePlayPause(item.tracks)}
+                          onRate={(rating) => handleRate(item.tracks.id, rating)}
+                        />
+                      )
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : playlists.length === 0 ? (
+              <div style={{
+                textAlign: 'center',
+                padding: '40px 20px',
+                color: designTokens.colors.neutral.darkGray,
+              }}>
+                <Music size={48} style={{ margin: '0 auto 16px', opacity: 0.3 }} />
+                <p>No playlists yet</p>
+                <p style={{ fontSize: '14px', marginTop: '8px' }}>
+                  Create your first playlist to start sharing music
+                </p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {playlists.map((playlist) => (
+                  <div
+                    key={playlist.id}
+                    onClick={() => handlePlaylistClick(playlist)}
+                    style={{
+                      padding: '16px',
+                      backgroundColor: currentPlaylist?.id === playlist.id ? '#ebf8ff' : '#ffffff',
+                      border: currentPlaylist?.id === playlist.id ? '2px solid #3182ce' : '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}>
+                      <div>
+                        <h3 style={{
+                          fontSize: '16px',
+                          fontWeight: '600',
+                          color: designTokens.colors.neutral.charcoal,
+                          marginBottom: '4px',
+                        }}>
+                          {playlist.title}
+                        </h3>
+                        {playlist.description && (
+                          <p style={{
+                            fontSize: '14px',
+                            color: designTokens.colors.neutral.darkGray,
+                          }}>
+                            {playlist.description}
+                          </p>
+                        )}
+                      </div>
+                      <button
+                        onClick={async (e) => {
+                          e.stopPropagation();
+
+                          // Always use production URL for sharing (works for all users)
+                          const shareUrl = `https://coretet.app/playlist/${playlist.share_code}`;
+
+                          // On native platforms, use native share sheet
+                          if (Capacitor.isNativePlatform()) {
+                            try {
+                              await Share.share({
+                                title: `Check out ${playlist.title} on CoreTet`,
+                                text: `Listen to ${playlist.title} on CoreTet`,
+                                url: shareUrl,
+                                dialogTitle: 'Share Playlist',
+                              });
+                            } catch (error) {
+                              console.error('Share failed:', error);
+                            }
+                          } else {
+                            // On web, copy web-friendly URL to clipboard
+                            navigator.clipboard.writeText(shareUrl);
+                            // Show temporary success message
+                            const btn = e.currentTarget;
+                            const originalHTML = btn.innerHTML;
+                            btn.innerHTML = '✓ Copied!';
+                            btn.style.color = '#48bb78';
+                            setTimeout(() => {
+                              btn.innerHTML = originalHTML;
+                              btn.style.color = designTokens.colors.primary.blue;
+                            }, 2000);
+                          }
+                        }}
+                        style={{
+                          padding: '8px',
+                          backgroundColor: 'transparent',
+                          border: 'none',
+                          cursor: 'pointer',
+                          color: designTokens.colors.primary.blue,
+                          fontSize: '14px',
+                          fontWeight: '500',
+                        }}
+                      >
+                        <Share2 size={20} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+
+      case 'profile':
+        return (
+          <div style={{
+            padding: designTokens.spacing.md,
+          }}>
+            {currentUser && (
+              <div style={{
+                backgroundColor: '#ffffff',
+                border: '1px solid #e2e8f0',
+                borderRadius: '8px',
+                padding: '16px',
+                marginBottom: '16px',
+              }}>
+                <div style={{ marginBottom: '12px' }}>
+                  <p style={{
+                    fontSize: '14px',
+                    color: designTokens.colors.neutral.darkGray,
+                    marginBottom: '4px',
+                  }}>
+                    Name
+                  </p>
+                  <p style={{
+                    fontSize: '16px',
+                    fontWeight: '500',
+                    color: designTokens.colors.neutral.charcoal,
+                  }}>
+                    {currentUser.name || 'User'}
+                  </p>
+                </div>
+
+                {currentUser.email && (
+                  <div style={{ marginBottom: '12px' }}>
+                    <p style={{
+                      fontSize: '14px',
+                      color: designTokens.colors.neutral.darkGray,
+                      marginBottom: '4px',
+                    }}>
+                      Email
+                    </p>
+                    <p style={{
+                      fontSize: '16px',
+                      fontWeight: '500',
+                      color: designTokens.colors.neutral.charcoal,
+                    }}>
+                      {currentUser.email}
+                    </p>
+                  </div>
+                )}
+
+                {currentUser.phoneNumber && (
+                  <div style={{ marginBottom: '12px' }}>
+                    <p style={{
+                      fontSize: '14px',
+                      color: designTokens.colors.neutral.darkGray,
+                      marginBottom: '4px',
+                    }}>
+                      Phone
+                    </p>
+                    <p style={{
+                      fontSize: '16px',
+                      fontWeight: '500',
+                      color: designTokens.colors.neutral.charcoal,
+                    }}>
+                      {currentUser.phoneNumber}
+                    </p>
+                  </div>
+                )}
+
+                <button
+                  onClick={() => navigate('/feedback')}
+                  style={{
+                    marginTop: '16px',
+                    width: '100%',
+                    padding: '12px',
+                    backgroundColor: designTokens.colors.primary.blue,
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    fontWeight: '500',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: designTokens.spacing.sm,
-                    margin: '0 auto'
+                    justifyContent: 'center',
+                    gap: '8px',
                   }}
                 >
-                  <Plus size={20} />
-                  Create Your First Playlist
+                  <MessageSquare size={18} />
+                  Community Feedback
+                </button>
+
+                <button
+                  onClick={() => auth.signOut()}
+                  style={{
+                    marginTop: '12px',
+                    width: '100%',
+                    padding: '12px',
+                    backgroundColor: '#f7fafc',
+                    color: '#4a5568',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Sign Out
                 </button>
               </div>
-            ) : (
-              playlists.map((playlist) => (
-                <div
-                  key={playlist.id}
-                  style={{
-                    padding: designTokens.spacing.lg,
-                    backgroundColor: designTokens.colors.neutral.white,
-                    border: `1px solid ${designTokens.colors.neutral.lightGray}`,
-                    borderRadius: '12px',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease'
-                  }}
-                  onClick={() => {
-                    // TODO: Navigate to playlist detail
-                    console.log('Playlist clicked:', playlist.name);
-                  }}
-                >
-                  <h3 style={{
-                    margin: `0 0 ${designTokens.spacing.xs} 0`,
-                    fontSize: designTokens.typography.fontSizes.h4,
-                    fontWeight: designTokens.typography.fontWeights.semibold,
-                    color: designTokens.colors.neutral.charcoal
-                  }}>
-                    {playlist.name}
-                  </h3>
-                  <p style={{
-                    margin: `0 0 ${designTokens.spacing.sm} 0`,
-                    fontSize: designTokens.typography.fontSizes.body,
-                    color: designTokens.colors.neutral.darkGray
-                  }}>
-                    {playlist.description || 'No description'}
-                  </p>
-                  <p style={{
-                    margin: 0,
-                    fontSize: designTokens.typography.fontSizes.bodySmall,
-                    color: designTokens.colors.neutral.gray
-                  }}>
-                    {playlist.trackCount || 0} tracks
-                  </p>
-                </div>
-              ))
             )}
           </div>
-        </div>
-      );
-    }
+        );
 
-    if (activeTab === 'bands') {
-      return (
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div style={baseStyle}>
+      {/* Fixed Header */}
+      <div style={{
+        flexShrink: 0,
+        backgroundColor: '#ffffff',
+        borderBottom: '1px solid #e2e8f0',
+      }}>
+        {/* Top header with logo, action button, and user button */}
         <div style={{
-          padding: `0 ${designTokens.spacing.lg} ${designTokens.spacing.lg}`
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
         }}>
-          {bands.length === 0 ? (
-            <div style={{
-              textAlign: 'center',
-              padding: designTokens.spacing.xxxl,
-              color: designTokens.colors.neutral.gray
-            }}>
-              <Users size={48} style={{ marginBottom: designTokens.spacing.md, opacity: 0.3 }} />
-              <p style={{ margin: 0, fontSize: designTokens.typography.fontSizes.body }}>
-                No bands yet. Join or create a band!
-              </p>
-            </div>
+          {/* Left: CoreTet Circle Logo or Back Button */}
+          {activeTab === 'playlists' && viewMode === 'detail' ? (
+            <button
+              onClick={handleBackToList}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px',
+                backgroundColor: 'transparent',
+                color: designTokens.colors.primary.blue,
+                border: 'none',
+                fontSize: '14px',
+                fontWeight: '500',
+                cursor: 'pointer',
+                flexShrink: 0,
+              }}
+            >
+              <ArrowLeft size={18} />
+              Back
+            </button>
           ) : (
             <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: designTokens.spacing.md
-            }}>
-              {bands.map((band) => (
-                <div
-                  key={band.id}
-                  onClick={() => handleBandClick(band)}
-                  style={{
-                    padding: designTokens.spacing.lg,
-                    backgroundColor: currentBand?.id === band.id
-                      ? designTokens.colors.primary.blue + '10'
-                      : designTokens.colors.neutral.white,
-                    border: currentBand?.id === band.id
-                      ? `2px solid ${designTokens.colors.primary.blue}`
-                      : `2px solid ${designTokens.colors.neutral.lightGray}`,
-                    borderRadius: '12px',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  <h3 style={{
-                    margin: `0 0 ${designTokens.spacing.xs} 0`,
-                    fontSize: designTokens.typography.fontSizes.h4,
-                    fontWeight: designTokens.typography.fontWeights.semibold,
-                    color: designTokens.colors.neutral.charcoal
-                  }}>
-                    {band.name}
-                  </h3>
-                  {band.description && (
-                    <p style={{
-                      margin: `0 0 ${designTokens.spacing.sm} 0`,
-                      fontSize: designTokens.typography.fontSizes.body,
-                      color: designTokens.colors.neutral.darkGray
-                    }}>
-                      {band.description}
-                    </p>
-                  )}
-                  <p style={{
-                    margin: 0,
-                    fontSize: designTokens.typography.fontSizes.bodySmall,
-                    color: designTokens.colors.neutral.gray
-                  }}>
-                    Invite Code: {band.invite_code}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      );
-    }
-
-    if (activeTab === 'add') {
-      return (
-        <div style={{
-          padding: `0 ${designTokens.spacing.lg} ${designTokens.spacing.lg}`
-        }}>
-          {/* Header */}
-          <div style={{
-            textAlign: 'center',
-            marginBottom: designTokens.spacing.lg
-          }}>
-            <h2 style={{
-              fontSize: designTokens.typography.fontSizes.h3,
-              fontWeight: designTokens.typography.fontWeights.semibold,
-              margin: `0 0 ${designTokens.spacing.sm} 0`,
-              color: designTokens.colors.neutral.charcoal
-            }}>
-              Upload a New Track
-            </h2>
-            <p style={{
-              fontSize: designTokens.typography.fontSizes.body,
-              color: designTokens.colors.neutral.darkGray,
-              margin: 0
-            }}>
-              Share your music with your band
-            </p>
-          </div>
-
-          {/* Audio Upload */}
-          <div style={{
-            marginBottom: designTokens.spacing.lg
-          }}>
-            <AudioUploader
-              currentUser={currentUser}
-              multiple={true}
-              onUploadComplete={(results) => {
-                console.log('✅ Upload completed:', results);
-                // TODO: Refresh tracks list or handle successful upload
-              }}
-              onUploadError={(error) => {
-                console.error('❌ Upload failed:', error);
-                // TODO: Show error message to user
-              }}
-              options={{
-                ensembleId: currentBand?.id,
-                versionType: 'other'
-              }}
-            />
-          </div>
-
-          {/* Additional Upload Options */}
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: designTokens.spacing.md
-          }}>
-
-            <button
-              onClick={() => {
-                // TODO: Implement cloud upload
-                console.log('Upload from cloud clicked');
-              }}
-              style={{
-                width: '100%',
-                padding: designTokens.spacing.lg,
-                border: `2px solid ${designTokens.colors.neutral.gray}`,
-                borderRadius: '12px',
-                backgroundColor: designTokens.colors.neutral.white,
-                textAlign: 'center',
-                fontSize: designTokens.typography.fontSizes.body,
-                fontWeight: designTokens.typography.fontWeights.semibold,
-                color: designTokens.colors.neutral.darkGray,
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = designTokens.colors.neutral.lightGray;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = designTokens.colors.neutral.white;
-              }}
-            >
-              Upload from Cloud
-            </button>
-
-            <button
-              onClick={() => {
-                // TODO: Implement audio recording
-                console.log('Record audio clicked');
-              }}
-              style={{
-                width: '100%',
-                padding: designTokens.spacing.lg,
-                border: `2px solid ${designTokens.colors.neutral.gray}`,
-                borderRadius: '12px',
-                backgroundColor: designTokens.colors.neutral.white,
-                textAlign: 'center',
-                fontSize: designTokens.typography.fontSizes.body,
-                fontWeight: designTokens.typography.fontWeights.semibold,
-                color: designTokens.colors.neutral.darkGray,
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = designTokens.colors.neutral.lightGray;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = designTokens.colors.neutral.white;
-              }}
-            >
-              Record Audio
-            </button>
-          </div>
-        </div>
-      );
-    }
-
-    if (activeTab === 'profile') {
-      return (
-        <div style={{
-          padding: `0 ${designTokens.spacing.lg} ${designTokens.spacing.lg}`
-        }}>
-          {/* User Info */}
-          <div style={{
-            textAlign: 'center',
-            marginBottom: designTokens.spacing.lg
-          }}>
-            <div style={{
-              width: '80px',
-              height: '80px',
-              borderRadius: '40px',
+              width: '40px',
+              height: '40px',
+              borderRadius: '50%',
               backgroundColor: designTokens.colors.primary.blue,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              margin: `0 auto ${designTokens.spacing.md}`,
-              fontSize: '32px',
-              fontWeight: designTokens.typography.fontWeights.semibold,
-              color: designTokens.colors.neutral.white
+              color: '#ffffff',
+              fontSize: '20px',
+              fontWeight: 'bold',
+              flexShrink: 0,
             }}>
-              {currentUser?.name?.charAt(0)?.toUpperCase() || 'U'}
+              C
             </div>
-            <h2 style={{
-              fontSize: designTokens.typography.fontSizes.h3,
-              fontWeight: designTokens.typography.fontWeights.semibold,
-              margin: `0 0 ${designTokens.spacing.xs} 0`,
-              color: designTokens.colors.neutral.charcoal
-            }}>
-              {currentUser?.name || 'User'}
-            </h2>
-            <p style={{
-              fontSize: designTokens.typography.fontSizes.body,
-              color: designTokens.colors.neutral.darkGray,
-              margin: 0
-            }}>
-              {currentUser?.phoneNumber || 'Phone not available'}
-            </p>
+          )}
+
+          {/* Center: Action Button */}
+          <div style={{ flexGrow: 1, display: 'flex', justifyContent: 'center' }}>
+            {activeTab === 'playlists' && viewMode === 'list' && (
+              <button
+                onClick={() => setShowCreatePlaylist(true)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '8px 16px',
+                  backgroundColor: designTokens.colors.primary.blue,
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '20px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                }}
+              >
+                <Plus size={16} />
+                New
+              </button>
+            )}
+            {activeTab === 'tracks' && (
+              <button
+                onClick={() => setShowUploader(true)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '8px 16px',
+                  backgroundColor: designTokens.colors.primary.blue,
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '20px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                }}
+              >
+                <Plus size={16} />
+                Upload
+              </button>
+            )}
+            {activeTab === 'playlists' && viewMode === 'detail' && (
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  onClick={() => setShowTrackSelector(true)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '6px 12px',
+                    backgroundColor: '#ffffff',
+                    color: designTokens.colors.primary.blue,
+                    border: `1px solid ${designTokens.colors.primary.blue}`,
+                    borderRadius: '20px',
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <Plus size={14} />
+                  From Library
+                </button>
+                <button
+                  onClick={() => setShowPlaylistUploader(true)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '6px 12px',
+                    backgroundColor: designTokens.colors.primary.blue,
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '20px',
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <Plus size={14} />
+                  Upload New
+                </button>
+              </div>
+            )}
           </div>
 
-          {/* Settings Options */}
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: designTokens.spacing.xs
-          }}>
-            <button
-              onClick={() => {
-                // TODO: Implement edit profile
-                console.log('Edit profile clicked');
-              }}
-              style={{
-                width: '100%',
-                padding: designTokens.spacing.md,
-                border: 'none',
-                borderRadius: '12px',
-                backgroundColor: designTokens.colors.neutral.white,
-                textAlign: 'left',
-                fontSize: designTokens.typography.fontSizes.body,
-                color: designTokens.colors.neutral.charcoal,
-                cursor: 'pointer',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                transition: 'background-color 0.2s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = designTokens.colors.neutral.lightGray;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = designTokens.colors.neutral.white;
-              }}
-            >
-              Edit Profile
-            </button>
-
-            <button
-              onClick={() => {
-                // TODO: Implement manage bands
-                console.log('Manage bands clicked');
-              }}
-              style={{
-                width: '100%',
-                padding: designTokens.spacing.md,
-                border: 'none',
-                borderRadius: '12px',
-                backgroundColor: designTokens.colors.neutral.white,
-                textAlign: 'left',
-                fontSize: designTokens.typography.fontSizes.body,
-                color: designTokens.colors.neutral.charcoal,
-                cursor: 'pointer',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                transition: 'background-color 0.2s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = designTokens.colors.neutral.lightGray;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = designTokens.colors.neutral.white;
-              }}
-            >
-              My Bands
-            </button>
-
-            <button
-              onClick={() => {
-                // TODO: Implement settings
-                console.log('Settings clicked');
-              }}
-              style={{
-                width: '100%',
-                padding: designTokens.spacing.md,
-                border: 'none',
-                borderRadius: '12px',
-                backgroundColor: designTokens.colors.neutral.white,
-                textAlign: 'left',
-                fontSize: designTokens.typography.fontSizes.body,
-                color: designTokens.colors.neutral.charcoal,
-                cursor: 'pointer',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-                transition: 'background-color 0.2s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = designTokens.colors.neutral.lightGray;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = designTokens.colors.neutral.white;
-              }}
-            >
-              Settings
-            </button>
-          </div>
-
-
-          {/* App Info */}
-          <div style={{
-            textAlign: 'center',
-            marginTop: designTokens.spacing.lg,
-            padding: designTokens.spacing.md,
-            color: designTokens.colors.neutral.gray,
-            fontSize: designTokens.typography.fontSizes.caption
-          }}>
-            CoreTet v1.0.0
+          {/* Right: Menu button for playlist detail or Spacer */}
+          <div style={{ width: '40px', flexShrink: 0, position: 'relative' }}>
+            {activeTab === 'playlists' && viewMode === 'detail' && (
+              <button
+                onClick={() => setShowPlaylistMenu(!showPlaylistMenu)}
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '50%',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: designTokens.colors.neutral.charcoal,
+                }}
+              >
+                <MoreVertical size={20} />
+              </button>
+            )}
           </div>
         </div>
-      );
-    }
 
-    return null;
-  };
-
-  return (
-    <div style={{
-      ...baseStyle,
-      backgroundColor: designTokens.colors.neutral.white,
-      paddingBottom: '80px'
-    }}>
-      {/* Header */}
-      <div style={{
-        padding: `${designTokens.spacing.lg} ${designTokens.spacing.lg} 0`,
-        borderBottom: `1px solid ${designTokens.colors.neutral.lightGray}`,
-        marginBottom: designTokens.spacing.lg
-      }}>
-        <h1 style={{
-          fontSize: designTokens.typography.fontSizes.h2,
-          fontWeight: designTokens.typography.fontWeights.semibold,
-          margin: `0 0 ${designTokens.spacing.lg} 0`,
-          color: designTokens.colors.neutral.charcoal
-        }}>
-          Hello, {currentUser?.name || 'User'}!
-        </h1>
+        {/* Playlist menu dropdown */}
+        {showPlaylistMenu && activeTab === 'playlists' && viewMode === 'detail' && (
+          <div style={{
+            position: 'absolute',
+            top: '60px',
+            right: '16px',
+            backgroundColor: '#ffffff',
+            border: '1px solid #e2e8f0',
+            borderRadius: '8px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            zIndex: 1000,
+            minWidth: '180px',
+          }}>
+            <button
+              onClick={() => {
+                setNewTitle(currentPlaylist?.title || '');
+                setEditingPlaylistTitle(currentPlaylist?.id || null);
+                setShowPlaylistMenu(false);
+              }}
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                backgroundColor: 'transparent',
+                border: 'none',
+                textAlign: 'left',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                fontSize: '14px',
+                color: designTokens.colors.neutral.charcoal,
+                borderBottom: '1px solid #e2e8f0',
+              }}
+            >
+              <Edit2 size={16} />
+              Edit Title
+            </button>
+            <button
+              onClick={() => {
+                setShowDeleteConfirm(true);
+                setShowPlaylistMenu(false);
+              }}
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                backgroundColor: 'transparent',
+                border: 'none',
+                textAlign: 'left',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                fontSize: '14px',
+                color: '#e53e3e',
+              }}
+            >
+              <Trash2 size={16} />
+              Delete Playlist
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Content */}
-      {renderContent()}
+      {/* Scrollable Content */}
+      <div style={{
+        flex: 1,
+        overflowY: 'auto' as const,
+        overflowX: 'hidden' as const,
+      }}>
+        {renderContent()}
+      </div>
 
-      {/* Tab Bar */}
+      {/* Fixed Footer - PlaybackBar (only show when track is selected) */}
+      {currentTrack && (
+        <PlaybackBar
+          track={{
+            id: currentTrack.id,
+            title: currentTrack.title,
+            file_url: currentTrack.file_url,
+            duration_seconds: currentTrack.duration_seconds
+          }}
+          audioRef={audioRef}
+          isPlaying={isPlaying}
+          isLoading={isLoading}
+          error={audioError}
+          onPlayPause={() => handlePlayPause()}
+        />
+      )}
+
       <TabBar
         activeTab={activeTab}
         onTabChange={setActiveTab}

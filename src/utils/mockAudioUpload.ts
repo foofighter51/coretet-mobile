@@ -2,7 +2,7 @@ import AudioProcessor, { AudioProcessingOptions, ProcessedAudio } from './audioP
 import { v4 as uuidv4 } from 'uuid';
 
 export interface MockUploadResult {
-  versionId: string;
+  trackId: string;
   fileUrl: string;
   metadata: any;
   compressionSavings: string;
@@ -71,7 +71,7 @@ export class MockAudioUploadService {
       );
 
       const mockResult: MockUploadResult = {
-        versionId: uuidv4(),
+        trackId: uuidv4(),
         fileUrl: `mock://processed-audio/${file.name}`,
         metadata: processedAudio.metadata,
         compressionSavings

@@ -1,9 +1,11 @@
 import React, { useState, useCallback, useRef } from 'react';
-import { Upload, Music, AlertCircle, CheckCircle, X } from 'lucide-react';
+import { Upload, Music, AlertCircle, CheckCircle, X, Cloud } from 'lucide-react';
 import { designTokens } from '../../design/designTokens';
 import AudioUploadService, { UploadProgress, UploadOptions, UploadResult } from '../../utils/audioUploadService';
 import MockAudioUploadService, { MockUploadProgress, MockUploadResult } from '../../utils/mockAudioUpload';
 import AudioProcessor from '../../utils/audioProcessor';
+import NativeFilePicker, { PickedFile } from '../../utils/nativeFilePicker';
+import { Capacitor } from '@capacitor/core';
 
 interface AudioUploaderProps {
   onUploadComplete?: (results: UploadResult[]) => void;
@@ -48,7 +50,7 @@ export const AudioUploader: React.FC<AudioUploaderProps> = ({
     ? new AudioUploadService(handleProgress, currentUser)
     : new MockAudioUploadService(handleProgress);
 
-  const handleFileSelection = useCallback(async (files: FileList | null) => {
+  const handleFileSelection = useCallback(async (files: FileList | PickedFile[] | null) => {
     if (!files || files.length === 0) return;
 
     setUploading(true);
@@ -56,11 +58,31 @@ export const AudioUploader: React.FC<AudioUploaderProps> = ({
     setUploadResults([]);
 
     try {
-      const fileArray = Array.from(files);
+      // Convert PickedFile[] or FileList to File[]
+      const fileArray: File[] = [];
+
+      if (files instanceof FileList) {
+        for (let i = 0; i < files.length; i++) {
+          fileArray.push(files[i]);
+        }
+      } else {
+        // PickedFile[] - convert Blob to File
+        for (const pickedFile of files) {
+          const file = new File([pickedFile.blob], pickedFile.name, {
+            type: pickedFile.type,
+          });
+          // Preserve webkitRelativePath if available
+          if (pickedFile.webkitRelativePath) {
+            (file as any).webkitRelativePath = pickedFile.webkitRelativePath;
+          }
+          fileArray.push(file);
+        }
+      }
+
       const results: UploadResult[] = [];
 
       if (multiple && fileArray.length > 1) {
-        // Upload multiple files
+        // Upload multiple files with folder paths
         const multipleResults = await uploadService.uploadMultipleAudios(fileArray, options);
         results.push(...multipleResults);
       } else {
@@ -107,11 +129,32 @@ export const AudioUploader: React.FC<AudioUploaderProps> = ({
     setIsDragOver(false);
   }, []);
 
-  const handleClick = useCallback(() => {
-    if (!disabled && !uploading) {
+  const handleClick = useCallback(async () => {
+    if (disabled || uploading) return;
+
+    // Use native picker on mobile platforms (supports cloud storage)
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const pickedFiles = await NativeFilePicker.pickAudioFiles({ multiple });
+        if (pickedFiles.length > 0) {
+          await handleFileSelection(pickedFiles);
+        }
+      } catch (error) {
+        console.error('Native file picker error:', error);
+        const errorMsg = error instanceof Error ? error.message : String(error);
+
+        // Show helpful error message
+        if (errorMsg.includes('canceled')) {
+          setError('File picker canceled. Note: Full cloud storage access (Google Drive, Dropbox) requires testing on a physical iOS device. The iOS simulator has limited file picker support.');
+        } else {
+          setError(`File picker error: ${errorMsg}. Try testing on a physical device for full cloud storage access.`);
+        }
+      }
+    } else {
+      // Use web file input on web platform
       fileInputRef.current?.click();
     }
-  }, [disabled, uploading]);
+  }, [disabled, uploading, multiple, handleFileSelection]);
 
   const clearResults = useCallback(() => {
     setUploadResults([]);
@@ -355,26 +398,35 @@ export const AudioUploader: React.FC<AudioUploaderProps> = ({
                   color: designTokens.colors.neutral.gray,
                   margin: '0 0 8px 0'
                 }}>
-                  {multiple
-                    ? 'Drag & drop audio files here, or click to browse'
-                    : 'Drag & drop an audio file here, or click to browse'
+                  {Capacitor.isNativePlatform()
+                    ? (multiple ? 'Tap to choose audio files' : 'Tap to choose an audio file')
+                    : (multiple
+                        ? 'Drag & drop audio files here, or click to browse'
+                        : 'Drag & drop an audio file here, or click to browse')
                   }
                 </p>
                 <p style={{
                   fontSize: designTokens.typography.fontSizes.caption,
                   color: designTokens.colors.neutral.gray,
-                  margin: '0'
+                  margin: '0 0 8px 0'
                 }}>
                   Supports MP3, WAV, AAC, M4A, FLAC, OGG • Max 100MB per file
                 </p>
-                <p style={{
-                  fontSize: designTokens.typography.fontSizes.caption,
-                  color: designTokens.colors.primary.blue,
-                  margin: '8px 0 0 0',
-                  fontWeight: designTokens.typography.fontWeights.medium
-                }}>
-                  ✨ Automatic volume normalization & compression included
-                </p>
+                {Capacitor.isNativePlatform() && (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    fontSize: designTokens.typography.fontSizes.caption,
+                    color: designTokens.colors.primary.blue,
+                    margin: '0',
+                    fontWeight: designTokens.typography.fontWeights.medium
+                  }}>
+                    <Cloud size={14} />
+                    <span>Access files from Google Drive, Dropbox, iCloud & more</span>
+                  </div>
+                )}
                 {!isSupabaseConfigured && (
                   <p style={{
                     fontSize: designTokens.typography.fontSizes.caption,

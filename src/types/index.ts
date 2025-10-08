@@ -36,7 +36,7 @@ export interface Playlist {
   updatedAt: string;
 }
 
-export type TabId = 'bands' | 'tracks' | 'add' | 'playlists' | 'profile';
+export type TabId = 'playlists' | 'tracks' | 'profile';
 
 export type ScreenId = 'welcome' | 'phone' | 'verify' | 'onboarding' | 'bandAction' | 'main';
 

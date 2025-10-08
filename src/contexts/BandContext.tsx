@@ -91,7 +91,7 @@ export function BandProvider({ children, currentUser }: BandProviderProps) {
 
       console.log('Creating band with data:', ensembleData);
 
-      const { data, error: supabaseError } = await db.ensembles.create(ensembleData);
+      const { data, error: supabaseError } = await db.bands.create(ensembleData);
 
       if (supabaseError) {
         console.error('Band creation error:', supabaseError);
@@ -151,7 +151,7 @@ export function BandProvider({ children, currentUser }: BandProviderProps) {
     try {
       console.log('Joining band with invite code:', inviteCode);
 
-      const { data, error: supabaseError } = await db.ensembles.joinWithCode(
+      const { data, error: supabaseError } = await db.bands.joinWithCode(
         inviteCode.trim().toUpperCase(),
         currentUser.phoneNumber
       );
@@ -200,11 +200,11 @@ export function BandProvider({ children, currentUser }: BandProviderProps) {
 
       // Query Supabase with the deterministic UUID (bypass Supabase auth)
       const { data, error: supabaseError } = await supabase
-        .from('ensemble_members')
+        .from('band_members')
         .select(`
-          ensembles (
+          bands (
             *,
-            ensemble_members (
+            band_members (
               id
             )
           )
@@ -219,9 +219,9 @@ export function BandProvider({ children, currentUser }: BandProviderProps) {
       }
 
       if (data) {
-        // Extract ensembles from the nested structure
+        // Extract bands from the nested structure
         const userBands = data
-          .map(item => item.ensembles)
+          .map(item => item.bands)
           .filter(Boolean) as Band[];
 
         console.log('✅ Fetched user bands:', userBands);

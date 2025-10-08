@@ -34,6 +34,7 @@ export class AudioPlayerManager {
   private currentTrack: AudioTrack | null = null;
   private progressInterval: NodeJS.Timeout | null = null;
   private events: AudioPlayerEvents = {};
+  private soundId: number | null = null; // Track the specific sound instance
   private playbackState: PlaybackState = {
     isPlaying: false,
     currentTime: 0,
@@ -117,11 +118,17 @@ export class AudioPlayerManager {
   }
 
   /**
-   * Play the current track
+   * Play the current track (or resume if paused)
    */
   play(): void {
     if (this.currentSound && !this.playbackState.isLoading) {
-      this.currentSound.play();
+      // If we have a soundId, resume that specific instance
+      // Otherwise, create a new one
+      if (this.soundId !== null) {
+        this.currentSound.play(this.soundId);
+      } else {
+        this.soundId = this.currentSound.play() as number;
+      }
     }
   }
 
@@ -129,8 +136,8 @@ export class AudioPlayerManager {
    * Pause the current track
    */
   pause(): void {
-    if (this.currentSound) {
-      this.currentSound.pause();
+    if (this.currentSound && this.soundId !== null) {
+      this.currentSound.pause(this.soundId);
     }
   }
 
@@ -139,9 +146,12 @@ export class AudioPlayerManager {
    */
   stop(): void {
     if (this.currentSound) {
-      this.currentSound.stop();
+      if (this.soundId !== null) {
+        this.currentSound.stop(this.soundId);
+      }
       this.currentSound.unload();
       this.currentSound = null;
+      this.soundId = null;
     }
 
     if (this.progressInterval) {
@@ -162,7 +172,11 @@ export class AudioPlayerManager {
   seek(time: number): void {
     if (this.currentSound && this.playbackState.duration > 0) {
       const clampedTime = Math.max(0, Math.min(time, this.playbackState.duration));
-      this.currentSound.seek(clampedTime);
+      if (this.soundId !== null) {
+        this.currentSound.seek(clampedTime, this.soundId);
+      } else {
+        this.currentSound.seek(clampedTime);
+      }
       this.updatePlaybackState({ currentTime: clampedTime });
     }
   }
@@ -199,8 +213,8 @@ export class AudioPlayerManager {
    * Skip forward by seconds
    */
   skipForward(seconds: number = 10): void {
-    if (this.currentSound) {
-      const currentTime = this.currentSound.seek() as number;
+    if (this.currentSound && this.soundId !== null) {
+      const currentTime = this.currentSound.seek(this.soundId) as number;
       this.seek(currentTime + seconds);
     }
   }
@@ -209,8 +223,8 @@ export class AudioPlayerManager {
    * Skip backward by seconds
    */
   skipBackward(seconds: number = 10): void {
-    if (this.currentSound) {
-      const currentTime = this.currentSound.seek() as number;
+    if (this.currentSound && this.soundId !== null) {
+      const currentTime = this.currentSound.seek(this.soundId) as number;
       this.seek(currentTime - seconds);
     }
   }
@@ -291,8 +305,8 @@ export class AudioPlayerManager {
     if (this.progressInterval) return;
 
     this.progressInterval = setInterval(() => {
-      if (this.currentSound && this.playbackState.isPlaying) {
-        const currentTime = this.currentSound.seek() as number;
+      if (this.currentSound && this.playbackState.isPlaying && this.soundId !== null) {
+        const currentTime = this.currentSound.seek(this.soundId) as number;
         const duration = this.playbackState.duration;
 
         this.updatePlaybackState({ currentTime });

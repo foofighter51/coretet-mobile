@@ -11,15 +11,11 @@ export interface UploadProgress {
 }
 
 export interface UploadOptions extends AudioProcessingOptions {
-  ensembleId?: string;
-  songId?: string;
-  versionType?: 'voice_memo' | 'rough_demo' | 'rehearsal' | 'working_mix' | 'final' | 'live' | 'other';
-  recordingDate?: Date;
   title?: string;
 }
 
 export interface UploadResult {
-  versionId: string;
+  trackId: string;
   fileUrl: string;
   metadata: any;
   compressionSavings: string;
@@ -49,23 +45,38 @@ export class AudioUploadService {
         throw new Error(validation.error);
       }
 
-      // Step 2: Process audio (compression + normalization)
-      this.updateProgress('processing', 20, 'Processing audio...');
+      // Step 2: Skip audio processing for MVP - just use original file
+      this.updateProgress('processing', 20, 'Preparing audio...');
 
-      const processedAudio = await this.audioProcessor.processAudioFile(file, {
-        targetVolume: 0.7, // Prevent audio whiplash with consistent 70% volume
-        maxBitrate: 192, // Good quality, manageable file size
-        normalizeAudio: true,
-        ...options
-      });
+      // Get basic metadata without processing
+      const arrayBuffer = await file.arrayBuffer();
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer.slice(0));
 
-      this.updateProgress('processing', 60, 'Audio processing complete');
+      const processedAudio = {
+        audioBuffer: arrayBuffer,
+        metadata: {
+          duration: audioBuffer.duration,
+          sampleRate: audioBuffer.sampleRate,
+          channels: audioBuffer.numberOfChannels,
+          bitrate: 0,
+          fileSize: file.size,
+          rmsLevel: 0,
+          peakLevel: 0,
+          format: file.type.split('/')[1] || 'audio'
+        },
+        originalSize: file.size,
+        compressedSize: file.size,
+        compressionRatio: 0
+      };
 
-      // Step 3: Generate unique filename
-      const fileExtension = 'mp3'; // Always MP3 after processing
+      this.updateProgress('processing', 60, 'Preparation complete');
+
+      // Step 3: Generate unique filename - keep original extension
+      const originalExtension = file.name.split('.').pop() || 'mp3';
       const timestamp = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
       const uniqueId = uuidv4().split('-')[0]; // Short unique ID
-      const filename = `${timestamp}_${options.title || 'untitled'}_${uniqueId}.${fileExtension}`
+      const filename = `${timestamp}_${options.title || 'untitled'}_${uniqueId}.${originalExtension}`
         .replace(/[^a-zA-Z0-9._-]/g, '_'); // Sanitize filename
 
       // Step 4: Upload to Supabase Storage
@@ -73,7 +84,7 @@ export class AudioUploadService {
 
       const filePath = `audio/${filename}`;
       const { data: uploadData, error: uploadError } = await storage.uploadAudio(
-        new File([processedAudio.audioBuffer], filename, { type: 'audio/mpeg' }),
+        new File([processedAudio.audioBuffer], filename, { type: file.type }),
         filePath
       );
 
@@ -89,30 +100,35 @@ export class AudioUploadService {
       // Step 6: Save metadata to database
       this.updateProgress('saving', 90, 'Saving metadata...');
 
-      // Use Clerk user ID converted to Supabase UUID for uploaded_by
+      // Use Clerk user ID directly (no UUID conversion needed)
       if (!this.currentUser) {
         throw new Error('User authentication required for upload');
       }
 
-      const supabaseUserId = ClerkSupabaseSync.generateUUIDFromClerkId(this.currentUser.id);
+      // Extract folder path from webkitRelativePath if available
+      const webkitFile = file as File & { webkitRelativePath?: string };
+      let folderPath: string | undefined;
 
-      const versionData = {
+      if (webkitFile.webkitRelativePath) {
+        // webkitRelativePath looks like: "FolderName/SubFolder/file.mp3"
+        const pathParts = webkitFile.webkitRelativePath.split('/');
+        // Remove the filename to get just the folder path
+        if (pathParts.length > 1) {
+          pathParts.pop(); // Remove filename
+          folderPath = pathParts.join('/');
+        }
+      }
+
+      const trackData = {
         title: options.title || file.name.replace(/\.[^/.]+$/, ''), // Remove extension
-        file_url: signedUrl,
+        file_url: signedUrl || filePath,
         file_size: processedAudio.compressedSize,
         duration_seconds: Math.round(processedAudio.metadata.duration),
-        version_type: options.versionType || 'other',
-        song_id: options.songId || null,
-        recording_date: options.recordingDate?.toISOString().split('T')[0] || null,
-        uploaded_by: supabaseUserId,
+        created_by: this.currentUser.id, // Use Clerk user ID directly (TEXT)
+        folder_path: folderPath,
       };
 
-      // Insert directly to bypass Supabase auth
-      const { data: version, error: dbError } = await supabase
-        .from('versions')
-        .insert(versionData)
-        .select()
-        .single();
+      const { data: track, error: dbError } = await db.tracks.create(trackData);
 
       if (dbError) {
         // Cleanup uploaded file if database save fails
@@ -123,15 +139,11 @@ export class AudioUploadService {
       // Step 7: Complete
       this.updateProgress('complete', 100, 'Upload successful!');
 
-      const compressionSavings = AudioProcessor.formatFileSize(
-        processedAudio.originalSize - processedAudio.compressedSize
-      );
-
       return {
-        versionId: version.id,
+        trackId: track.id,
         fileUrl: signedUrl || filePath, // Use signed URL or fallback to path
         metadata: processedAudio.metadata,
-        compressionSavings
+        compressionSavings: '0 B' // No compression in MVP
       };
 
     } catch (error) {
@@ -149,7 +161,10 @@ export class AudioUploadService {
     options: UploadOptions = {}
   ): Promise<UploadResult[]> {
     const results: UploadResult[] = [];
+    const errors: { file: string; error: string }[] = [];
     const total = files.length;
+
+    console.log(`📤 Starting batch upload of ${total} files`);
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
@@ -158,8 +173,10 @@ export class AudioUploadService {
         this.updateProgress(
           'processing',
           Math.round((i / total) * 100),
-          `Processing ${i + 1} of ${total}: ${file.name}`
+          `Uploading ${i + 1} of ${total}: ${file.name.substring(0, 30)}${file.name.length > 30 ? '...' : ''}`
         );
+
+        console.log(`📤 Uploading file ${i + 1}/${total}: ${file.name}`);
 
         const result = await this.uploadAudio(file, {
           ...options,
@@ -167,14 +184,37 @@ export class AudioUploadService {
         });
 
         results.push(result);
+        console.log(`✅ Successfully uploaded ${file.name}`);
 
       } catch (error) {
-        console.error(`Failed to upload ${file.name}:`, error);
-        // Continue with other files even if one fails
+        const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+        console.error(`❌ Failed to upload ${file.name}:`, errorMsg);
+        errors.push({ file: file.name, error: errorMsg });
+
+        // Update progress with error info
+        this.updateProgress(
+          'processing',
+          Math.round((i / total) * 100),
+          `Failed to upload ${file.name}: ${errorMsg}. Continuing...`
+        );
+
+        // Small delay to show error message
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
     }
 
-    this.updateProgress('complete', 100, `Uploaded ${results.length} of ${total} files`);
+    // Final summary
+    const successCount = results.length;
+    const failCount = errors.length;
+    let message = `Upload complete: ${successCount}/${total} successful`;
+
+    if (failCount > 0) {
+      message += `, ${failCount} failed`;
+      console.warn('❌ Failed uploads:', errors);
+    }
+
+    this.updateProgress(failCount > 0 ? 'processing' : 'complete', 100, message);
+
     return results;
   }
 
@@ -197,17 +237,17 @@ export class AudioUploadService {
   /**
    * Delete audio file and associated data
    */
-  static async deleteAudio(versionId: string): Promise<void> {
+  static async deleteAudio(trackId: string): Promise<void> {
     try {
-      // Get version data to find file path
-      const { data: version, error: fetchError } = await db.versions.getById(versionId);
+      // Get track data to find file path
+      const { data: track, error: fetchError } = await db.tracks.getById(trackId);
 
-      if (fetchError || !version) {
-        throw new Error('Version not found');
+      if (fetchError || !track) {
+        throw new Error('Track not found');
       }
 
       // Extract file path from URL
-      const url = new URL(version.file_url);
+      const url = new URL(track.file_url);
       const filePath = url.pathname.split('/').pop(); // Get filename from path
 
       if (filePath) {
@@ -216,13 +256,10 @@ export class AudioUploadService {
       }
 
       // Delete from database (this should cascade to related records)
-      const { error: deleteError } = await supabase
-        .from('versions')
-        .delete()
-        .eq('id', versionId);
+      const { error: deleteError } = await db.tracks.delete(trackId);
 
       if (deleteError) {
-        throw new Error(`Failed to delete version: ${deleteError.message}`);
+        throw new Error(`Failed to delete track: ${deleteError.message}`);
       }
 
     } catch (error) {
@@ -232,9 +269,9 @@ export class AudioUploadService {
   }
 
   /**
-   * Get upload statistics for a user or ensemble
+   * Get upload statistics for a user
    */
-  static async getUploadStats(ensembleId?: string): Promise<{
+  static async getUploadStats(userId?: string): Promise<{
     totalFiles: number;
     totalSize: string;
     totalDuration: string;
@@ -242,22 +279,22 @@ export class AudioUploadService {
   }> {
     try {
       let query = supabase
-        .from('versions')
+        .from('tracks')
         .select('file_size, duration_seconds');
 
-      if (ensembleId) {
-        query = query.eq('songs.ensemble_id', ensembleId);
+      if (userId) {
+        query = query.eq('created_by', userId);
       }
 
-      const { data: versions, error } = await query;
+      const { data: tracks, error } = await query;
 
       if (error) {
         throw new Error(`Failed to get stats: ${error.message}`);
       }
 
-      const totalFiles = versions?.length || 0;
-      const totalSize = versions?.reduce((sum, v) => sum + (v.file_size || 0), 0) || 0;
-      const totalDuration = versions?.reduce((sum, v) => sum + (v.duration_seconds || 0), 0) || 0;
+      const totalFiles = tracks?.length || 0;
+      const totalSize = tracks?.reduce((sum, t) => sum + (t.file_size || 0), 0) || 0;
+      const totalDuration = tracks?.reduce((sum, t) => sum + (t.duration_seconds || 0), 0) || 0;
 
       // Estimate compression savings (assuming 30% average compression)
       const estimatedOriginalSize = totalSize / 0.7;

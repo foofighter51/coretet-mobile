@@ -21,9 +21,9 @@ export const supabase = (() => {
   if (!_supabaseClient) {
     _supabaseClient = createClient<Database>(supabaseUrl, supabaseAnonKey, {
       auth: {
-        autoRefreshToken: false, // We'll handle token refresh via Clerk
-        persistSession: false, // Clerk manages the session
-        detectSessionInUrl: false,
+        autoRefreshToken: true, // Auto-refresh tokens for persistent sessions
+        persistSession: true, // Persist sessions in localStorage
+        detectSessionInUrl: true, // Detect session from email confirmation URLs
       },
     });
   }
@@ -156,185 +156,175 @@ export const db = {
     },
   },
 
-  // Version operations
-  versions: {
-    async create(version: {
+  // Track operations
+  tracks: {
+    async create(track: {
       title: string;
       file_url: string;
       file_size?: number;
       duration_seconds?: number;
-      version_type?: string;
-      song_id?: string;
-      recording_date?: string;
+      created_by: string;
+      folder_path?: string;
     }) {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-
       const { data, error } = await supabase
-        .from('versions')
-        .insert({
-          ...version,
-          uploaded_by: user.id,
-        })
+        .from('tracks')
+        .insert(track)
         .select()
         .single();
 
       return { data, error };
     },
 
-    async getByEnsemble(ensembleId: string) {
+    async getByUser(userId: string) {
       const { data, error } = await supabase
-        .from('versions')
-        .select(`
-          *,
-          songs (
-            title
-          ),
-          profiles!versions_uploaded_by_fkey (
-            name
-          )
-        `)
-        .eq('songs.ensemble_id', ensembleId);
+        .from('tracks')
+        .select('*')
+        .eq('created_by', userId)
+        .order('created_at', { ascending: false });
 
       return { data, error };
     },
 
     async getById(id: string) {
       const { data, error } = await supabase
-        .from('versions')
-        .select(`
-          *,
-          songs (
-            title
-          ),
-          profiles!versions_uploaded_by_fkey (
-            name
-          )
-        `)
+        .from('tracks')
+        .select('*')
         .eq('id', id)
         .single();
 
       return { data, error };
     },
+
+    async delete(trackId: string) {
+      const { data, error } = await supabase
+        .from('tracks')
+        .delete()
+        .eq('id', trackId);
+
+      return { data, error };
+    },
   },
 
-  // Ensemble operations
-  ensembles: {
-    async create(ensemble: {
-      name: string;
+  // Playlist operations
+  playlists: {
+    async create(playlist: {
+      title: string;
       description?: string;
-      authorized_phone_1?: string;
-      authorized_phone_2?: string;
-      authorized_phone_3?: string;
-      authorized_phone_4?: string;
+      created_by: string;
+      is_public?: boolean;
     }) {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-
-      // Generate cryptographically secure 8-character invite code
-      const generateInviteCode = () => {
-        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Exclude confusing chars
-        const array = new Uint8Array(8);
-        crypto.getRandomValues(array);
-        let result = '';
-        for (let i = 0; i < 8; i++) {
-          result += chars[array[i] % chars.length];
-        }
-        return result;
-      };
-
-      const invite_code = generateInviteCode();
-
-      // Normalize phone numbers before storing
-      const normalizedEnsemble = {
-        ...ensemble,
-        created_by: user.id,
-        invite_code,
-        authorized_phone_1: ensemble.authorized_phone_1 ? normalizePhoneNumber(ensemble.authorized_phone_1) : null,
-        authorized_phone_2: ensemble.authorized_phone_2 ? normalizePhoneNumber(ensemble.authorized_phone_2) : null,
-        authorized_phone_3: ensemble.authorized_phone_3 ? normalizePhoneNumber(ensemble.authorized_phone_3) : null,
-        authorized_phone_4: ensemble.authorized_phone_4 ? normalizePhoneNumber(ensemble.authorized_phone_4) : null,
-      };
-
       const { data, error } = await supabase
-        .from('ensembles')
-        .insert(normalizedEnsemble)
+        .from('playlists')
+        .insert({
+          ...playlist,
+          is_public: playlist.is_public ?? true, // Default to public for MVP
+        })
         .select()
         .single();
 
       return { data, error };
     },
 
-    async getByUser() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-
+    async getByUser(userId: string) {
       const { data, error } = await supabase
-        .from('ensemble_members')
-        .select(`
-          ensembles (
-            *,
-            ensemble_members (
-              id
-            )
-          )
-        `)
-        .eq('user_id', user.id);
+        .from('playlists')
+        .select('*')
+        .eq('created_by', userId)
+        .order('created_at', { ascending: false });
 
       return { data, error };
     },
 
-    async joinWithCode(inviteCode: string, userPhone: string) {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-
-      // First find the ensemble with authorization check
-      const { data: ensemble, error: ensembleError } = await supabase
-        .from('ensembles')
-        .select('id, name, authorized_phone_1, authorized_phone_2, authorized_phone_3, authorized_phone_4')
-        .eq('invite_code', inviteCode.toUpperCase())
-        .single();
-
-      if (ensembleError || !ensemble) {
-        return { data: null, error: ensembleError || new Error('Invalid invite code') };
-      }
-
-      // Normalize user phone and compare with stored normalized phone numbers
-      const normalizedUserPhone = normalizePhoneNumber(userPhone);
-      const isAuthorized = ensemble.authorized_phone_1 === normalizedUserPhone ||
-                          ensemble.authorized_phone_2 === normalizedUserPhone ||
-                          ensemble.authorized_phone_3 === normalizedUserPhone ||
-                          ensemble.authorized_phone_4 === normalizedUserPhone;
-
-      if (!isAuthorized) {
-        return {
-          data: null,
-          error: new Error(`Not authorized to join "${ensemble.name}". Contact the band creator.`)
-        };
-      }
-
-      // Check if already a member
-      const { data: existingMember } = await supabase
-        .from('ensemble_members')
-        .select('id')
-        .eq('ensemble_id', ensemble.id)
-        .eq('user_id', user.id)
-        .single();
-
-      if (existingMember) {
-        return {
-          data: null,
-          error: new Error(`You're already a member of "${ensemble.name}"`)
-        };
-      }
-
-      // Join the ensemble
+    async getByShareCode(shareCode: string) {
       const { data, error } = await supabase
-        .from('ensemble_members')
-        .insert({
-          ensemble_id: ensemble.id,
-          user_id: user.id,
-        })
+        .from('playlists')
+        .select(`
+          *,
+          playlist_items (
+            *,
+            tracks (
+              *
+            )
+          )
+        `)
+        .eq('share_code', shareCode)
+        .eq('is_public', true)
+        .single();
+
+      return { data, error };
+    },
+
+    async delete(playlistId: string) {
+      const { data, error } = await supabase
+        .from('playlists')
+        .delete()
+        .eq('id', playlistId);
+
+      return { data, error };
+    },
+
+    async update(playlistId: string, updates: {
+      title?: string;
+      description?: string;
+      is_public?: boolean;
+    }) {
+      const { data, error } = await supabase
+        .from('playlists')
+        .update(updates)
+        .eq('id', playlistId)
+        .select()
+        .single();
+
+      return { data, error };
+    },
+  },
+
+  // Playlist item operations
+  playlistItems: {
+    async add(item: {
+      playlist_id: string;
+      track_id: string;
+      added_by: string;
+      position: number;
+    }) {
+      const { data, error } = await supabase
+        .from('playlist_items')
+        .insert(item)
+        .select()
+        .single();
+
+      return { data, error };
+    },
+
+    async getByPlaylist(playlistId: string) {
+      const { data, error } = await supabase
+        .from('playlist_items')
+        .select(`
+          *,
+          tracks (
+            *
+          )
+        `)
+        .eq('playlist_id', playlistId)
+        .order('position', { ascending: true });
+
+      return { data, error };
+    },
+
+    async remove(itemId: string) {
+      const { data, error } = await supabase
+        .from('playlist_items')
+        .delete()
+        .eq('id', itemId);
+
+      return { data, error };
+    },
+
+    async updatePosition(itemId: string, newPosition: number) {
+      const { data, error } = await supabase
+        .from('playlist_items')
+        .update({ position: newPosition })
+        .eq('id', itemId)
         .select()
         .single();
 
@@ -344,17 +334,16 @@ export const db = {
 
   // Rating operations
   ratings: {
-    async upsert(versionId: string, rating: 'listened' | 'like' | 'love', playlistId?: string) {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-
+    async upsert(trackId: string, rating: 'listened' | 'liked' | 'loved', userId: string) {
       const { data, error } = await supabase
-        .from('ratings')
+        .from('track_ratings')
         .upsert({
-          version_id: versionId,
-          user_id: user.id,
-          playlist_id: playlistId,
-          rating,
+          track_id: trackId,
+          user_id: userId,
+          rating: rating,
+          updated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'track_id,user_id'
         })
         .select()
         .single();
@@ -362,11 +351,30 @@ export const db = {
       return { data, error };
     },
 
-    async getByVersion(versionId: string) {
+    async getByTrack(trackId: string) {
       const { data, error } = await supabase
-        .from('ratings')
+        .from('track_ratings')
         .select('*')
-        .eq('version_id', versionId);
+        .eq('track_id', trackId);
+
+      return { data, error };
+    },
+
+    async getByUser(userId: string) {
+      const { data, error } = await supabase
+        .from('track_ratings')
+        .select('*')
+        .eq('user_id', userId);
+
+      return { data, error };
+    },
+
+    async delete(trackId: string, userId: string) {
+      const { data, error } = await supabase
+        .from('track_ratings')
+        .delete()
+        .eq('track_id', trackId)
+        .eq('user_id', userId);
 
       return { data, error };
     },
@@ -375,20 +383,14 @@ export const db = {
   // Comment operations
   comments: {
     async create(comment: {
-      version_id: string;
+      track_id: string;
+      user_id: string;
       content: string;
       timestamp_seconds?: number;
-      playlist_id?: string;
     }) {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-
       const { data, error } = await supabase
         .from('comments')
-        .insert({
-          ...comment,
-          user_id: user.id,
-        })
+        .insert(comment)
         .select(`
           *,
           profiles (
@@ -400,8 +402,8 @@ export const db = {
       return { data, error };
     },
 
-    async getByVersion(versionId: string, playlistId?: string) {
-      let query = supabase
+    async getByTrack(trackId: string) {
+      const { data, error } = await supabase
         .from('comments')
         .select(`
           *,
@@ -409,15 +411,236 @@ export const db = {
             name
           )
         `)
-        .eq('version_id', versionId)
+        .eq('track_id', trackId)
         .order('created_at', { ascending: false });
 
-      if (playlistId) {
-        query = query.eq('playlist_id', playlistId);
-      }
-
-      const { data, error } = await query;
       return { data, error };
+    },
+  },
+
+  // Playlist follower operations
+  playlistFollowers: {
+    async follow(playlistId: string, userId: string) {
+      const { data, error } = await supabase
+        .from('playlist_followers')
+        .insert({
+          playlist_id: playlistId,
+          user_id: userId,
+        })
+        .select()
+        .single();
+
+      return { data, error };
+    },
+
+    async unfollow(playlistId: string, userId: string) {
+      const { error } = await supabase
+        .from('playlist_followers')
+        .delete()
+        .eq('playlist_id', playlistId)
+        .eq('user_id', userId);
+
+      return { error };
+    },
+
+    async isFollowing(playlistId: string, userId: string) {
+      const { data, error } = await supabase
+        .from('playlist_followers')
+        .select('id')
+        .eq('playlist_id', playlistId)
+        .eq('user_id', userId)
+        .single();
+
+      return { isFollowing: !!data && !error, error };
+    },
+
+    async getFollowedPlaylists(userId: string) {
+      const { data, error } = await supabase
+        .from('playlist_followers')
+        .select(`
+          *,
+          playlists (
+            *
+          )
+        `)
+        .eq('user_id', userId)
+        .order('followed_at', { ascending: false });
+
+      return { data, error };
+    },
+  },
+
+  // Feedback operations
+  feedback: {
+    async create(feedback: {
+      user_id: string;
+      category: 'bug' | 'feature' | 'question' | 'other';
+      title: string;
+      description: string;
+      image_url?: string;
+    }) {
+      const { data, error } = await supabase
+        .from('feedback')
+        .insert(feedback)
+        .select(`
+          *,
+          profiles (
+            name
+          )
+        `)
+        .single();
+
+      return { data, error };
+    },
+
+    async getAll() {
+      const { data, error } = await supabase
+        .from('feedback')
+        .select(`
+          *,
+          profiles (
+            name
+          ),
+          feedback_votes (count),
+          feedback_comments (count)
+        `)
+        .order('created_at', { ascending: false });
+
+      return { data, error };
+    },
+
+    async getById(feedbackId: string) {
+      const { data, error } = await supabase
+        .from('feedback')
+        .select(`
+          *,
+          profiles (
+            name
+          ),
+          feedback_votes (
+            user_id
+          ),
+          feedback_comments (
+            *,
+            profiles (
+              name
+            )
+          )
+        `)
+        .eq('id', feedbackId)
+        .single();
+
+      return { data, error };
+    },
+
+    async updateStatus(feedbackId: string, status: 'open' | 'under_review' | 'in_progress' | 'completed' | 'wont_fix') {
+      const { data, error } = await supabase
+        .from('feedback')
+        .update({ status, updated_at: new Date().toISOString() })
+        .eq('id', feedbackId)
+        .select()
+        .single();
+
+      return { data, error };
+    },
+
+    async delete(feedbackId: string) {
+      const { error } = await supabase
+        .from('feedback')
+        .delete()
+        .eq('id', feedbackId);
+
+      return { error };
+    },
+  },
+
+  feedbackVotes: {
+    async vote(feedbackId: string, userId: string) {
+      const { data, error } = await supabase
+        .from('feedback_votes')
+        .insert({
+          feedback_id: feedbackId,
+          user_id: userId,
+        })
+        .select()
+        .single();
+
+      return { data, error };
+    },
+
+    async unvote(feedbackId: string, userId: string) {
+      const { error } = await supabase
+        .from('feedback_votes')
+        .delete()
+        .eq('feedback_id', feedbackId)
+        .eq('user_id', userId);
+
+      return { error };
+    },
+
+    async hasVoted(feedbackId: string, userId: string) {
+      const { data, error } = await supabase
+        .from('feedback_votes')
+        .select('id')
+        .eq('feedback_id', feedbackId)
+        .eq('user_id', userId)
+        .single();
+
+      return { hasVoted: !!data && !error, error };
+    },
+
+    async getVoteCount(feedbackId: string) {
+      const { count, error } = await supabase
+        .from('feedback_votes')
+        .select('*', { count: 'exact', head: true })
+        .eq('feedback_id', feedbackId);
+
+      return { count: count || 0, error };
+    },
+  },
+
+  feedbackComments: {
+    async create(comment: {
+      feedback_id: string;
+      user_id: string;
+      content: string;
+    }) {
+      const { data, error } = await supabase
+        .from('feedback_comments')
+        .insert(comment)
+        .select(`
+          *,
+          profiles (
+            name
+          )
+        `)
+        .single();
+
+      return { data, error };
+    },
+
+    async getByFeedback(feedbackId: string) {
+      const { data, error } = await supabase
+        .from('feedback_comments')
+        .select(`
+          *,
+          profiles (
+            name
+          )
+        `)
+        .eq('feedback_id', feedbackId)
+        .order('created_at', { ascending: true });
+
+      return { data, error };
+    },
+
+    async delete(commentId: string) {
+      const { error } = await supabase
+        .from('feedback_comments')
+        .delete()
+        .eq('id', commentId);
+
+      return { error };
     },
   },
 };
