@@ -14,6 +14,8 @@ interface Playlist {
 
 interface PlaylistContextType {
   playlists: Playlist[];
+  createdPlaylists: Playlist[];
+  followedPlaylists: Playlist[];
   currentPlaylist: Playlist | null;
   isLoading: boolean;
   error: string | null;
@@ -28,6 +30,8 @@ const PlaylistContext = createContext<PlaylistContextType | undefined>(undefined
 
 export const PlaylistProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  const [createdPlaylists, setCreatedPlaylists] = useState<Playlist[]>([]);
+  const [followedPlaylists, setFollowedPlaylists] = useState<Playlist[]>([]);
   const [currentPlaylist, setCurrentPlaylist] = useState<Playlist | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -80,14 +84,18 @@ export const PlaylistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         // Don't fail completely, just use created playlists
       }
 
-      // Extract playlist objects from followed data and combine with created
-      const followedPlaylists = followedData?.map(item => item.playlists).filter(Boolean) || [];
+      // Extract playlist objects from followed data
+      const followedPlaylistsData = followedData?.map(item => item.playlists).filter(Boolean) || [];
 
-      // Combine and deduplicate (in case user follows their own playlist)
+      // Store created and followed separately
+      setCreatedPlaylists(createdPlaylists || []);
+      setFollowedPlaylists(followedPlaylistsData);
+
+      // Combine and deduplicate for backward compatibility
       const allPlaylists = [...(createdPlaylists || [])];
       const createdIds = new Set(allPlaylists.map(p => p.id));
 
-      followedPlaylists.forEach(playlist => {
+      followedPlaylistsData.forEach(playlist => {
         if (!createdIds.has(playlist.id)) {
           allPlaylists.push(playlist);
         }
@@ -219,6 +227,8 @@ export const PlaylistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const value: PlaylistContextType = {
     playlists,
+    createdPlaylists,
+    followedPlaylists,
     currentPlaylist,
     isLoading,
     error,

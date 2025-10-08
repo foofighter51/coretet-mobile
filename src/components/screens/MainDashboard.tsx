@@ -208,9 +208,10 @@ const baseStyle = {
 
 export function MainDashboard({ currentUser }: MainDashboardProps) {
   const navigate = useNavigate();
-  const { playlists, currentPlaylist, createPlaylist, setCurrentPlaylist } = usePlaylist();
+  const { playlists, createdPlaylists, followedPlaylists, currentPlaylist, createPlaylist, setCurrentPlaylist } = usePlaylist();
 
   const [activeTab, setActiveTab] = useState<TabId>('playlists');
+  const [playlistFilter, setPlaylistFilter] = useState<'mine' | 'following'>('mine');
   const [tracks, setTracks] = useState<any[]>([]);
   const [playlistTracks, setPlaylistTracks] = useState<any[]>([]);
   const [showCreatePlaylist, setShowCreatePlaylist] = useState(false);
@@ -223,6 +224,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   // Audio playback state - consolidated
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [currentTrack, setCurrentTrack] = useState<any | null>(null);
+  const currentTrackRef = useRef<any | null>(null); // Ref to track current track for event listeners
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [audioError, setAudioError] = useState<string | null>(null);
@@ -374,6 +376,43 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
     }
   };
 
+  const playNextTrack = () => {
+    const track = currentTrackRef.current;
+    console.log('🎵 playNextTrack called, currentTrack:', track?.title);
+    if (!track) return;
+
+    // Determine which track list to use
+    let trackList: any[] = [];
+
+    if (activeTab === 'tracks') {
+      // Use filtered tracks from the Tracks tab
+      trackList = filteredTracks;
+      console.log('🎵 Using filtered tracks, count:', trackList.length);
+    } else if (activeTab === 'playlists' && viewMode === 'detail') {
+      // Use filtered playlist tracks
+      trackList = filteredPlaylistTracks.map((item: any) => item.tracks).filter(Boolean);
+      console.log('🎵 Using playlist tracks, count:', trackList.length);
+    }
+
+    if (trackList.length === 0) {
+      console.log('🎵 No tracks in list, returning');
+      return;
+    }
+
+    // Find current track index
+    const currentIndex = trackList.findIndex((t: any) => t.id === track.id);
+    console.log('🎵 Current index:', currentIndex, 'Total tracks:', trackList.length);
+
+    // Play next track if there is one
+    if (currentIndex >= 0 && currentIndex < trackList.length - 1) {
+      const nextTrack = trackList[currentIndex + 1];
+      console.log('🎵 Playing next track:', nextTrack.title);
+      handlePlayPause(nextTrack);
+    } else {
+      console.log('🎵 No next track available (last track or not found)');
+    }
+  };
+
   const handlePlayPause = async (track?: any) => {
     try {
       if (!audioRef.current) {
@@ -388,7 +427,10 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
           setIsPlaying(false);
         });
         audioRef.current.addEventListener('ended', () => {
+          console.log('🎵 Track ended event fired');
           setIsPlaying(false);
+          // Auto-play next track
+          playNextTrack();
         });
       }
 
@@ -409,6 +451,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
           setIsLoading(true);
           audioRef.current.src = targetTrack.file_url;
           setCurrentTrack(targetTrack);
+          currentTrackRef.current = targetTrack; // Update ref for event listeners
         }
 
         await audioRef.current.play();
@@ -517,6 +560,9 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
 
     return sorted;
   }, [playlistTracks, ratingFilter, trackRatings, playlistSortBy, sortAscending]);
+
+  // Check if current playlist is owned by the user (moved to component level)
+  const isPlaylistOwner = currentPlaylist ? createdPlaylists.some(p => p.id === currentPlaylist.id) : false;
 
   const renderContent = () => {
     switch (activeTab) {
@@ -721,6 +767,53 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                     Cancel
                   </button>
                 </div>
+              </div>
+            )}
+
+            {/* Playlist Filter Toggle */}
+            {viewMode !== 'detail' && (
+              <div style={{
+                display: 'flex',
+                gap: '8px',
+                marginBottom: designTokens.spacing.md,
+                padding: '4px',
+                backgroundColor: designTokens.colors.neutral.offWhite,
+                borderRadius: '8px',
+              }}>
+                <button
+                  onClick={() => setPlaylistFilter('mine')}
+                  style={{
+                    flex: 1,
+                    padding: '8px 16px',
+                    backgroundColor: playlistFilter === 'mine' ? designTokens.colors.primary.blue : 'transparent',
+                    color: playlistFilter === 'mine' ? '#ffffff' : designTokens.colors.neutral.charcoal,
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  My Playlists
+                </button>
+                <button
+                  onClick={() => setPlaylistFilter('following')}
+                  style={{
+                    flex: 1,
+                    padding: '8px 16px',
+                    backgroundColor: playlistFilter === 'following' ? designTokens.colors.primary.blue : 'transparent',
+                    color: playlistFilter === 'following' ? '#ffffff' : designTokens.colors.neutral.charcoal,
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  Following {followedPlaylists.length > 0 && `(${followedPlaylists.length})`}
+                </button>
               </div>
             )}
 
@@ -1040,21 +1133,23 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                   </div>
                 )}
               </div>
-            ) : playlists.length === 0 ? (
+            ) : (playlistFilter === 'mine' ? createdPlaylists : followedPlaylists).length === 0 ? (
               <div style={{
                 textAlign: 'center',
                 padding: '40px 20px',
                 color: designTokens.colors.neutral.darkGray,
               }}>
                 <Music size={48} style={{ margin: '0 auto 16px', opacity: 0.3 }} />
-                <p>No playlists yet</p>
+                <p>{playlistFilter === 'mine' ? 'No playlists yet' : 'Not following any playlists'}</p>
                 <p style={{ fontSize: '14px', marginTop: '8px' }}>
-                  Create your first playlist to start sharing music
+                  {playlistFilter === 'mine'
+                    ? 'Create your first playlist to start sharing music'
+                    : 'Follow playlists shared with you to see them here'}
                 </p>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {playlists.map((playlist) => (
+                {(playlistFilter === 'mine' ? createdPlaylists : followedPlaylists).map((playlist) => (
                   <div
                     key={playlist.id}
                     onClick={() => handlePlaylistClick(playlist)}
@@ -1100,11 +1195,11 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                           // On native platforms, use native share sheet
                           if (Capacitor.isNativePlatform()) {
                             try {
-                              // Just share the URL - iOS Share "Copy" will copy the text field
+                              // Only use text field to avoid "2 Links" issue on iOS
+                              // iOS Share treats text and url as separate items
                               await Share.share({
                                 title: `Check out ${playlist.title} on CoreTet`,
                                 text: shareUrl,
-                                url: shareUrl,
                                 dialogTitle: 'Share Playlist',
                               });
                             } catch (error) {
@@ -1360,7 +1455,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                 Upload
               </button>
             )}
-            {activeTab === 'playlists' && viewMode === 'detail' && (
+            {activeTab === 'playlists' && viewMode === 'detail' && isPlaylistOwner && (
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button
                   onClick={() => setShowTrackSelector(true)}
@@ -1406,7 +1501,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
 
           {/* Right: Menu button for playlist detail or Spacer */}
           <div style={{ width: '40px', flexShrink: 0, position: 'relative' }}>
-            {activeTab === 'playlists' && viewMode === 'detail' && (
+            {activeTab === 'playlists' && viewMode === 'detail' && isPlaylistOwner && (
               <button
                 onClick={() => setShowPlaylistMenu(!showPlaylistMenu)}
                 style={{
@@ -1496,26 +1591,34 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
         flex: 1,
         overflowY: 'auto' as const,
         overflowX: 'hidden' as const,
-        paddingBottom: '88px', // Space for fixed TabBar (60px height + 28px padding)
+        paddingBottom: currentTrack ? '200px' : '88px', // Extra space for PlaybackBar when playing
       }}>
         {renderContent()}
       </div>
 
       {/* Fixed Footer - PlaybackBar (only show when track is selected) */}
       {currentTrack && (
-        <PlaybackBar
-          track={{
-            id: currentTrack.id,
-            title: currentTrack.title,
-            file_url: currentTrack.file_url,
-            duration_seconds: currentTrack.duration_seconds
-          }}
-          audioRef={audioRef}
-          isPlaying={isPlaying}
-          isLoading={isLoading}
-          error={audioError}
-          onPlayPause={() => handlePlayPause()}
-        />
+        <div style={{
+          position: 'fixed',
+          bottom: '80px', // Stick to TabBar (adjusted to match actual TabBar height)
+          left: 0,
+          right: 0,
+          zIndex: 99, // Below TabBar (100) but above content
+        }}>
+          <PlaybackBar
+            track={{
+              id: currentTrack.id,
+              title: currentTrack.title,
+              file_url: currentTrack.file_url,
+              duration_seconds: currentTrack.duration_seconds
+            }}
+            audioRef={audioRef}
+            isPlaying={isPlaying}
+            isLoading={isLoading}
+            error={audioError}
+            onPlayPause={() => handlePlayPause()}
+          />
+        </div>
       )}
 
       <TabBar

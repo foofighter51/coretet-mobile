@@ -27,6 +27,11 @@ export const PlaybackBar: React.FC<PlaybackBarProps> = ({
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
 
+  // Safety check - if track is null, don't render
+  if (!track) {
+    return null;
+  }
+
   // Reset time and duration when track changes
   useEffect(() => {
     setCurrentTime(0);

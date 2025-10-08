@@ -21,22 +21,29 @@ export function PublicPlaylistView() {
 
   useEffect(() => {
     const fetchPlaylist = async () => {
+      console.log('🎵 PublicPlaylistView: shareCode =', shareCode);
       if (!shareCode) {
+        console.error('🎵 No shareCode provided');
         setError('Invalid share link');
         setLoading(false);
         return;
       }
 
       try {
+        console.log('🎵 Fetching playlist with shareCode:', shareCode);
         // Fetch playlist by share_code
         const { data: playlistData, error: playlistError } = await db.playlists.getByShareCode(shareCode);
 
+        console.log('🎵 Playlist query result:', { playlistData, playlistError });
+
         if (playlistError || !playlistData) {
+          console.error('🎵 Playlist not found or error:', playlistError);
           setError('Playlist not found');
           setLoading(false);
           return;
         }
 
+        console.log('🎵 Playlist found:', playlistData.title);
         setPlaylist(playlistData);
 
         // Fetch playlist tracks
@@ -49,6 +56,7 @@ export function PublicPlaylistView() {
           return;
         }
 
+        console.log('🎵 Tracks loaded:', trackData?.length || 0);
         setTracks(trackData || []);
         setLoading(false);
       } catch (err) {
@@ -64,11 +72,16 @@ export function PublicPlaylistView() {
   // Check if user is logged in and following
   useEffect(() => {
     const checkFollowStatus = async () => {
-      const { user } = await auth.getCurrentUser();
-      if (user && playlist) {
-        setCurrentUserId(user.id);
-        const { isFollowing: following } = await db.playlistFollowers.isFollowing(playlist.id, user.id);
-        setIsFollowing(following);
+      try {
+        const { user } = await auth.getCurrentUser();
+        if (user && playlist) {
+          setCurrentUserId(user.id);
+          const { isFollowing: following } = await db.playlistFollowers.isFollowing(playlist.id, user.id);
+          setIsFollowing(following);
+        }
+      } catch (error) {
+        // Silently fail if user is not logged in or table doesn't exist
+        console.log('Could not check follow status:', error);
       }
     };
 
@@ -97,21 +110,34 @@ export function PublicPlaylistView() {
   };
 
   const handlePlayPause = async (track?: any) => {
-    if (!audioRef.current) {
-      audioRef.current = new Audio();
-    }
+    try {
+      console.log('🎵 handlePlayPause called with track:', track);
+      if (!audioRef.current) {
+        audioRef.current = new Audio();
+      }
 
-    const targetTrack = track || currentTrack;
-    if (!targetTrack) return;
+      const targetTrack = track || currentTrack;
+      if (!targetTrack) {
+        console.log('🎵 No track to play');
+        return;
+      }
 
-    if (currentlyPlayingTrack === targetTrack.id) {
-      audioRef.current.pause();
-      setCurrentlyPlayingTrack(null);
-    } else {
-      audioRef.current.src = targetTrack.file_url;
-      audioRef.current.play();
-      setCurrentlyPlayingTrack(targetTrack.id);
-      setCurrentTrack(targetTrack);
+      console.log('🎵 Target track:', { id: targetTrack.id, title: targetTrack.title, file_url: targetTrack.file_url });
+
+      if (currentlyPlayingTrack === targetTrack.id) {
+        console.log('🎵 Pausing current track');
+        audioRef.current.pause();
+        setCurrentlyPlayingTrack(null);
+      } else {
+        console.log('🎵 Playing new track');
+        audioRef.current.src = targetTrack.file_url;
+        await audioRef.current.play();
+        setCurrentlyPlayingTrack(targetTrack.id);
+        setCurrentTrack(targetTrack);
+        console.log('🎵 Track playing successfully');
+      }
+    } catch (error) {
+      console.error('🎵 Error in handlePlayPause:', error);
     }
   };
 
@@ -265,6 +291,7 @@ export function PublicPlaylistView() {
         overflowY: 'auto',
         overflowX: 'hidden',
         padding: designTokens.spacing.md,
+        paddingBottom: currentTrack ? '100px' : designTokens.spacing.md, // Space for PlaybackBar when visible
       }}>
         {tracks.length === 0 ? (
           <div style={{
@@ -343,18 +370,29 @@ export function PublicPlaylistView() {
         )}
       </div>
 
-      {/* PlaybackBar */}
-      <PlaybackBar
-        track={currentTrack ? {
-          id: currentTrack.id,
-          title: currentTrack.title,
-          file_url: currentTrack.file_url,
-          duration_seconds: currentTrack.duration_seconds
-        } : null}
-        audioRef={audioRef}
-        isPlaying={currentlyPlayingTrack !== null}
-        onPlayPause={() => handlePlayPause()}
-      />
+      {/* PlaybackBar - only show when track is selected, fixed at bottom */}
+      {currentTrack && (
+        <div style={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          zIndex: 100,
+          paddingBottom: '20px' // Space for home indicator
+        }}>
+          <PlaybackBar
+            track={{
+              id: currentTrack.id,
+              title: currentTrack.title,
+              file_url: currentTrack.file_url,
+              duration_seconds: currentTrack.duration_seconds
+            }}
+            audioRef={audioRef}
+            isPlaying={currentlyPlayingTrack !== null}
+            onPlayPause={() => handlePlayPause()}
+          />
+        </div>
+      )}
     </div>
   );
 }
