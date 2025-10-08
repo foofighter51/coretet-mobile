@@ -207,11 +207,15 @@ export default function App() {
         {/* Public playlist view - accessible without auth */}
         <Route path="/playlist/:shareCode" element={<PublicPlaylistView />} />
 
-        {/* Feedback board - accessible without auth */}
-        <Route path="/feedback" element={<FeedbackBoard />} />
+        {/* Feedback board - requires authentication */}
+        <Route path="/feedback" element={
+          user ? <FeedbackBoard /> : (Capacitor.isNativePlatform() ? <PhoneAuthScreen /> : <LandingPage />)
+        } />
 
-        {/* Feedback dashboard - for admins to view/manage feedback */}
-        <Route path="/admin/feedback" element={<FeedbackDashboard />} />
+        {/* Feedback dashboard - requires authentication (admin only) */}
+        <Route path="/admin/feedback" element={
+          user ? <FeedbackDashboard /> : (Capacitor.isNativePlatform() ? <PhoneAuthScreen /> : <LandingPage />)
+        } />
 
         {/* App routes - only accessible on native app or when authenticated */}
         <Route path="/app/*" element={
@@ -225,8 +229,10 @@ export default function App() {
             : <LandingPage />
         } />
 
-        {/* Catch-all redirects to landing */}
-        <Route path="*" element={<LandingPage />} />
+        {/* Catch-all - show landing page on web, auth screen on native */}
+        <Route path="*" element={
+          Capacitor.isNativePlatform() ? <PhoneAuthScreen /> : <LandingPage />
+        } />
       </Routes>
     </BrowserRouter>
   );
