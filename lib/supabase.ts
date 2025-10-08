@@ -71,6 +71,26 @@ export async function clearSupabaseAuth() {
 
 // Auth helpers
 export const auth = {
+  // Sign in with email and password
+  async signInWithPassword(email: string, password: string) {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    return { data, error };
+  },
+
+  // Sign up with email and password
+  async signUpWithPassword(email: string, password: string) {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+
+    return { data, error };
+  },
+
   // Sign up with phone number (requires verification)
   async signUpWithPhone(phone: string) {
     const { data, error } = await supabase.auth.signInWithOtp({
