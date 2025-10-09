@@ -11,13 +11,25 @@ html, body {
   margin: 0;
   padding: 0;
   height: 100vh;
-  overflow: auto; /* Changed from hidden to allow scrolling */
+  overflow: hidden; /* Keep hidden for mobile app */
   width: 100%;
 }
 
+/* Allow scrolling for admin pages */
+body:has([data-admin-page]) {
+  overflow: auto;
+}
+
 #root {
-  min-height: 100vh; /* Changed from height to min-height */
-  overflow: auto; /* Changed from hidden to allow scrolling */
+  height: 100vh;
+  overflow: hidden; /* Keep hidden for mobile app */
+}
+
+/* Allow scrolling on admin pages only */
+#root:has([data-admin-page]) {
+  min-height: 100vh;
+  height: auto;
+  overflow: visible;
 }
 
 /* Hide scrollbars for webkit browsers */
