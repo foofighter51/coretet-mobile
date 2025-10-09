@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Filter, Plus, Music, Share2, ArrowLeft, Play, Pause, X, Check, MessageSquare, MoreVertical, Edit2, Trash2, Headphones, ThumbsUp, Heart } from 'lucide-react';
+import { Search, Filter, Plus, Music, Upload, ArrowLeft, Play, Pause, X, Check, MessageSquare, MoreVertical, Edit2, Trash2, Headphones, ThumbsUp, Heart } from 'lucide-react';
 import { designTokens } from '../../design/designTokens';
 import { usePlaylist } from '../../contexts/PlaylistContext';
 import { TrackRowWithPlayer } from '../molecules/TrackRowWithPlayer';
@@ -15,12 +15,17 @@ import { Share } from '@capacitor/share';
 import DeepLinkService from '../../utils/deepLinkHandler';
 
 // Track Detail Modal Component
-function TrackDetailModal({ track, onClose }: {
+function TrackDetailModal({ track, onClose, currentUser }: {
   track: any;
   onClose: () => void;
+  currentUser: any;
 }) {
   const [ratings, setRatings] = useState<any[]>([]);
   const [loadingRatings, setLoadingRatings] = useState(true);
+  const [comments, setComments] = useState<any[]>([]);
+  const [loadingComments, setLoadingComments] = useState(true);
+  const [newComment, setNewComment] = useState('');
+  const [submittingComment, setSubmittingComment] = useState(false);
 
   // Fetch all ratings for this track
   useEffect(() => {
@@ -57,6 +62,80 @@ function TrackDetailModal({ track, onClose }: {
     fetchRatings();
   }, [track.id]);
 
+  // Fetch all comments for this track
+  useEffect(() => {
+    const fetchComments = async () => {
+      try {
+        setLoadingComments(true);
+        const { data, error } = await db.comments.getByTrack(track.id);
+
+        if (error) {
+          console.error('Failed to fetch comments:', error);
+          return;
+        }
+
+        // Fetch profile names for each comment
+        if (data && data.length > 0) {
+          const commentsWithNames = await Promise.all(
+            data.map(async (comment: any) => {
+              const { data: profile } = await db.profiles.getById(comment.user_id);
+              return {
+                ...comment,
+                userName: profile?.name || 'Unknown User',
+              };
+            })
+          );
+          setComments(commentsWithNames);
+        }
+      } catch (error) {
+        console.error('Error fetching comments:', error);
+      } finally {
+        setLoadingComments(false);
+      }
+    };
+
+    fetchComments();
+  }, [track.id]);
+
+  const handleSubmitComment = async () => {
+    if (!newComment.trim() || !currentUser?.id) return;
+
+    try {
+      setSubmittingComment(true);
+      const { error } = await db.comments.create({
+        track_id: track.id,
+        user_id: currentUser.id,
+        content: newComment.trim(),
+      });
+
+      if (error) {
+        console.error('Failed to create comment:', error);
+        return;
+      }
+
+      // Refresh comments
+      const { data } = await db.comments.getByTrack(track.id);
+      if (data && data.length > 0) {
+        const commentsWithNames = await Promise.all(
+          data.map(async (comment: any) => {
+            const { data: profile } = await db.profiles.getById(comment.user_id);
+            return {
+              ...comment,
+              userName: profile?.name || 'Unknown User',
+            };
+          })
+        );
+        setComments(commentsWithNames);
+      }
+
+      setNewComment('');
+    } catch (error) {
+      console.error('Error submitting comment:', error);
+    } finally {
+      setSubmittingComment(false);
+    }
+  };
+
   // Group ratings by type
   const listenedBy = ratings.filter(r => r.rating === 'listened').map(r => r.userName);
   const likedBy = ratings.filter(r => r.rating === 'liked').map(r => r.userName);
@@ -72,42 +151,56 @@ function TrackDetailModal({ track, onClose }: {
         bottom: 0,
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
         display: 'flex',
-        alignItems: 'flex-end',
+        alignItems: 'center',
         justifyContent: 'center',
         zIndex: 1000,
+        padding: designTokens.spacing.lg,
       }}
       onClick={onClose}
     >
       <div
         style={{
           backgroundColor: designTokens.colors.surface.primary,
-          borderTopLeftRadius: designTokens.borderRadius.xl,
-          borderTopRightRadius: designTokens.borderRadius.xl,
+          borderRadius: designTokens.borderRadius.xl,
           width: '100%',
-          maxWidth: '600px',
-          maxHeight: '80vh',
+          maxWidth: '500px',
+          maxHeight: '85vh',
           overflowY: 'auto',
           padding: designTokens.spacing.lg,
+          boxShadow: designTokens.shadows.elevated,
+          userSelect: 'none',
+          WebkitUserSelect: 'none',
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
+        {/* Header with Duration */}
         <div style={{
           display: 'flex',
           justifyContent: 'space-between',
-          alignItems: 'center',
+          alignItems: 'flex-start',
           marginBottom: designTokens.spacing.xl,
+          gap: designTokens.spacing.md,
         }}>
-          <h2 style={{
-            fontSize: designTokens.typography.fontSizes.h3,
-            fontWeight: designTokens.typography.fontWeights.semibold,
-            color: designTokens.colors.text.primary,
-            margin: 0,
-            flex: 1,
-            paddingRight: designTokens.spacing.md,
-          }}>
-            {track.title}
-          </h2>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h2 style={{
+              fontSize: designTokens.typography.fontSizes.h3,
+              fontWeight: designTokens.typography.fontWeights.semibold,
+              color: designTokens.colors.text.primary,
+              margin: 0,
+              marginBottom: designTokens.spacing.xs,
+            }}>
+              {track.title}
+            </h2>
+            <p style={{
+              fontSize: designTokens.typography.fontSizes.bodySmall,
+              color: designTokens.colors.text.secondary,
+              margin: 0,
+            }}>
+              {track.duration_seconds ?
+                `${Math.floor(track.duration_seconds / 60)}:${String(Math.floor(track.duration_seconds % 60)).padStart(2, '0')}`
+                : 'Unknown'}
+            </p>
+          </div>
           <button
             onClick={onClose}
             style={{
@@ -115,28 +208,11 @@ function TrackDetailModal({ track, onClose }: {
               border: 'none',
               cursor: 'pointer',
               padding: designTokens.spacing.xs,
+              flexShrink: 0,
             }}
           >
             <X size={24} color={designTokens.colors.text.secondary} />
           </button>
-        </div>
-
-        {/* Track Info */}
-        <div style={{
-          padding: designTokens.spacing.lg,
-          backgroundColor: designTokens.colors.surface.secondary,
-          borderRadius: designTokens.borderRadius.md,
-          marginBottom: designTokens.spacing.xl,
-        }}>
-          <p style={{
-            fontSize: designTokens.typography.fontSizes.bodySmall,
-            color: designTokens.colors.text.secondary,
-            margin: 0,
-          }}>
-            Duration: {track.duration_seconds ?
-              `${Math.floor(track.duration_seconds / 60)}:${String(Math.floor(track.duration_seconds % 60)).padStart(2, '0')}`
-              : 'Unknown'}
-          </p>
         </div>
 
         {/* Ratings Section */}
@@ -180,30 +256,29 @@ function TrackDetailModal({ track, onClose }: {
               {listenedBy.length > 0 && (
                 <div style={{
                   display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: designTokens.spacing.md,
-                  padding: designTokens.spacing.md,
+                  alignItems: 'center',
+                  gap: designTokens.spacing.sm,
+                  padding: designTokens.spacing.sm,
                   backgroundColor: designTokens.colors.ratings.listened.bgLight,
                   borderRadius: designTokens.borderRadius.md,
                 }}>
-                  <Headphones size={20} color={designTokens.colors.text.primary} style={{ flexShrink: 0, marginTop: '2px' }} />
-                  <div style={{ flex: 1 }}>
-                    <p style={{
-                      fontSize: designTokens.typography.fontSizes.bodySmall,
-                      fontWeight: designTokens.typography.fontWeights.medium,
-                      color: designTokens.colors.text.primary,
-                      margin: `0 0 ${designTokens.spacing.xs} 0`,
-                    }}>
-                      Listened
-                    </p>
-                    <p style={{
-                      fontSize: designTokens.typography.fontSizes.bodySmall,
-                      color: designTokens.colors.text.secondary,
-                      margin: 0,
-                    }}>
-                      {listenedBy.join(', ')}
-                    </p>
-                  </div>
+                  <Headphones size={18} color={designTokens.colors.text.primary} style={{ flexShrink: 0 }} />
+                  <p style={{
+                    fontSize: designTokens.typography.fontSizes.bodySmall,
+                    fontWeight: designTokens.typography.fontWeights.medium,
+                    color: designTokens.colors.text.primary,
+                    margin: 0,
+                    marginRight: designTokens.spacing.xs,
+                  }}>
+                    Listened
+                  </p>
+                  <p style={{
+                    fontSize: designTokens.typography.fontSizes.bodySmall,
+                    color: designTokens.colors.text.secondary,
+                    margin: 0,
+                  }}>
+                    {listenedBy.join(', ')}
+                  </p>
                 </div>
               )}
 
@@ -211,30 +286,29 @@ function TrackDetailModal({ track, onClose }: {
               {likedBy.length > 0 && (
                 <div style={{
                   display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: designTokens.spacing.md,
-                  padding: designTokens.spacing.md,
+                  alignItems: 'center',
+                  gap: designTokens.spacing.sm,
+                  padding: designTokens.spacing.sm,
                   backgroundColor: designTokens.colors.ratings.liked.bgLight,
                   borderRadius: designTokens.borderRadius.md,
                 }}>
-                  <ThumbsUp size={20} color={designTokens.colors.text.primary} style={{ flexShrink: 0, marginTop: '2px' }} />
-                  <div style={{ flex: 1 }}>
-                    <p style={{
-                      fontSize: designTokens.typography.fontSizes.bodySmall,
-                      fontWeight: designTokens.typography.fontWeights.medium,
-                      color: designTokens.colors.text.primary,
-                      margin: `0 0 ${designTokens.spacing.xs} 0`,
-                    }}>
-                      Liked
-                    </p>
-                    <p style={{
-                      fontSize: designTokens.typography.fontSizes.bodySmall,
-                      color: designTokens.colors.text.secondary,
-                      margin: 0,
-                    }}>
-                      {likedBy.join(', ')}
-                    </p>
-                  </div>
+                  <ThumbsUp size={18} color={designTokens.colors.text.primary} style={{ flexShrink: 0 }} />
+                  <p style={{
+                    fontSize: designTokens.typography.fontSizes.bodySmall,
+                    fontWeight: designTokens.typography.fontWeights.medium,
+                    color: designTokens.colors.text.primary,
+                    margin: 0,
+                    marginRight: designTokens.spacing.xs,
+                  }}>
+                    Liked
+                  </p>
+                  <p style={{
+                    fontSize: designTokens.typography.fontSizes.bodySmall,
+                    color: designTokens.colors.text.secondary,
+                    margin: 0,
+                  }}>
+                    {likedBy.join(', ')}
+                  </p>
                 </div>
               )}
 
@@ -242,46 +316,155 @@ function TrackDetailModal({ track, onClose }: {
               {lovedBy.length > 0 && (
                 <div style={{
                   display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: designTokens.spacing.md,
-                  padding: designTokens.spacing.md,
+                  alignItems: 'center',
+                  gap: designTokens.spacing.sm,
+                  padding: designTokens.spacing.sm,
                   backgroundColor: designTokens.colors.ratings.loved.bgLight,
                   borderRadius: designTokens.borderRadius.md,
                 }}>
-                  <Heart size={20} color={designTokens.colors.text.primary} style={{ flexShrink: 0, marginTop: '2px' }} />
-                  <div style={{ flex: 1 }}>
-                    <p style={{
-                      fontSize: designTokens.typography.fontSizes.bodySmall,
-                      fontWeight: designTokens.typography.fontWeights.medium,
-                      color: designTokens.colors.text.primary,
-                      margin: `0 0 ${designTokens.spacing.xs} 0`,
-                    }}>
-                      Loved
-                    </p>
-                    <p style={{
-                      fontSize: designTokens.typography.fontSizes.bodySmall,
-                      color: designTokens.colors.text.secondary,
-                      margin: 0,
-                    }}>
-                      {lovedBy.join(', ')}
-                    </p>
-                  </div>
+                  <Heart size={18} color={designTokens.colors.text.primary} style={{ flexShrink: 0 }} />
+                  <p style={{
+                    fontSize: designTokens.typography.fontSizes.bodySmall,
+                    fontWeight: designTokens.typography.fontWeights.medium,
+                    color: designTokens.colors.text.primary,
+                    margin: 0,
+                    marginRight: designTokens.spacing.xs,
+                  }}>
+                    Loved
+                  </p>
+                  <p style={{
+                    fontSize: designTokens.typography.fontSizes.bodySmall,
+                    color: designTokens.colors.text.secondary,
+                    margin: 0,
+                  }}>
+                    {lovedBy.join(', ')}
+                  </p>
                 </div>
               )}
             </div>
           )}
         </div>
 
-        {/* Comments Placeholder */}
+        {/* Comments Section */}
         <div style={{
-          padding: designTokens.spacing.xl,
-          textAlign: 'center',
-          color: designTokens.colors.text.secondary,
-          fontSize: designTokens.typography.fontSizes.bodySmall,
           borderTop: `1px solid ${designTokens.colors.borders.default}`,
-          marginTop: designTokens.spacing.xl,
+          paddingTop: designTokens.spacing.xl,
         }}>
-          Comments coming soon...
+          <h3 style={{
+            fontSize: designTokens.typography.fontSizes.body,
+            fontWeight: designTokens.typography.fontWeights.semibold,
+            color: designTokens.colors.text.primary,
+            marginBottom: designTokens.spacing.md,
+          }}>
+            Comments
+          </h3>
+
+          {/* Comment Input */}
+          <div style={{
+            display: 'flex',
+            gap: designTokens.spacing.sm,
+            marginBottom: designTokens.spacing.lg,
+          }}>
+            <input
+              type="text"
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && !submittingComment && handleSubmitComment()}
+              placeholder="Add a comment..."
+              disabled={submittingComment}
+              style={{
+                flex: 1,
+                padding: designTokens.spacing.sm,
+                border: `1px solid ${designTokens.colors.borders.default}`,
+                borderRadius: designTokens.borderRadius.sm,
+                fontSize: designTokens.typography.fontSizes.bodySmall,
+              }}
+            />
+            <button
+              onClick={handleSubmitComment}
+              disabled={!newComment.trim() || submittingComment}
+              style={{
+                padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
+                backgroundColor: newComment.trim() && !submittingComment ? designTokens.colors.primary.blue : designTokens.colors.text.disabled,
+                color: designTokens.colors.text.inverse,
+                border: 'none',
+                borderRadius: designTokens.borderRadius.sm,
+                fontSize: designTokens.typography.fontSizes.bodySmall,
+                cursor: newComment.trim() && !submittingComment ? 'pointer' : 'not-allowed',
+              }}
+            >
+              {submittingComment ? 'Posting...' : 'Post'}
+            </button>
+          </div>
+
+          {/* Comments List */}
+          {loadingComments ? (
+            <p style={{
+              fontSize: designTokens.typography.fontSizes.bodySmall,
+              color: designTokens.colors.text.secondary,
+              textAlign: 'center',
+              padding: designTokens.spacing.xl,
+            }}>
+              Loading comments...
+            </p>
+          ) : comments.length === 0 ? (
+            <p style={{
+              fontSize: designTokens.typography.fontSizes.bodySmall,
+              color: designTokens.colors.text.secondary,
+              textAlign: 'center',
+              padding: designTokens.spacing.xl,
+            }}>
+              No comments yet. Be the first to comment!
+            </p>
+          ) : (
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: designTokens.spacing.md,
+            }}>
+              {comments.map((comment: any) => (
+                <div
+                  key={comment.id}
+                  style={{
+                    padding: designTokens.spacing.md,
+                    backgroundColor: designTokens.colors.surface.secondary,
+                    borderRadius: designTokens.borderRadius.md,
+                  }}
+                >
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: designTokens.spacing.xs,
+                  }}>
+                    <p style={{
+                      fontSize: designTokens.typography.fontSizes.bodySmall,
+                      fontWeight: designTokens.typography.fontWeights.medium,
+                      color: designTokens.colors.text.primary,
+                      margin: 0,
+                    }}>
+                      {comment.userName}
+                    </p>
+                    <p style={{
+                      fontSize: designTokens.typography.fontSizes.caption,
+                      color: designTokens.colors.text.muted,
+                      margin: 0,
+                    }}>
+                      {new Date(comment.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <p style={{
+                    fontSize: designTokens.typography.fontSizes.bodySmall,
+                    color: designTokens.colors.text.secondary,
+                    margin: 0,
+                    whiteSpace: 'pre-wrap',
+                  }}>
+                    {comment.content}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -1714,55 +1897,57 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                           </p>
                         )}
                       </div>
-                      <button
-                        onClick={async (e) => {
-                          e.stopPropagation();
+                      {playlistFilter === 'mine' && (
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
 
-                          // Use custom app scheme for direct app opening
-                          const shareUrl = `coretet://playlist/${playlist.share_code}`;
+                            // Use custom app scheme for direct app opening
+                            const shareUrl = `coretet://playlist/${playlist.share_code}`;
 
-                          // On native platforms, use native share sheet
-                          if (Capacitor.isNativePlatform()) {
-                            try {
-                              const shareText = `Check out "${playlist.title}" on CoreTet\n\n${shareUrl}`;
-                              console.log('Sharing with text:', shareText);
+                            // On native platforms, use native share sheet
+                            if (Capacitor.isNativePlatform()) {
+                              try {
+                                const shareText = `Check out "${playlist.title}" on CoreTet\n\n${shareUrl}`;
+                                console.log('Sharing with text:', shareText);
 
-                              await Share.share({
-                                title: playlist.title,
-                                text: shareText,
-                                dialogTitle: 'Share Playlist',
-                              });
+                                await Share.share({
+                                  title: playlist.title,
+                                  text: shareText,
+                                  dialogTitle: 'Share Playlist',
+                                });
 
-                              console.log('Share completed successfully');
-                            } catch (error) {
-                              console.error('Share failed:', error);
+                                console.log('Share completed successfully');
+                              } catch (error) {
+                                console.error('Share failed:', error);
+                              }
+                            } else {
+                              // On web, copy web-friendly URL to clipboard
+                              navigator.clipboard.writeText(shareUrl);
+                              // Show temporary success message
+                              const btn = e.currentTarget;
+                              const originalHTML = btn.innerHTML;
+                              btn.innerHTML = '✓ Copied!';
+                              btn.style.color = '#48bb78';
+                              setTimeout(() => {
+                                btn.innerHTML = originalHTML;
+                                btn.style.color = designTokens.colors.primary.blue;
+                              }, 2000);
                             }
-                          } else {
-                            // On web, copy web-friendly URL to clipboard
-                            navigator.clipboard.writeText(shareUrl);
-                            // Show temporary success message
-                            const btn = e.currentTarget;
-                            const originalHTML = btn.innerHTML;
-                            btn.innerHTML = '✓ Copied!';
-                            btn.style.color = '#48bb78';
-                            setTimeout(() => {
-                              btn.innerHTML = originalHTML;
-                              btn.style.color = designTokens.colors.primary.blue;
-                            }, 2000);
-                          }
-                        }}
-                        style={{
-                          padding: designTokens.spacing.sm,
-                          backgroundColor: 'transparent',
-                          border: 'none',
-                          cursor: 'pointer',
-                          color: designTokens.colors.primary.blue,
-                          fontSize: designTokens.typography.fontSizes.bodySmall,
-                          fontWeight: designTokens.typography.fontWeights.medium,
-                        }}
-                      >
-                        <Share2 size={20} />
-                      </button>
+                          }}
+                          style={{
+                            padding: designTokens.spacing.sm,
+                            backgroundColor: 'transparent',
+                            border: 'none',
+                            cursor: 'pointer',
+                            color: designTokens.colors.primary.blue,
+                            fontSize: designTokens.typography.fontSizes.bodySmall,
+                            fontWeight: designTokens.typography.fontWeights.medium,
+                          }}
+                        >
+                          <Upload size={20} />
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -1896,6 +2081,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
         flexShrink: 0,
         backgroundColor: designTokens.colors.surface.primary,
         borderBottom: `1px solid ${designTokens.colors.borders.default}`,
+        paddingTop: 'env(safe-area-inset-top, 0px)',
       }}>
         {/* Top header with logo, action button, and user button */}
         <div style={{
@@ -2156,7 +2342,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                 borderBottom: `1px solid ${designTokens.colors.borders.default}`,
               }}
             >
-              <Share2 size={16} />
+              <Upload size={16} />
               Share Playlist
             </button>
             <button
@@ -2274,6 +2460,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
         <TrackDetailModal
           track={selectedTrackForDetail}
           onClose={() => setSelectedTrackForDetail(null)}
+          currentUser={currentUser}
         />
       )}
     </div>
