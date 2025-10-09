@@ -90,8 +90,7 @@ export function FeedbackBoard() {
         if (uploadError) {
           console.error('Failed to upload image:', uploadError);
         } else if (uploadData) {
-          const { data: urlData } = await storage.getPublicUrl('audio-files', fileName);
-          imageUrl = urlData?.publicUrl;
+          imageUrl = storage.getPublicUrl('audio-files', fileName);
         }
       }
 
@@ -110,6 +109,10 @@ export function FeedbackBoard() {
       setSelectedImage(null);
       setImagePreview(null);
       setShowCreateForm(false);
+
+      // Fix iOS viewport issue after keyboard dismissal
+      window.scrollTo(0, 0);
+      document.body.scrollTop = 0;
 
       // Reload feedback
       await loadFeedback();

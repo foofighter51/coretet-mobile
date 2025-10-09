@@ -145,9 +145,9 @@ export const AudioUploader: React.FC<AudioUploaderProps> = ({
 
         // Show helpful error message
         if (errorMsg.includes('canceled')) {
-          setError('File picker canceled. Note: Full cloud storage access (Google Drive, Dropbox) requires testing on a physical iOS device. The iOS simulator has limited file picker support.');
+          setError('File picker canceled. If uploading from cloud storage (Google Drive, iCloud Drive, Dropbox), make sure the file has been downloaded to your device first.');
         } else {
-          setError(`File picker error: ${errorMsg}. Try testing on a physical device for full cloud storage access.`);
+          setError(`File picker error: ${errorMsg}. For cloud storage files, try downloading them to your device first.`);
         }
       }
     } else {

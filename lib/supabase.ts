@@ -747,9 +747,9 @@ export const storage = {
   },
 
   // Get public URL for file (for public buckets only)
-  getPublicUrl(path: string) {
+  getPublicUrl(bucket: string, path: string) {
     const { data } = supabase.storage
-      .from('audio-files')
+      .from(bucket)
       .getPublicUrl(path);
 
     return data.publicUrl;
