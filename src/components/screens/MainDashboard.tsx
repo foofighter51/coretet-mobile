@@ -80,9 +80,9 @@ function TrackDetailModal({ track, onClose }: {
     >
       <div
         style={{
-          backgroundColor: '#ffffff',
-          borderTopLeftRadius: '16px',
-          borderTopRightRadius: '16px',
+          backgroundColor: designTokens.colors.surface.primary,
+          borderTopLeftRadius: designTokens.borderRadius.xl,
+          borderTopRightRadius: designTokens.borderRadius.xl,
           width: '100%',
           maxWidth: '600px',
           maxHeight: '80vh',
@@ -96,15 +96,15 @@ function TrackDetailModal({ track, onClose }: {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: '20px',
+          marginBottom: designTokens.spacing.xl,
         }}>
           <h2 style={{
-            fontSize: '20px',
-            fontWeight: '600',
-            color: designTokens.colors.neutral.charcoal,
+            fontSize: designTokens.typography.fontSizes.h3,
+            fontWeight: designTokens.typography.fontWeights.semibold,
+            color: designTokens.colors.text.primary,
             margin: 0,
             flex: 1,
-            paddingRight: '12px',
+            paddingRight: designTokens.spacing.md,
           }}>
             {track.title}
           </h2>
@@ -114,23 +114,23 @@ function TrackDetailModal({ track, onClose }: {
               backgroundColor: 'transparent',
               border: 'none',
               cursor: 'pointer',
-              padding: '4px',
+              padding: designTokens.spacing.xs,
             }}
           >
-            <X size={24} color={designTokens.colors.neutral.darkGray} />
+            <X size={24} color={designTokens.colors.text.secondary} />
           </button>
         </div>
 
         {/* Track Info */}
         <div style={{
-          padding: '16px',
-          backgroundColor: '#f7fafc',
-          borderRadius: '8px',
-          marginBottom: '20px',
+          padding: designTokens.spacing.lg,
+          backgroundColor: designTokens.colors.surface.secondary,
+          borderRadius: designTokens.borderRadius.md,
+          marginBottom: designTokens.spacing.xl,
         }}>
           <p style={{
-            fontSize: '14px',
-            color: designTokens.colors.neutral.darkGray,
+            fontSize: designTokens.typography.fontSizes.bodySmall,
+            color: designTokens.colors.text.secondary,
             margin: 0,
           }}>
             Duration: {track.duration_seconds ?
@@ -141,32 +141,32 @@ function TrackDetailModal({ track, onClose }: {
 
         {/* Ratings Section */}
         <div style={{
-          marginBottom: '20px',
+          marginBottom: designTokens.spacing.xl,
         }}>
           <h3 style={{
-            fontSize: '16px',
-            fontWeight: '600',
-            color: designTokens.colors.neutral.charcoal,
-            marginBottom: '12px',
+            fontSize: designTokens.typography.fontSizes.body,
+            fontWeight: designTokens.typography.fontWeights.semibold,
+            color: designTokens.colors.text.primary,
+            marginBottom: designTokens.spacing.md,
           }}>
             Ratings
           </h3>
 
           {loadingRatings ? (
             <p style={{
-              fontSize: '14px',
-              color: designTokens.colors.neutral.darkGray,
+              fontSize: designTokens.typography.fontSizes.bodySmall,
+              color: designTokens.colors.text.secondary,
               textAlign: 'center',
-              padding: '20px',
+              padding: designTokens.spacing.xl,
             }}>
               Loading ratings...
             </p>
           ) : ratings.length === 0 ? (
             <p style={{
-              fontSize: '14px',
-              color: designTokens.colors.neutral.darkGray,
+              fontSize: designTokens.typography.fontSizes.bodySmall,
+              color: designTokens.colors.text.secondary,
               textAlign: 'center',
-              padding: '20px',
+              padding: designTokens.spacing.xl,
             }}>
               No ratings yet
             </p>
@@ -174,31 +174,31 @@ function TrackDetailModal({ track, onClose }: {
             <div style={{
               display: 'flex',
               flexDirection: 'column',
-              gap: '12px',
+              gap: designTokens.spacing.md,
             }}>
               {/* Listened */}
               {listenedBy.length > 0 && (
                 <div style={{
                   display: 'flex',
                   alignItems: 'flex-start',
-                  gap: '12px',
-                  padding: '12px',
-                  backgroundColor: '#f0f9ff',
-                  borderRadius: '8px',
+                  gap: designTokens.spacing.md,
+                  padding: designTokens.spacing.md,
+                  backgroundColor: designTokens.colors.ratings.listened.bgLight,
+                  borderRadius: designTokens.borderRadius.md,
                 }}>
-                  <Headphones size={20} color={designTokens.colors.neutral.charcoal} style={{ flexShrink: 0, marginTop: '2px' }} />
+                  <Headphones size={20} color={designTokens.colors.text.primary} style={{ flexShrink: 0, marginTop: '2px' }} />
                   <div style={{ flex: 1 }}>
                     <p style={{
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      color: designTokens.colors.neutral.charcoal,
-                      margin: '0 0 4px 0',
+                      fontSize: designTokens.typography.fontSizes.bodySmall,
+                      fontWeight: designTokens.typography.fontWeights.medium,
+                      color: designTokens.colors.text.primary,
+                      margin: `0 0 ${designTokens.spacing.xs} 0`,
                     }}>
                       Listened
                     </p>
                     <p style={{
-                      fontSize: '14px',
-                      color: designTokens.colors.neutral.darkGray,
+                      fontSize: designTokens.typography.fontSizes.bodySmall,
+                      color: designTokens.colors.text.secondary,
                       margin: 0,
                     }}>
                       {listenedBy.join(', ')}
@@ -212,24 +212,24 @@ function TrackDetailModal({ track, onClose }: {
                 <div style={{
                   display: 'flex',
                   alignItems: 'flex-start',
-                  gap: '12px',
-                  padding: '12px',
-                  backgroundColor: '#f0fff4',
-                  borderRadius: '8px',
+                  gap: designTokens.spacing.md,
+                  padding: designTokens.spacing.md,
+                  backgroundColor: designTokens.colors.ratings.liked.bgLight,
+                  borderRadius: designTokens.borderRadius.md,
                 }}>
-                  <ThumbsUp size={20} color={designTokens.colors.neutral.charcoal} style={{ flexShrink: 0, marginTop: '2px' }} />
+                  <ThumbsUp size={20} color={designTokens.colors.text.primary} style={{ flexShrink: 0, marginTop: '2px' }} />
                   <div style={{ flex: 1 }}>
                     <p style={{
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      color: designTokens.colors.neutral.charcoal,
-                      margin: '0 0 4px 0',
+                      fontSize: designTokens.typography.fontSizes.bodySmall,
+                      fontWeight: designTokens.typography.fontWeights.medium,
+                      color: designTokens.colors.text.primary,
+                      margin: `0 0 ${designTokens.spacing.xs} 0`,
                     }}>
                       Liked
                     </p>
                     <p style={{
-                      fontSize: '14px',
-                      color: designTokens.colors.neutral.darkGray,
+                      fontSize: designTokens.typography.fontSizes.bodySmall,
+                      color: designTokens.colors.text.secondary,
                       margin: 0,
                     }}>
                       {likedBy.join(', ')}
@@ -243,24 +243,24 @@ function TrackDetailModal({ track, onClose }: {
                 <div style={{
                   display: 'flex',
                   alignItems: 'flex-start',
-                  gap: '12px',
-                  padding: '12px',
-                  backgroundColor: '#fff5f5',
-                  borderRadius: '8px',
+                  gap: designTokens.spacing.md,
+                  padding: designTokens.spacing.md,
+                  backgroundColor: designTokens.colors.ratings.loved.bgLight,
+                  borderRadius: designTokens.borderRadius.md,
                 }}>
-                  <Heart size={20} color={designTokens.colors.neutral.charcoal} style={{ flexShrink: 0, marginTop: '2px' }} />
+                  <Heart size={20} color={designTokens.colors.text.primary} style={{ flexShrink: 0, marginTop: '2px' }} />
                   <div style={{ flex: 1 }}>
                     <p style={{
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      color: designTokens.colors.neutral.charcoal,
-                      margin: '0 0 4px 0',
+                      fontSize: designTokens.typography.fontSizes.bodySmall,
+                      fontWeight: designTokens.typography.fontWeights.medium,
+                      color: designTokens.colors.text.primary,
+                      margin: `0 0 ${designTokens.spacing.xs} 0`,
                     }}>
                       Loved
                     </p>
                     <p style={{
-                      fontSize: '14px',
-                      color: designTokens.colors.neutral.darkGray,
+                      fontSize: designTokens.typography.fontSizes.bodySmall,
+                      color: designTokens.colors.text.secondary,
                       margin: 0,
                     }}>
                       {lovedBy.join(', ')}
@@ -274,12 +274,12 @@ function TrackDetailModal({ track, onClose }: {
 
         {/* Comments Placeholder */}
         <div style={{
-          padding: '20px',
+          padding: designTokens.spacing.xl,
           textAlign: 'center',
-          color: designTokens.colors.neutral.darkGray,
-          fontSize: '14px',
-          borderTop: '1px solid #e2e8f0',
-          marginTop: '20px',
+          color: designTokens.colors.text.secondary,
+          fontSize: designTokens.typography.fontSizes.bodySmall,
+          borderTop: `1px solid ${designTokens.colors.borders.default}`,
+          marginTop: designTokens.spacing.xl,
         }}>
           Comments coming soon...
         </div>
@@ -310,9 +310,9 @@ function TrackSelectorModal({ tracks, existingTrackIds, onAddTracks, onCancel }:
 
   return (
     <div style={{
-      backgroundColor: '#f7fafc',
-      border: '1px solid #e2e8f0',
-      borderRadius: '8px',
+      backgroundColor: designTokens.colors.surface.secondary,
+      border: `1px solid ${designTokens.colors.borders.default}`,
+      borderRadius: designTokens.borderRadius.md,
       padding: designTokens.spacing.md,
       marginBottom: designTokens.spacing.md,
     }}>
@@ -320,12 +320,12 @@ function TrackSelectorModal({ tracks, existingTrackIds, onAddTracks, onCancel }:
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: '12px',
+        marginBottom: designTokens.spacing.md,
       }}>
         <h3 style={{
-          fontSize: '16px',
-          fontWeight: '600',
-          color: designTokens.colors.neutral.charcoal,
+          fontSize: designTokens.typography.fontSizes.body,
+          fontWeight: designTokens.typography.fontWeights.semibold,
+          color: designTokens.colors.text.primary,
           margin: 0,
         }}>
           Select Tracks from Library
@@ -336,19 +336,19 @@ function TrackSelectorModal({ tracks, existingTrackIds, onAddTracks, onCancel }:
             backgroundColor: 'transparent',
             border: 'none',
             cursor: 'pointer',
-            padding: '4px',
+            padding: designTokens.spacing.xs,
           }}
         >
-          <X size={20} color={designTokens.colors.neutral.darkGray} />
+          <X size={20} color={designTokens.colors.text.secondary} />
         </button>
       </div>
 
       {availableTracks.length === 0 ? (
         <p style={{
-          fontSize: '14px',
-          color: designTokens.colors.neutral.darkGray,
+          fontSize: designTokens.typography.fontSizes.bodySmall,
+          color: designTokens.colors.text.secondary,
           textAlign: 'center',
-          padding: '20px',
+          padding: designTokens.spacing.xl,
         }}>
           All your tracks are already in this playlist
         </p>
@@ -357,10 +357,10 @@ function TrackSelectorModal({ tracks, existingTrackIds, onAddTracks, onCancel }:
           <div style={{
             maxHeight: '300px',
             overflowY: 'auto',
-            marginBottom: '12px',
-            border: '1px solid #e2e8f0',
-            borderRadius: '6px',
-            backgroundColor: '#ffffff',
+            marginBottom: designTokens.spacing.md,
+            border: `1px solid ${designTokens.colors.borders.default}`,
+            borderRadius: designTokens.borderRadius.sm,
+            backgroundColor: designTokens.colors.surface.primary,
           }}>
             {availableTracks.map(track => {
               const isSelected = selectedTracks.includes(track.id);
@@ -371,32 +371,32 @@ function TrackSelectorModal({ tracks, existingTrackIds, onAddTracks, onCancel }:
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '12px',
-                    padding: '12px',
-                    borderBottom: '1px solid #f7fafc',
+                    gap: designTokens.spacing.md,
+                    padding: designTokens.spacing.md,
+                    borderBottom: `1px solid ${designTokens.colors.borders.light}`,
                     cursor: 'pointer',
-                    backgroundColor: isSelected ? '#ebf8ff' : '#ffffff',
+                    backgroundColor: isSelected ? designTokens.colors.surface.hover : designTokens.colors.surface.primary,
                     transition: 'background-color 0.2s',
                   }}
                 >
                   <div style={{
                     width: '20px',
                     height: '20px',
-                    borderRadius: '4px',
-                    border: `2px solid ${isSelected ? designTokens.colors.primary.blue : '#cbd5e0'}`,
-                    backgroundColor: isSelected ? designTokens.colors.primary.blue : '#ffffff',
+                    borderRadius: designTokens.borderRadius.sm,
+                    border: `2px solid ${isSelected ? designTokens.colors.primary.blue : designTokens.colors.text.disabled}`,
+                    backgroundColor: isSelected ? designTokens.colors.primary.blue : designTokens.colors.surface.primary,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     flexShrink: 0,
                   }}>
-                    {isSelected && <Check size={14} color="#ffffff" />}
+                    {isSelected && <Check size={14} color={designTokens.colors.text.inverse} />}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <p style={{
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      color: designTokens.colors.neutral.charcoal,
+                      fontSize: designTokens.typography.fontSizes.bodySmall,
+                      fontWeight: designTokens.typography.fontWeights.medium,
+                      color: designTokens.colors.text.primary,
                       margin: 0,
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
@@ -406,9 +406,9 @@ function TrackSelectorModal({ tracks, existingTrackIds, onAddTracks, onCancel }:
                     </p>
                     {track.duration_seconds && (
                       <p style={{
-                        fontSize: '12px',
-                        color: designTokens.colors.neutral.darkGray,
-                        margin: '2px 0 0 0',
+                        fontSize: designTokens.typography.fontSizes.caption,
+                        color: designTokens.colors.text.secondary,
+                        margin: `${designTokens.spacing.xs} 0 0 0`,
                       }}>
                         {Math.floor(track.duration_seconds / 60)}:{String(track.duration_seconds % 60).padStart(2, '0')}
                       </p>
@@ -419,16 +419,16 @@ function TrackSelectorModal({ tracks, existingTrackIds, onAddTracks, onCancel }:
             })}
           </div>
 
-          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+          <div style={{ display: 'flex', gap: designTokens.spacing.sm, justifyContent: 'flex-end' }}>
             <button
               onClick={onCancel}
               style={{
-                padding: '8px 16px',
-                backgroundColor: '#e2e8f0',
-                color: '#4a5568',
+                padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
+                backgroundColor: designTokens.colors.surface.disabled,
+                color: designTokens.colors.text.muted,
                 border: 'none',
-                borderRadius: '6px',
-                fontSize: '14px',
+                borderRadius: designTokens.borderRadius.sm,
+                fontSize: designTokens.typography.fontSizes.bodySmall,
                 cursor: 'pointer',
               }}
             >
@@ -438,12 +438,12 @@ function TrackSelectorModal({ tracks, existingTrackIds, onAddTracks, onCancel }:
               onClick={() => onAddTracks(selectedTracks)}
               disabled={selectedTracks.length === 0}
               style={{
-                padding: '8px 16px',
-                backgroundColor: selectedTracks.length > 0 ? designTokens.colors.primary.blue : '#cbd5e0',
-                color: '#ffffff',
+                padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
+                backgroundColor: selectedTracks.length > 0 ? designTokens.colors.primary.blue : designTokens.colors.text.disabled,
+                color: designTokens.colors.text.inverse,
                 border: 'none',
-                borderRadius: '6px',
-                fontSize: '14px',
+                borderRadius: designTokens.borderRadius.sm,
+                fontSize: designTokens.typography.fontSizes.bodySmall,
                 cursor: selectedTracks.length > 0 ? 'pointer' : 'not-allowed',
               }}
             >
@@ -504,6 +504,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   const [audioError, setAudioError] = useState<string | null>(null);
 
   const [trackRatings, setTrackRatings] = useState<Record<string, 'listened' | 'liked' | 'loved'>>({});
+  const [aggregatedRatings, setAggregatedRatings] = useState<Record<string, { listened: number; liked: number; loved: number }>>({});
   const [ratingFilter, setRatingFilter] = useState<'all' | 'listened' | 'liked' | 'loved' | 'unrated'>('all');
   const [playlistSortBy, setPlaylistSortBy] = useState<'position' | 'name' | 'duration' | 'rating'>('position');
   const [sortAscending, setSortAscending] = useState(true);
@@ -560,6 +561,12 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
         throw error;
       }
       setPlaylistTracks(data || []);
+
+      // Fetch aggregated ratings for playlist tracks
+      if (data && data.length > 0) {
+        const trackIds = data.map((item: any) => item.tracks?.id).filter(Boolean);
+        await fetchAggregatedRatings(trackIds);
+      }
     } catch (error) {
       console.error('Error fetching playlist tracks:', error);
       throw error;
@@ -640,28 +647,52 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   };
 
   const handleAddExistingTracks = async (selectedTrackIds: string[]) => {
-    if (!currentPlaylist || !currentUser?.id) return;
+    if (!currentPlaylist || !currentUser?.id) {
+      console.error('Missing currentPlaylist or currentUser:', { currentPlaylist, currentUser });
+      return;
+    }
 
     try {
+      console.log('Adding tracks to playlist:', { playlistId: currentPlaylist.id, trackIds: selectedTrackIds });
+
       // Get current playlist items to determine starting position
-      const { data: items } = await db.playlistItems.getByPlaylist(currentPlaylist.id);
-      let nextPosition = (items?.length || 0) + 1;
+      const { data: items, error: fetchError } = await db.playlistItems.getByPlaylist(currentPlaylist.id);
+      if (fetchError) {
+        console.error('Error fetching playlist items:', fetchError);
+        throw fetchError;
+      }
+
+      // Find the maximum position value and start from there
+      const maxPosition = items && items.length > 0
+        ? Math.max(...items.map((item: any) => item.position || 0))
+        : 0;
+      let nextPosition = maxPosition + 1;
+      console.log('Starting position (max + 1):', nextPosition, 'from', items?.length, 'items');
 
       // Add each selected track to the playlist
       for (const trackId of selectedTrackIds) {
-        await db.playlistItems.add({
+        const { data, error } = await db.playlistItems.add({
           playlist_id: currentPlaylist.id,
           track_id: trackId,
           added_by: currentUser.id,
           position: nextPosition++,
         });
+
+        if (error) {
+          console.error('Error adding track to playlist:', { trackId, error });
+          throw error;
+        }
+        console.log('Successfully added track:', { trackId, data });
       }
 
       // Refresh playlist tracks
+      console.log('Refreshing playlist tracks...');
       await loadPlaylistTracks(currentPlaylist.id);
       setShowTrackSelector(false);
+      console.log('Tracks added successfully');
     } catch (error) {
       console.error('Error adding tracks to playlist:', error);
+      setError('Failed to add tracks to playlist. Please try again.');
     }
   };
 
@@ -786,6 +817,39 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
     }
   };
 
+  // Fetch aggregated ratings for tracks
+  const fetchAggregatedRatings = async (trackIds: string[]) => {
+    if (trackIds.length === 0) return;
+
+    try {
+      const aggregated: Record<string, { listened: number; liked: number; loved: number }> = {};
+
+      // Initialize all tracks with zero counts
+      trackIds.forEach(id => {
+        aggregated[id] = { listened: 0, liked: 0, loved: 0 };
+      });
+
+      // Fetch all ratings for these tracks
+      const promises = trackIds.map(id => db.ratings.getByTrack(id));
+      const results = await Promise.all(promises);
+
+      results.forEach((result, index) => {
+        const trackId = trackIds[index];
+        if (result.data && result.data.length > 0) {
+          result.data.forEach((rating: any) => {
+            if (rating.rating === 'listened') aggregated[trackId].listened++;
+            else if (rating.rating === 'liked') aggregated[trackId].liked++;
+            else if (rating.rating === 'loved') aggregated[trackId].loved++;
+          });
+        }
+      });
+
+      setAggregatedRatings(prev => ({ ...prev, ...aggregated }));
+    } catch (error) {
+      console.error('Error fetching aggregated ratings:', error);
+    }
+  };
+
   // Fetch user's tracks and ratings
   useEffect(() => {
     const fetchUserTracks = async () => {
@@ -808,6 +872,11 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
           });
           setTrackRatings(ratingsMap);
         }
+
+        // Fetch aggregated ratings for all tracks
+        if (data && data.length > 0) {
+          await fetchAggregatedRatings(data.map((t: any) => t.id));
+        }
       } catch (error) {
         console.error('Error fetching tracks:', error);
       }
@@ -820,8 +889,24 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
     if (!currentUser?.id) return;
 
     try {
-      await db.ratings.upsert(trackId, rating, currentUser.id);
-      setTrackRatings(prev => ({ ...prev, [trackId]: rating }));
+      const currentUserRating = trackRatings[trackId];
+
+      // If clicking same rating, remove it
+      if (currentUserRating === rating) {
+        await db.ratings.delete(trackId, currentUser.id);
+        setTrackRatings(prev => {
+          const newRatings = { ...prev };
+          delete newRatings[trackId];
+          return newRatings;
+        });
+      } else {
+        // Otherwise, set new rating
+        await db.ratings.upsert(trackId, rating, currentUser.id);
+        setTrackRatings(prev => ({ ...prev, [trackId]: rating }));
+      }
+
+      // Refresh aggregated ratings for this track
+      await fetchAggregatedRatings([trackId]);
     } catch (error) {
       console.error('Error rating track:', error);
     }
@@ -971,9 +1056,9 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
 
             {showUploader && (
               <div style={{
-                backgroundColor: '#f7fafc',
+                backgroundColor: designTokens.colors.surface.secondary,
                 padding: designTokens.spacing.md,
-                borderRadius: '8px',
+                borderRadius: designTokens.borderRadius.md,
                 marginBottom: designTokens.spacing.md,
               }}>
                 <AudioUploader
@@ -1000,13 +1085,13 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                 <button
                   onClick={() => setShowUploader(false)}
                   style={{
-                    marginTop: '8px',
-                    padding: '8px 16px',
-                    backgroundColor: '#e2e8f0',
-                    color: '#4a5568',
+                    marginTop: designTokens.spacing.sm,
+                    padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
+                    backgroundColor: designTokens.colors.borders.default,
+                    color: designTokens.colors.text.muted,
                     border: 'none',
-                    borderRadius: '6px',
-                    fontSize: '14px',
+                    borderRadius: designTokens.borderRadius.sm,
+                    fontSize: designTokens.typography.fontSizes.bodySmall,
                     cursor: 'pointer',
                   }}
                 >
@@ -1018,12 +1103,12 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
             {tracks.length === 0 ? (
               <div style={{
                 textAlign: 'center',
-                padding: '40px 20px',
+                padding: `${designTokens.spacing.xxl} ${designTokens.spacing.xl}`,
                 color: designTokens.colors.neutral.darkGray,
               }}>
-                <Music size={48} style={{ margin: '0 auto 16px', opacity: 0.3 }} />
+                <Music size={48} style={{ margin: `0 auto ${designTokens.spacing.lg}`, opacity: 0.3 }} />
                 <p>No tracks uploaded yet</p>
-                <p style={{ fontSize: '14px', marginTop: '8px' }}>
+                <p style={{ fontSize: designTokens.typography.fontSizes.bodySmall, marginTop: designTokens.spacing.sm }}>
                   Upload your first track to get started
                 </p>
               </div>
@@ -1032,23 +1117,23 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                 {/* Rating Filter */}
                 <div style={{
                   display: 'flex',
-                  gap: '8px',
-                  marginBottom: '16px',
+                  gap: designTokens.spacing.sm,
+                  marginBottom: designTokens.spacing.lg,
                   overflowX: 'auto',
-                  paddingBottom: '4px',
+                  paddingBottom: designTokens.spacing.xs,
                 }}>
                   {(['all', 'listened', 'liked', 'loved', 'unrated'] as const).map(filter => (
                     <button
                       key={filter}
                       onClick={() => setRatingFilter(filter)}
                       style={{
-                        padding: '6px 12px',
-                        backgroundColor: ratingFilter === filter ? designTokens.colors.primary.blue : '#f7fafc',
-                        color: ratingFilter === filter ? '#ffffff' : designTokens.colors.neutral.darkGray,
-                        border: ratingFilter === filter ? 'none' : '1px solid #e2e8f0',
-                        borderRadius: '16px',
-                        fontSize: '13px',
-                        fontWeight: '500',
+                        padding: `${designTokens.spacing.xs} ${designTokens.spacing.md}`,
+                        backgroundColor: ratingFilter === filter ? designTokens.colors.primary.blue : designTokens.colors.surface.secondary,
+                        color: ratingFilter === filter ? designTokens.colors.text.inverse : designTokens.colors.neutral.darkGray,
+                        border: ratingFilter === filter ? 'none' : `1px solid ${designTokens.colors.borders.default}`,
+                        borderRadius: designTokens.borderRadius.lg,
+                        fontSize: designTokens.typography.fontSizes.caption,
+                        fontWeight: designTokens.typography.fontWeights.medium,
                         cursor: 'pointer',
                         whiteSpace: 'nowrap',
                         transition: 'all 0.2s',
@@ -1070,11 +1155,14 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                     }}
                     isPlaying={currentTrack?.id === track.id && isPlaying}
                     currentRating={trackRatings[track.id]}
+                    aggregatedRatings={aggregatedRatings[track.id]}
                     onPlayPause={() => handlePlayPause(track)}
                     onRate={(rating) => handleRate(track.id, rating)}
                     onLongPress={() => setSelectedTrackForDetail(track)}
                   />
                 ))}
+                {/* Spacer to prevent last track from hiding behind PlaybackBar/TabBar */}
+                <div style={{ height: '16px' }} />
               </div>
             )}
           </div>
@@ -1088,9 +1176,9 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
 
             {showCreatePlaylist && (
               <div style={{
-                backgroundColor: '#f7fafc',
+                backgroundColor: designTokens.colors.surface.secondary,
                 padding: designTokens.spacing.md,
-                borderRadius: '8px',
+                borderRadius: designTokens.borderRadius.md,
                 marginBottom: designTokens.spacing.md,
               }}>
                 <input
@@ -1105,38 +1193,38 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                   disabled={createPlaylistLoading}
                   style={{
                     width: '100%',
-                    padding: '10px',
-                    border: `1px solid ${error ? '#fc8181' : '#e2e8f0'}`,
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    marginBottom: '8px',
+                    padding: designTokens.spacing.sm,
+                    border: `1px solid ${error ? designTokens.colors.system.error : designTokens.colors.borders.default}`,
+                    borderRadius: designTokens.borderRadius.sm,
+                    fontSize: designTokens.typography.fontSizes.bodySmall,
+                    marginBottom: designTokens.spacing.sm,
                   }}
                   autoFocus
                 />
                 {error && (
                   <div style={{
-                    padding: '8px 12px',
-                    backgroundColor: '#fee',
-                    border: '1px solid #fcc',
-                    borderRadius: '6px',
-                    color: '#c00',
-                    fontSize: '13px',
-                    marginBottom: '8px',
+                    padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
+                    backgroundColor: designTokens.colors.feedback.error.bg,
+                    border: `1px solid ${designTokens.colors.feedback.error.border}`,
+                    borderRadius: designTokens.borderRadius.sm,
+                    color: designTokens.colors.feedback.error.text,
+                    fontSize: designTokens.typography.fontSizes.caption,
+                    marginBottom: designTokens.spacing.sm,
                   }}>
                     {error}
                   </div>
                 )}
-                <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ display: 'flex', gap: designTokens.spacing.sm }}>
                   <button
                     onClick={handleCreatePlaylist}
                     disabled={createPlaylistLoading}
                     style={{
-                      padding: '8px 16px',
+                      padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
                       backgroundColor: designTokens.colors.primary.blue,
-                      color: '#ffffff',
+                      color: designTokens.colors.text.inverse,
                       border: 'none',
-                      borderRadius: '6px',
-                      fontSize: '14px',
+                      borderRadius: designTokens.borderRadius.sm,
+                      fontSize: designTokens.typography.fontSizes.bodySmall,
                       cursor: createPlaylistLoading ? 'not-allowed' : 'pointer',
                       opacity: createPlaylistLoading ? 0.6 : 1,
                     }}
@@ -1151,12 +1239,12 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                     }}
                     disabled={createPlaylistLoading}
                     style={{
-                      padding: '8px 16px',
-                      backgroundColor: '#e2e8f0',
-                      color: '#4a5568',
+                      padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
+                      backgroundColor: designTokens.colors.borders.default,
+                      color: designTokens.colors.text.muted,
                       border: 'none',
-                      borderRadius: '6px',
-                      fontSize: '14px',
+                      borderRadius: designTokens.borderRadius.sm,
+                      fontSize: designTokens.typography.fontSizes.bodySmall,
                       cursor: createPlaylistLoading ? 'not-allowed' : 'pointer',
                       opacity: createPlaylistLoading ? 0.6 : 1,
                     }}
@@ -1171,23 +1259,23 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
             {viewMode !== 'detail' && (
               <div style={{
                 display: 'flex',
-                gap: '8px',
+                gap: designTokens.spacing.sm,
                 marginBottom: designTokens.spacing.md,
-                padding: '4px',
+                padding: designTokens.spacing.xs,
                 backgroundColor: designTokens.colors.neutral.offWhite,
-                borderRadius: '8px',
+                borderRadius: designTokens.borderRadius.md,
               }}>
                 <button
                   onClick={() => setPlaylistFilter('mine')}
                   style={{
                     flex: 1,
-                    padding: '8px 16px',
+                    padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
                     backgroundColor: playlistFilter === 'mine' ? designTokens.colors.primary.blue : 'transparent',
-                    color: playlistFilter === 'mine' ? '#ffffff' : designTokens.colors.neutral.charcoal,
+                    color: playlistFilter === 'mine' ? designTokens.colors.text.inverse : designTokens.colors.neutral.charcoal,
                     border: 'none',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    fontWeight: '600',
+                    borderRadius: designTokens.borderRadius.sm,
+                    fontSize: designTokens.typography.fontSizes.bodySmall,
+                    fontWeight: designTokens.typography.fontWeights.semibold,
                     cursor: 'pointer',
                     transition: 'all 0.2s',
                   }}
@@ -1198,13 +1286,13 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                   onClick={() => setPlaylistFilter('following')}
                   style={{
                     flex: 1,
-                    padding: '8px 16px',
+                    padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
                     backgroundColor: playlistFilter === 'following' ? designTokens.colors.primary.blue : 'transparent',
-                    color: playlistFilter === 'following' ? '#ffffff' : designTokens.colors.neutral.charcoal,
+                    color: playlistFilter === 'following' ? designTokens.colors.text.inverse : designTokens.colors.neutral.charcoal,
                     border: 'none',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    fontWeight: '600',
+                    borderRadius: designTokens.borderRadius.sm,
+                    fontSize: designTokens.typography.fontSizes.bodySmall,
+                    fontWeight: designTokens.typography.fontWeights.semibold,
                     cursor: 'pointer',
                     transition: 'all 0.2s',
                   }}
@@ -1219,12 +1307,12 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                 {/* Edit title modal */}
                 {editingPlaylistTitle && (
                   <div style={{
-                    backgroundColor: '#f7fafc',
+                    backgroundColor: designTokens.colors.surface.secondary,
                     padding: designTokens.spacing.md,
-                    borderRadius: '8px',
+                    borderRadius: designTokens.borderRadius.md,
                     marginBottom: designTokens.spacing.md,
                   }}>
-                    <h3 style={{ margin: '0 0 12px 0', fontSize: '16px', fontWeight: '600' }}>Edit Playlist Title</h3>
+                    <h3 style={{ margin: `0 0 ${designTokens.spacing.md} 0`, fontSize: designTokens.typography.fontSizes.body, fontWeight: designTokens.typography.fontWeights.semibold }}>Edit Playlist Title</h3>
                     <input
                       type="text"
                       value={newTitle}
@@ -1235,37 +1323,37 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                       placeholder="Playlist title..."
                       style={{
                         width: '100%',
-                        padding: '10px',
-                        border: `1px solid ${error ? '#fc8181' : '#e2e8f0'}`,
-                        borderRadius: '6px',
-                        fontSize: '14px',
-                        marginBottom: '8px',
+                        padding: designTokens.spacing.sm,
+                        border: `1px solid ${error ? designTokens.colors.system.error : designTokens.colors.borders.default}`,
+                        borderRadius: designTokens.borderRadius.sm,
+                        fontSize: designTokens.typography.fontSizes.bodySmall,
+                        marginBottom: designTokens.spacing.sm,
                       }}
                       autoFocus
                     />
                     {error && (
                       <div style={{
-                        padding: '8px 12px',
-                        backgroundColor: '#fee',
-                        border: '1px solid #fcc',
-                        borderRadius: '6px',
-                        color: '#c00',
-                        fontSize: '13px',
-                        marginBottom: '8px',
+                        padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
+                        backgroundColor: designTokens.colors.feedback.error.bg,
+                        border: `1px solid ${designTokens.colors.feedback.error.border}`,
+                        borderRadius: designTokens.borderRadius.sm,
+                        color: designTokens.colors.feedback.error.text,
+                        fontSize: designTokens.typography.fontSizes.caption,
+                        marginBottom: designTokens.spacing.sm,
                       }}>
                         {error}
                       </div>
                     )}
-                    <div style={{ display: 'flex', gap: '8px' }}>
+                    <div style={{ display: 'flex', gap: designTokens.spacing.sm }}>
                       <button
                         onClick={handleEditPlaylistTitle}
                         style={{
-                          padding: '8px 16px',
+                          padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
                           backgroundColor: designTokens.colors.primary.blue,
-                          color: '#ffffff',
+                          color: designTokens.colors.text.inverse,
                           border: 'none',
-                          borderRadius: '6px',
-                          fontSize: '14px',
+                          borderRadius: designTokens.borderRadius.sm,
+                          fontSize: designTokens.typography.fontSizes.bodySmall,
                           cursor: 'pointer',
                         }}
                       >
@@ -1277,12 +1365,12 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                           setError(null);
                         }}
                         style={{
-                          padding: '8px 16px',
-                          backgroundColor: '#e2e8f0',
-                          color: '#4a5568',
+                          padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
+                          backgroundColor: designTokens.colors.borders.default,
+                          color: designTokens.colors.text.muted,
                           border: 'none',
-                          borderRadius: '6px',
-                          fontSize: '14px',
+                          borderRadius: designTokens.borderRadius.sm,
+                          fontSize: designTokens.typography.fontSizes.bodySmall,
                           cursor: 'pointer',
                         }}
                       >
@@ -1295,28 +1383,28 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                 {/* Delete confirmation modal */}
                 {showDeleteConfirm && (
                   <div style={{
-                    backgroundColor: '#fff5f5',
+                    backgroundColor: designTokens.colors.ratings.loved.bgLight,
                     padding: designTokens.spacing.md,
-                    borderRadius: '8px',
+                    borderRadius: designTokens.borderRadius.md,
                     marginBottom: designTokens.spacing.md,
-                    border: '1px solid #feb2b2',
+                    border: `1px solid ${designTokens.colors.system.error}`,
                   }}>
-                    <h3 style={{ margin: '0 0 8px 0', fontSize: '16px', fontWeight: '600', color: '#c53030' }}>Delete Playlist?</h3>
-                    <p style={{ margin: '0 0 16px 0', fontSize: '14px', color: '#742a2a' }}>
+                    <h3 style={{ margin: `0 0 ${designTokens.spacing.sm} 0`, fontSize: designTokens.typography.fontSizes.body, fontWeight: designTokens.typography.fontWeights.semibold, color: designTokens.colors.system.error }}>Delete Playlist?</h3>
+                    <p style={{ margin: `0 0 ${designTokens.spacing.lg} 0`, fontSize: designTokens.typography.fontSizes.bodySmall, color: designTokens.colors.feedback.error.text }}>
                       This will permanently delete "{currentPlaylist.title}" and all its contents. This action cannot be undone.
                     </p>
-                    <div style={{ display: 'flex', gap: '8px' }}>
+                    <div style={{ display: 'flex', gap: designTokens.spacing.sm }}>
                       <button
                         onClick={handleDeletePlaylist}
                         style={{
-                          padding: '8px 16px',
-                          backgroundColor: '#e53e3e',
-                          color: '#ffffff',
+                          padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
+                          backgroundColor: designTokens.colors.system.error,
+                          color: designTokens.colors.text.inverse,
                           border: 'none',
-                          borderRadius: '6px',
-                          fontSize: '14px',
+                          borderRadius: designTokens.borderRadius.sm,
+                          fontSize: designTokens.typography.fontSizes.bodySmall,
                           cursor: 'pointer',
-                          fontWeight: '500',
+                          fontWeight: designTokens.typography.fontWeights.medium,
                         }}
                       >
                         Delete
@@ -1324,12 +1412,12 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                       <button
                         onClick={() => setShowDeleteConfirm(false)}
                         style={{
-                          padding: '8px 16px',
-                          backgroundColor: '#e2e8f0',
-                          color: '#4a5568',
+                          padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
+                          backgroundColor: designTokens.colors.borders.default,
+                          color: designTokens.colors.text.muted,
                           border: 'none',
-                          borderRadius: '6px',
-                          fontSize: '14px',
+                          borderRadius: designTokens.borderRadius.sm,
+                          fontSize: designTokens.typography.fontSizes.bodySmall,
                           cursor: 'pointer',
                         }}
                       >
@@ -1350,32 +1438,54 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
 
                 {showPlaylistUploader && (
                   <div style={{
-                    backgroundColor: '#f7fafc',
+                    backgroundColor: designTokens.colors.surface.secondary,
                     padding: designTokens.spacing.md,
-                    borderRadius: '8px',
+                    borderRadius: designTokens.borderRadius.md,
                     marginBottom: designTokens.spacing.md,
                   }}>
                     <AudioUploader
                       multiple={true}
                       onUploadComplete={async (results) => {
+                        console.log('Upload complete, results:', results);
                         setShowPlaylistUploader(false);
 
                         // Add all uploaded tracks to current playlist
                         if (results.length > 0 && currentPlaylist) {
-                          const { data: items } = await db.playlistItems.getByPlaylist(currentPlaylist.id);
-                          let nextPosition = (items?.length || 0) + 1;
+                          console.log('Adding uploaded tracks to playlist:', currentPlaylist.id);
+
+                          const { data: items, error: fetchError } = await db.playlistItems.getByPlaylist(currentPlaylist.id);
+                          if (fetchError) {
+                            console.error('Error fetching playlist items:', fetchError);
+                            setError('Failed to add tracks to playlist. Please try again.');
+                            return;
+                          }
+
+                          // Find the maximum position value and start from there
+                          const maxPosition = items && items.length > 0
+                            ? Math.max(...items.map((item: any) => item.position || 0))
+                            : 0;
+                          let nextPosition = maxPosition + 1;
+                          console.log('Starting position for uploaded tracks (max + 1):', nextPosition, 'from', items?.length, 'items');
 
                           // Add each track to the playlist
                           for (const result of results) {
-                            await db.playlistItems.add({
+                            const { data, error } = await db.playlistItems.add({
                               playlist_id: currentPlaylist.id,
                               track_id: result.trackId,
                               added_by: currentUser?.id || '',
                               position: nextPosition++,
                             });
+
+                            if (error) {
+                              console.error('Error adding uploaded track to playlist:', { trackId: result.trackId, error });
+                              setError('Failed to add tracks to playlist. Please try again.');
+                              return;
+                            }
+                            console.log('Successfully added uploaded track:', { trackId: result.trackId, data });
                           }
 
                           // Refresh playlist tracks
+                          console.log('Refreshing playlist tracks after upload...');
                           await loadPlaylistTracks(currentPlaylist.id);
 
                           // Refresh tracks list
@@ -1384,6 +1494,9 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                               setTracks(data || []);
                             });
                           }
+                          console.log('Upload to playlist complete');
+                        } else {
+                          console.log('No results or no currentPlaylist:', { resultsCount: results.length, currentPlaylist });
                         }
                       }}
                       onUploadError={(error) => {
@@ -1399,13 +1512,13 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                     <button
                       onClick={() => setShowPlaylistUploader(false)}
                       style={{
-                        marginTop: '8px',
-                        padding: '8px 16px',
-                        backgroundColor: '#e2e8f0',
-                        color: '#4a5568',
+                        marginTop: designTokens.spacing.sm,
+                        padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
+                        backgroundColor: designTokens.colors.borders.default,
+                        color: designTokens.colors.text.muted,
                         border: 'none',
-                        borderRadius: '6px',
-                        fontSize: '14px',
+                        borderRadius: designTokens.borderRadius.sm,
+                        fontSize: designTokens.typography.fontSizes.bodySmall,
                         cursor: 'pointer',
                       }}
                     >
@@ -1417,10 +1530,10 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                 {playlistTracks.length === 0 ? (
                   <div style={{
                     textAlign: 'center',
-                    padding: '40px 20px',
+                    padding: `${designTokens.spacing.xxl} ${designTokens.spacing.xl}`,
                     color: designTokens.colors.neutral.darkGray,
                   }}>
-                    <Music size={48} style={{ margin: '0 auto 16px', opacity: 0.3 }} />
+                    <Music size={48} style={{ margin: `0 auto ${designTokens.spacing.lg}`, opacity: 0.3 }} />
                     <p>No tracks in this playlist yet</p>
                   </div>
                 ) : (
@@ -1428,16 +1541,16 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                     {/* Sort Options */}
                     <div style={{
                       display: 'flex',
-                      gap: '8px',
-                      marginBottom: '12px',
+                      gap: designTokens.spacing.sm,
+                      marginBottom: designTokens.spacing.md,
                       overflowX: 'auto',
-                      paddingBottom: '4px',
+                      paddingBottom: designTokens.spacing.xs,
                     }}>
                       <span style={{
-                        fontSize: '13px',
+                        fontSize: designTokens.typography.fontSizes.caption,
                         color: designTokens.colors.neutral.darkGray,
-                        padding: '6px 0',
-                        fontWeight: '500',
+                        padding: `${designTokens.spacing.xs} 0`,
+                        fontWeight: designTokens.typography.fontWeights.medium,
                         whiteSpace: 'nowrap',
                       }}>Sort:</span>
                       {(['position', 'name', 'duration', 'rating'] as const).map(sort => {
@@ -1453,13 +1566,13 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                             key={sort}
                             onClick={() => handleSortChange(sort)}
                             style={{
-                              padding: '6px 12px',
-                              backgroundColor: isActive ? designTokens.colors.primary.blue : '#ffffff',
-                              color: isActive ? '#ffffff' : designTokens.colors.neutral.darkGray,
-                              border: isActive ? 'none' : '1px solid #e2e8f0',
-                              borderRadius: '16px',
-                              fontSize: '13px',
-                              fontWeight: '500',
+                              padding: `${designTokens.spacing.xs} ${designTokens.spacing.md}`,
+                              backgroundColor: isActive ? designTokens.colors.primary.blue : designTokens.colors.surface.primary,
+                              color: isActive ? designTokens.colors.text.inverse : designTokens.colors.neutral.darkGray,
+                              border: isActive ? 'none' : `1px solid ${designTokens.colors.borders.default}`,
+                              borderRadius: designTokens.borderRadius.lg,
+                              fontSize: designTokens.typography.fontSizes.caption,
+                              fontWeight: designTokens.typography.fontWeights.medium,
                               cursor: 'pointer',
                               whiteSpace: 'nowrap',
                               transition: 'all 0.2s',
@@ -1474,16 +1587,16 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                     {/* Rating Filter */}
                     <div style={{
                       display: 'flex',
-                      gap: '8px',
-                      marginBottom: '16px',
+                      gap: designTokens.spacing.sm,
+                      marginBottom: designTokens.spacing.lg,
                       overflowX: 'auto',
-                      paddingBottom: '4px',
+                      paddingBottom: designTokens.spacing.xs,
                     }}>
                       <span style={{
-                        fontSize: '13px',
+                        fontSize: designTokens.typography.fontSizes.caption,
                         color: designTokens.colors.neutral.darkGray,
-                        padding: '6px 0',
-                        fontWeight: '500',
+                        padding: `${designTokens.spacing.xs} 0`,
+                        fontWeight: designTokens.typography.fontWeights.medium,
                         whiteSpace: 'nowrap',
                       }}>Filter:</span>
                       {(['all', 'listened', 'liked', 'loved', 'unrated'] as const).map(filter => (
@@ -1491,13 +1604,13 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                           key={filter}
                           onClick={() => setRatingFilter(filter)}
                           style={{
-                            padding: '6px 12px',
-                            backgroundColor: ratingFilter === filter ? designTokens.colors.primary.blue : '#f7fafc',
-                            color: ratingFilter === filter ? '#ffffff' : designTokens.colors.neutral.darkGray,
-                            border: ratingFilter === filter ? 'none' : '1px solid #e2e8f0',
-                            borderRadius: '16px',
-                            fontSize: '13px',
-                            fontWeight: '500',
+                            padding: `${designTokens.spacing.xs} ${designTokens.spacing.md}`,
+                            backgroundColor: ratingFilter === filter ? designTokens.colors.primary.blue : designTokens.colors.surface.secondary,
+                            color: ratingFilter === filter ? designTokens.colors.text.inverse : designTokens.colors.neutral.darkGray,
+                            border: ratingFilter === filter ? 'none' : `1px solid ${designTokens.colors.borders.default}`,
+                            borderRadius: designTokens.borderRadius.lg,
+                            fontSize: designTokens.typography.fontSizes.caption,
+                            fontWeight: designTokens.typography.fontWeights.medium,
                             cursor: 'pointer',
                             whiteSpace: 'nowrap',
                             transition: 'all 0.2s',
@@ -1510,7 +1623,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
 
                     {filteredPlaylistTracks.map((item: any) => (
                       item.tracks && (
-                        <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: designTokens.spacing.sm }}>
                           {isEditingTracks && (
                             <input
                               type="checkbox"
@@ -1535,6 +1648,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                               }}
                               isPlaying={currentTrack?.id === item.tracks.id && isPlaying}
                               currentRating={trackRatings[item.tracks.id]}
+                              aggregatedRatings={aggregatedRatings[item.tracks.id]}
                               onPlayPause={() => handlePlayPause(item.tracks)}
                               onRate={(rating) => handleRate(item.tracks.id, rating)}
                               onLongPress={() => setSelectedTrackForDetail(item.tracks)}
@@ -1543,34 +1657,36 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                         </div>
                       )
                     ))}
+                    {/* Spacer to prevent last track from hiding behind PlaybackBar/TabBar */}
+                    <div style={{ height: '16px' }} />
                   </div>
                 )}
               </div>
             ) : (playlistFilter === 'mine' ? createdPlaylists : followedPlaylists).length === 0 ? (
               <div style={{
                 textAlign: 'center',
-                padding: '40px 20px',
+                padding: `${designTokens.spacing.xxl} ${designTokens.spacing.xl}`,
                 color: designTokens.colors.neutral.darkGray,
               }}>
-                <Music size={48} style={{ margin: '0 auto 16px', opacity: 0.3 }} />
+                <Music size={48} style={{ margin: `0 auto ${designTokens.spacing.lg}`, opacity: 0.3 }} />
                 <p>{playlistFilter === 'mine' ? 'No playlists yet' : 'Not following any playlists'}</p>
-                <p style={{ fontSize: '14px', marginTop: '8px' }}>
+                <p style={{ fontSize: designTokens.typography.fontSizes.bodySmall, marginTop: designTokens.spacing.sm }}>
                   {playlistFilter === 'mine'
                     ? 'Create your first playlist to start sharing music'
                     : 'Follow playlists shared with you to see them here'}
                 </p>
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: designTokens.spacing.md }}>
                 {(playlistFilter === 'mine' ? createdPlaylists : followedPlaylists).map((playlist) => (
                   <div
                     key={playlist.id}
                     onClick={() => handlePlaylistClick(playlist)}
                     style={{
-                      padding: '16px',
-                      backgroundColor: currentPlaylist?.id === playlist.id ? '#ebf8ff' : '#ffffff',
-                      border: currentPlaylist?.id === playlist.id ? '2px solid #3182ce' : '1px solid #e2e8f0',
-                      borderRadius: '8px',
+                      padding: designTokens.spacing.lg,
+                      backgroundColor: currentPlaylist?.id === playlist.id ? designTokens.colors.surface.hover : designTokens.colors.surface.primary,
+                      border: currentPlaylist?.id === playlist.id ? `2px solid ${designTokens.colors.primary.blue}` : `1px solid ${designTokens.colors.borders.default}`,
+                      borderRadius: designTokens.borderRadius.md,
                       cursor: 'pointer',
                       transition: 'all 0.2s',
                     }}
@@ -1582,16 +1698,16 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                     }}>
                       <div>
                         <h3 style={{
-                          fontSize: '16px',
-                          fontWeight: '600',
+                          fontSize: designTokens.typography.fontSizes.body,
+                          fontWeight: designTokens.typography.fontWeights.semibold,
                           color: designTokens.colors.neutral.charcoal,
-                          marginBottom: '4px',
+                          marginBottom: designTokens.spacing.xs,
                         }}>
                           {playlist.title}
                         </h3>
                         {playlist.description && (
                           <p style={{
-                            fontSize: '14px',
+                            fontSize: designTokens.typography.fontSizes.bodySmall,
                             color: designTokens.colors.neutral.darkGray,
                           }}>
                             {playlist.description}
@@ -1636,13 +1752,13 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                           }
                         }}
                         style={{
-                          padding: '8px',
+                          padding: designTokens.spacing.sm,
                           backgroundColor: 'transparent',
                           border: 'none',
                           cursor: 'pointer',
                           color: designTokens.colors.primary.blue,
-                          fontSize: '14px',
-                          fontWeight: '500',
+                          fontSize: designTokens.typography.fontSizes.bodySmall,
+                          fontWeight: designTokens.typography.fontWeights.medium,
                         }}
                       >
                         <Share2 size={20} />
@@ -1662,23 +1778,23 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
           }}>
             {currentUser && (
               <div style={{
-                backgroundColor: '#ffffff',
-                border: '1px solid #e2e8f0',
-                borderRadius: '8px',
-                padding: '16px',
-                marginBottom: '16px',
+                backgroundColor: designTokens.colors.surface.primary,
+                border: `1px solid ${designTokens.colors.borders.default}`,
+                borderRadius: designTokens.borderRadius.md,
+                padding: designTokens.spacing.lg,
+                marginBottom: designTokens.spacing.lg,
               }}>
-                <div style={{ marginBottom: '12px' }}>
+                <div style={{ marginBottom: designTokens.spacing.md }}>
                   <p style={{
-                    fontSize: '14px',
+                    fontSize: designTokens.typography.fontSizes.bodySmall,
                     color: designTokens.colors.neutral.darkGray,
-                    marginBottom: '4px',
+                    marginBottom: designTokens.spacing.xs,
                   }}>
                     Name
                   </p>
                   <p style={{
-                    fontSize: '16px',
-                    fontWeight: '500',
+                    fontSize: designTokens.typography.fontSizes.body,
+                    fontWeight: designTokens.typography.fontWeights.medium,
                     color: designTokens.colors.neutral.charcoal,
                   }}>
                     {currentUser.name || 'User'}
@@ -1686,17 +1802,17 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                 </div>
 
                 {currentUser.email && (
-                  <div style={{ marginBottom: '12px' }}>
+                  <div style={{ marginBottom: designTokens.spacing.md }}>
                     <p style={{
-                      fontSize: '14px',
+                      fontSize: designTokens.typography.fontSizes.bodySmall,
                       color: designTokens.colors.neutral.darkGray,
-                      marginBottom: '4px',
+                      marginBottom: designTokens.spacing.xs,
                     }}>
                       Email
                     </p>
                     <p style={{
-                      fontSize: '16px',
-                      fontWeight: '500',
+                      fontSize: designTokens.typography.fontSizes.body,
+                      fontWeight: designTokens.typography.fontWeights.medium,
                       color: designTokens.colors.neutral.charcoal,
                     }}>
                       {currentUser.email}
@@ -1705,17 +1821,17 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                 )}
 
                 {currentUser.phoneNumber && (
-                  <div style={{ marginBottom: '12px' }}>
+                  <div style={{ marginBottom: designTokens.spacing.md }}>
                     <p style={{
-                      fontSize: '14px',
+                      fontSize: designTokens.typography.fontSizes.bodySmall,
                       color: designTokens.colors.neutral.darkGray,
-                      marginBottom: '4px',
+                      marginBottom: designTokens.spacing.xs,
                     }}>
                       Phone
                     </p>
                     <p style={{
-                      fontSize: '16px',
-                      fontWeight: '500',
+                      fontSize: designTokens.typography.fontSizes.body,
+                      fontWeight: designTokens.typography.fontWeights.medium,
                       color: designTokens.colors.neutral.charcoal,
                     }}>
                       {currentUser.phoneNumber}
@@ -1726,20 +1842,20 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                 <button
                   onClick={() => navigate('/feedback')}
                   style={{
-                    marginTop: '16px',
+                    marginTop: designTokens.spacing.lg,
                     width: '100%',
-                    padding: '12px',
+                    padding: designTokens.spacing.md,
                     backgroundColor: designTokens.colors.primary.blue,
-                    color: '#ffffff',
+                    color: designTokens.colors.text.inverse,
                     border: 'none',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    fontWeight: '500',
+                    borderRadius: designTokens.borderRadius.sm,
+                    fontSize: designTokens.typography.fontSizes.bodySmall,
+                    fontWeight: designTokens.typography.fontWeights.medium,
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '8px',
+                    gap: designTokens.spacing.sm,
                   }}
                 >
                   <MessageSquare size={18} />
@@ -1749,15 +1865,15 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                 <button
                   onClick={() => auth.signOut()}
                   style={{
-                    marginTop: '12px',
+                    marginTop: designTokens.spacing.md,
                     width: '100%',
-                    padding: '12px',
-                    backgroundColor: '#f7fafc',
-                    color: '#4a5568',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    fontWeight: '500',
+                    padding: designTokens.spacing.md,
+                    backgroundColor: designTokens.colors.surface.secondary,
+                    color: designTokens.colors.text.muted,
+                    border: `1px solid ${designTokens.colors.borders.default}`,
+                    borderRadius: designTokens.borderRadius.sm,
+                    fontSize: designTokens.typography.fontSizes.bodySmall,
+                    fontWeight: designTokens.typography.fontWeights.medium,
                     cursor: 'pointer',
                   }}
                 >
@@ -1778,8 +1894,8 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
       {/* Fixed Header */}
       <div style={{
         flexShrink: 0,
-        backgroundColor: '#ffffff',
-        borderBottom: '1px solid #e2e8f0',
+        backgroundColor: designTokens.colors.surface.primary,
+        borderBottom: `1px solid ${designTokens.colors.borders.default}`,
       }}>
         {/* Top header with logo, action button, and user button */}
         <div style={{
@@ -1795,13 +1911,13 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
-                padding: '8px',
+                gap: designTokens.spacing.xs,
+                padding: designTokens.spacing.sm,
                 backgroundColor: 'transparent',
                 color: designTokens.colors.primary.blue,
                 border: 'none',
-                fontSize: '14px',
-                fontWeight: '500',
+                fontSize: designTokens.typography.fontSizes.bodySmall,
+                fontWeight: designTokens.typography.fontWeights.medium,
                 cursor: 'pointer',
                 flexShrink: 0,
               }}
@@ -1811,16 +1927,16 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
             </button>
           ) : (
             <div style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '50%',
+              width: designTokens.spacing.xxl,
+              height: designTokens.spacing.xxl,
+              borderRadius: designTokens.borderRadius.full,
               backgroundColor: designTokens.colors.primary.blue,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#ffffff',
-              fontSize: '20px',
-              fontWeight: 'bold',
+              color: designTokens.colors.text.inverse,
+              fontSize: designTokens.typography.fontSizes.h3,
+              fontWeight: designTokens.typography.fontWeights.bold,
               flexShrink: 0,
             }}>
               C
@@ -1835,14 +1951,14 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '6px',
-                  padding: '8px 16px',
+                  gap: designTokens.spacing.xs,
+                  padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
                   backgroundColor: designTokens.colors.primary.blue,
-                  color: '#ffffff',
+                  color: designTokens.colors.text.inverse,
                   border: 'none',
-                  borderRadius: '20px',
-                  fontSize: '14px',
-                  fontWeight: '500',
+                  borderRadius: designTokens.borderRadius.xxl,
+                  fontSize: designTokens.typography.fontSizes.bodySmall,
+                  fontWeight: designTokens.typography.fontWeights.medium,
                   cursor: 'pointer',
                 }}
               >
@@ -1856,14 +1972,14 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '6px',
-                  padding: '8px 16px',
+                  gap: designTokens.spacing.xs,
+                  padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
                   backgroundColor: designTokens.colors.primary.blue,
-                  color: '#ffffff',
+                  color: designTokens.colors.text.inverse,
                   border: 'none',
-                  borderRadius: '20px',
-                  fontSize: '14px',
-                  fontWeight: '500',
+                  borderRadius: designTokens.borderRadius.xxl,
+                  fontSize: designTokens.typography.fontSizes.bodySmall,
+                  fontWeight: designTokens.typography.fontWeights.medium,
                   cursor: 'pointer',
                 }}
               >
@@ -1872,7 +1988,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
               </button>
             )}
             {activeTab === 'playlists' && viewMode === 'detail' && isPlaylistOwner && (
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{ display: 'flex', gap: designTokens.spacing.sm }}>
                 {isEditingTracks ? (
                   <>
                     <button
@@ -1880,14 +1996,14 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                       style={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '4px',
-                        padding: '6px 12px',
-                        backgroundColor: '#ffffff',
+                        gap: designTokens.spacing.xs,
+                        padding: `${designTokens.spacing.xs} ${designTokens.spacing.md}`,
+                        backgroundColor: designTokens.colors.surface.primary,
                         color: designTokens.colors.neutral.charcoal,
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '20px',
-                        fontSize: '13px',
-                        fontWeight: '500',
+                        border: `1px solid ${designTokens.colors.borders.default}`,
+                        borderRadius: designTokens.borderRadius.xxl,
+                        fontSize: designTokens.typography.fontSizes.caption,
+                        fontWeight: designTokens.typography.fontWeights.medium,
                         cursor: 'pointer',
                       }}
                     >
@@ -1899,14 +2015,14 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                         style={{
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '4px',
-                          padding: '6px 12px',
+                          gap: designTokens.spacing.xs,
+                          padding: `${designTokens.spacing.xs} ${designTokens.spacing.md}`,
                           backgroundColor: designTokens.colors.system.error,
-                          color: '#ffffff',
+                          color: designTokens.colors.text.inverse,
                           border: 'none',
-                          borderRadius: '20px',
-                          fontSize: '13px',
-                          fontWeight: '500',
+                          borderRadius: designTokens.borderRadius.xxl,
+                          fontSize: designTokens.typography.fontSizes.caption,
+                          fontWeight: designTokens.typography.fontWeights.medium,
                           cursor: 'pointer',
                         }}
                       >
@@ -1922,14 +2038,14 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                       style={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '4px',
-                        padding: '6px 12px',
-                        backgroundColor: '#ffffff',
+                        gap: designTokens.spacing.xs,
+                        padding: `${designTokens.spacing.xs} ${designTokens.spacing.md}`,
+                        backgroundColor: designTokens.colors.surface.primary,
                         color: designTokens.colors.primary.blue,
                         border: `1px solid ${designTokens.colors.primary.blue}`,
-                        borderRadius: '20px',
-                        fontSize: '13px',
-                        fontWeight: '500',
+                        borderRadius: designTokens.borderRadius.xxl,
+                        fontSize: designTokens.typography.fontSizes.caption,
+                        fontWeight: designTokens.typography.fontWeights.medium,
                         cursor: 'pointer',
                       }}
                     >
@@ -1941,14 +2057,14 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                       style={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '4px',
-                        padding: '6px 12px',
+                        gap: designTokens.spacing.xs,
+                        padding: `${designTokens.spacing.xs} ${designTokens.spacing.md}`,
                         backgroundColor: designTokens.colors.primary.blue,
-                        color: '#ffffff',
+                        color: designTokens.colors.text.inverse,
                         border: 'none',
-                        borderRadius: '20px',
-                        fontSize: '13px',
-                        fontWeight: '500',
+                        borderRadius: designTokens.borderRadius.xxl,
+                        fontSize: designTokens.typography.fontSizes.caption,
+                        fontWeight: designTokens.typography.fontWeights.medium,
                         cursor: 'pointer',
                       }}
                     >
@@ -1962,14 +2078,14 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
           </div>
 
           {/* Right: Menu button for playlist detail or Spacer */}
-          <div style={{ width: '40px', flexShrink: 0, position: 'relative' }}>
+          <div style={{ width: designTokens.spacing.xxl, flexShrink: 0, position: 'relative' }}>
             {activeTab === 'playlists' && viewMode === 'detail' && isPlaylistOwner && !isEditingTracks && (
               <button
                 onClick={() => setShowPlaylistMenu(!showPlaylistMenu)}
                 style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '50%',
+                  width: designTokens.spacing.xxl,
+                  height: designTokens.spacing.xxl,
+                  borderRadius: designTokens.borderRadius.full,
                   backgroundColor: 'transparent',
                   border: 'none',
                   display: 'flex',
@@ -1990,14 +2106,59 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
           <div style={{
             position: 'absolute',
             top: '60px',
-            right: '16px',
-            backgroundColor: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderRadius: '8px',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            right: designTokens.spacing.lg,
+            backgroundColor: designTokens.colors.surface.primary,
+            border: `1px solid ${designTokens.colors.borders.default}`,
+            borderRadius: designTokens.borderRadius.md,
+            boxShadow: designTokens.shadows.elevated,
             zIndex: 1000,
             minWidth: '180px',
           }}>
+            <button
+              onClick={async () => {
+                setShowPlaylistMenu(false);
+
+                if (!currentPlaylist) return;
+
+                const shareUrl = `coretet://playlist/${currentPlaylist.share_code}`;
+
+                // On native platforms, use native share sheet
+                if (Capacitor.isNativePlatform()) {
+                  try {
+                    const shareText = `Check out "${currentPlaylist.title}" on CoreTet\n\n${shareUrl}`;
+
+                    await Share.share({
+                      title: currentPlaylist.title,
+                      text: shareText,
+                      dialogTitle: 'Share Playlist',
+                    });
+                  } catch (error) {
+                    console.error('Share failed:', error);
+                  }
+                } else {
+                  // On web, copy to clipboard
+                  navigator.clipboard.writeText(shareUrl);
+                  // Could add a toast notification here
+                }
+              }}
+              style={{
+                width: '100%',
+                padding: `${designTokens.spacing.md} ${designTokens.spacing.lg}`,
+                backgroundColor: 'transparent',
+                border: 'none',
+                textAlign: 'left',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: designTokens.spacing.md,
+                fontSize: designTokens.typography.fontSizes.bodySmall,
+                color: designTokens.colors.neutral.charcoal,
+                borderBottom: `1px solid ${designTokens.colors.borders.default}`,
+              }}
+            >
+              <Share2 size={16} />
+              Share Playlist
+            </button>
             <button
               onClick={() => {
                 setNewTitle(currentPlaylist?.title || '');
@@ -2006,17 +2167,17 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
               }}
               style={{
                 width: '100%',
-                padding: '12px 16px',
+                padding: `${designTokens.spacing.md} ${designTokens.spacing.lg}`,
                 backgroundColor: 'transparent',
                 border: 'none',
                 textAlign: 'left',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '12px',
-                fontSize: '14px',
+                gap: designTokens.spacing.md,
+                fontSize: designTokens.typography.fontSizes.bodySmall,
                 color: designTokens.colors.neutral.charcoal,
-                borderBottom: '1px solid #e2e8f0',
+                borderBottom: `1px solid ${designTokens.colors.borders.default}`,
               }}
             >
               <Edit2 size={16} />
@@ -2026,17 +2187,17 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
               onClick={handleToggleEditMode}
               style={{
                 width: '100%',
-                padding: '12px 16px',
+                padding: `${designTokens.spacing.md} ${designTokens.spacing.lg}`,
                 backgroundColor: 'transparent',
                 border: 'none',
                 textAlign: 'left',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '12px',
-                fontSize: '14px',
+                gap: designTokens.spacing.md,
+                fontSize: designTokens.typography.fontSizes.bodySmall,
                 color: designTokens.colors.neutral.charcoal,
-                borderBottom: '1px solid #e2e8f0',
+                borderBottom: `1px solid ${designTokens.colors.borders.default}`,
               }}
             >
               <Edit2 size={16} />
@@ -2049,16 +2210,16 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
               }}
               style={{
                 width: '100%',
-                padding: '12px 16px',
+                padding: `${designTokens.spacing.md} ${designTokens.spacing.lg}`,
                 backgroundColor: 'transparent',
                 border: 'none',
                 textAlign: 'left',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '12px',
-                fontSize: '14px',
-                color: '#e53e3e',
+                gap: designTokens.spacing.md,
+                fontSize: designTokens.typography.fontSizes.bodySmall,
+                color: designTokens.colors.system.error,
               }}
             >
               <Trash2 size={16} />
@@ -2073,7 +2234,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
         flex: 1,
         overflowY: 'auto' as const,
         overflowX: 'hidden' as const,
-        paddingBottom: currentTrack ? '200px' : '88px', // Extra space for PlaybackBar when playing
+        paddingBottom: currentTrack ? '164px' : '84px', // Extra space: TabBar (60px) + PlaybackBar (~84px) + gap (8px) + margin (12px)
       }}>
         {renderContent()}
       </div>
@@ -2082,7 +2243,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
       {currentTrack && (
         <div style={{
           position: 'fixed',
-          bottom: '80px', // Stick to TabBar (adjusted to match actual TabBar height)
+          bottom: '68px', // TabBar (60px) + small gap (8px)
           left: 0,
           right: 0,
           zIndex: 99, // Below TabBar (100) but above content
