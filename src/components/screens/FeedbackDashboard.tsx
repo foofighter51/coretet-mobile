@@ -159,11 +159,13 @@ export function FeedbackDashboard() {
   return (
     <div style={{
       fontFamily: designTokens.typography.fontFamily,
-      maxWidth: '1400px',
-      margin: '0 auto',
-      padding: '32px',
+      width: '100%',
+      maxWidth: '100%',
+      margin: '0',
+      padding: '32px 48px',
       backgroundColor: '#f7fafc',
       minHeight: '100vh',
+      overflowY: 'auto',
     }}>
       {/* Header */}
       <div style={{ marginBottom: '32px' }}>
@@ -178,8 +180,8 @@ export function FeedbackDashboard() {
       {/* Stats */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-        gap: '16px',
+        gridTemplateColumns: 'repeat(5, 1fr)',
+        gap: '24px',
         marginBottom: '32px',
       }}>
         <StatCard label="Total Feedback" value={stats.total} color="#3b82f6" />
@@ -192,13 +194,14 @@ export function FeedbackDashboard() {
       {/* Filters */}
       <div style={{
         backgroundColor: '#ffffff',
-        padding: '16px',
+        padding: '20px 24px',
         borderRadius: '8px',
         marginBottom: '24px',
         display: 'flex',
-        gap: '16px',
-        flexWrap: 'wrap',
+        gap: '24px',
+        flexWrap: 'nowrap',
         alignItems: 'flex-end',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
       }}>
         <div>
           <label style={{ fontSize: '14px', fontWeight: '600', marginBottom: '8px', display: 'block' }}>
@@ -267,7 +270,7 @@ export function FeedbackDashboard() {
       </div>
 
       {/* Feedback List */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         {filteredFeedback.map((item) => {
           const isExpanded = expandedItems.has(item.id);
           const itemComments = comments[item.id] || [];
@@ -277,29 +280,38 @@ export function FeedbackDashboard() {
               key={item.id}
               style={{
                 backgroundColor: '#ffffff',
-                padding: '24px',
+                padding: '20px 24px',
                 borderRadius: '8px',
                 border: '1px solid #e2e8f0',
                 opacity: item.archived ? 0.6 : 1,
+                boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                transition: 'box-shadow 0.2s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
               }}
             >
-              <div style={{ display: 'flex', gap: '24px' }}>
+              <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
                 {/* Vote Count */}
                 <div style={{
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
-                  minWidth: '60px',
+                  minWidth: '50px',
+                  paddingTop: '4px',
                 }}>
-                  <ThumbsUp size={20} color="#6b7280" />
-                  <span style={{ fontSize: '20px', fontWeight: '700', marginTop: '8px' }}>
+                  <ThumbsUp size={18} color="#6b7280" />
+                  <span style={{ fontSize: '18px', fontWeight: '700', marginTop: '6px' }}>
                     {item.voteCount}
                   </span>
-                  <span style={{ fontSize: '12px', color: '#9ca3af' }}>votes</span>
+                  <span style={{ fontSize: '11px', color: '#9ca3af' }}>votes</span>
                 </div>
 
                 {/* Content */}
-                <div style={{ flex: 1 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap' }}>
                     <span style={{
                       display: 'inline-flex',
@@ -371,11 +383,20 @@ export function FeedbackDashboard() {
                     </button>
                   </div>
 
-                  <h2 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '12px' }}>
+                  <h2
+                    onClick={() => toggleExpanded(item.id)}
+                    style={{
+                      fontSize: '18px',
+                      fontWeight: '600',
+                      marginBottom: '8px',
+                      cursor: 'pointer',
+                      color: designTokens.colors.neutral.charcoal,
+                    }}
+                  >
                     {item.title}
                   </h2>
 
-                  <p style={{ fontSize: '15px', lineHeight: '1.6', color: '#4a5568', marginBottom: '16px' }}>
+                  <p style={{ fontSize: '14px', lineHeight: '1.5', color: '#4a5568', marginBottom: '12px' }}>
                     {item.description}
                   </p>
 
