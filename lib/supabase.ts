@@ -340,6 +340,16 @@ export const db = {
       return { data, error };
     },
 
+    async removeByTrack(playlistId: string, trackId: string) {
+      const { error } = await supabase
+        .from('playlist_items')
+        .delete()
+        .eq('playlist_id', playlistId)
+        .eq('track_id', trackId);
+
+      return { error };
+    },
+
     async updatePosition(itemId: string, newPosition: number) {
       const { data, error } = await supabase
         .from('playlist_items')

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Play, Pause, Headphones, ThumbsUp, Heart, Folder, ChevronLeft } from 'lucide-react';
+import { Play, Pause, Headphones, ThumbsUp, Heart, Folder, ChevronLeft, Trash2 } from 'lucide-react';
 import { designTokens } from '../../design/designTokens';
 
 interface SwipeableTrackRowProps {
@@ -13,6 +13,8 @@ interface SwipeableTrackRowProps {
   currentRating?: 'listened' | 'liked' | 'loved' | null;
   onPlayPause: () => void;
   onRate: (rating: 'listened' | 'liked' | 'loved') => void;
+  onRemove?: () => void;
+  showRemoveButton?: boolean;
 }
 
 export const SwipeableTrackRow: React.FC<SwipeableTrackRowProps> = ({
@@ -21,6 +23,8 @@ export const SwipeableTrackRow: React.FC<SwipeableTrackRowProps> = ({
   currentRating,
   onPlayPause,
   onRate,
+  onRemove,
+  showRemoveButton = false,
 }) => {
   const [swipeOffset, setSwipeOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -28,7 +32,7 @@ export const SwipeableTrackRow: React.FC<SwipeableTrackRowProps> = ({
   const currentXRef = useRef<number>(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const maxSwipe = 150; // Show all three rating buttons
+  const maxSwipe = showRemoveButton ? 200 : 150; // Extra space for remove button
 
   // Close swipe when clicking outside
   useEffect(() => {
@@ -105,6 +109,11 @@ export const SwipeableTrackRow: React.FC<SwipeableTrackRowProps> = ({
     setSwipeOffset(0);
   };
 
+  const handleRemoveClick = () => {
+    onRemove?.();
+    setSwipeOffset(0);
+  };
+
   const formatTime = (seconds?: number) => {
     if (!seconds) return '0:00';
     const mins = Math.floor(seconds / 60);
@@ -121,7 +130,7 @@ export const SwipeableTrackRow: React.FC<SwipeableTrackRowProps> = ({
         borderRadius: '8px',
         marginBottom: '4px',
       }}>
-      {/* Rating buttons (behind the track row) */}
+      {/* Action buttons (behind the track row) */}
       <div style={{
         position: 'absolute',
         right: 0,
@@ -131,6 +140,29 @@ export const SwipeableTrackRow: React.FC<SwipeableTrackRowProps> = ({
         alignItems: 'center',
         gap: '0px',
       }}>
+        {showRemoveButton && (
+          <button
+            onClick={handleRemoveClick}
+            aria-label={`Remove ${track.title} from playlist`}
+            style={{
+              width: '50px',
+              height: '100%',
+              backgroundColor: designTokens.colors.system.error,
+              border: 'none',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              minHeight: '44px',
+            }}
+          >
+            <Trash2
+              size={20}
+              color="#ffffff"
+              aria-hidden="true"
+            />
+          </button>
+        )}
         <button
           onClick={() => handleRate('listened')}
           aria-label={`Mark ${track.title} as listened`}

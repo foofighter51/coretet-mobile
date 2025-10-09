@@ -329,6 +329,9 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
 
       if (deleteError) throw deleteError;
 
+      // Reload playlists to update the list
+      await loadPlaylists();
+
       // Go back to list view
       handleBackToList();
     } catch (err) {
@@ -503,6 +506,31 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
       setTrackRatings(prev => ({ ...prev, [trackId]: rating }));
     } catch (error) {
       console.error('Error rating track:', error);
+    }
+  };
+
+  const handleRemoveTrackFromPlaylist = async (trackId: string) => {
+    if (!currentPlaylist || !isPlaylistOwner) return;
+
+    try {
+      const { error } = await db.playlistItems.removeByTrack(currentPlaylist.id, trackId);
+
+      if (error) {
+        console.error('Failed to remove track:', error);
+        setError('Failed to remove track from playlist');
+        return;
+      }
+
+      // Stop playback if this track is currently playing
+      if (currentTrack?.id === trackId && isPlaying) {
+        handlePlayPause();
+      }
+
+      // Reload playlist tracks
+      await loadPlaylistTracks(currentPlaylist.id);
+    } catch (err) {
+      console.error('Error removing track:', err);
+      setError('Failed to remove track from playlist');
     }
   };
 
@@ -1127,6 +1155,8 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                           currentRating={trackRatings[item.tracks.id]}
                           onPlayPause={() => handlePlayPause(item.tracks)}
                           onRate={(rating) => handleRate(item.tracks.id, rating)}
+                          onRemove={isPlaylistOwner ? () => handleRemoveTrackFromPlaylist(item.tracks.id) : undefined}
+                          showRemoveButton={isPlaylistOwner}
                         />
                       )
                     ))}
