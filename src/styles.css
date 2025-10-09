@@ -11,13 +11,13 @@ html, body {
   margin: 0;
   padding: 0;
   height: 100vh;
-  overflow: hidden;
+  overflow: auto; /* Changed from hidden to allow scrolling */
   width: 100%;
 }
 
 #root {
-  height: 100vh;
-  overflow: hidden;
+  min-height: 100vh; /* Changed from height to min-height */
+  overflow: auto; /* Changed from hidden to allow scrolling */
 }
 
 /* Hide scrollbars for webkit browsers */
