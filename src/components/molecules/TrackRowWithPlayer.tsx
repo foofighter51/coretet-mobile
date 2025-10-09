@@ -1,5 +1,5 @@
 import React, { useCallback, memo, useState } from 'react';
-import { Play, Heart, ThumbsUp, Trash2 } from 'lucide-react';
+import { Play, Heart, ThumbsUp } from 'lucide-react';
 import { designTokens } from '../../design/designTokens';
 import { Track } from '../../types';
 import { AudioPlayer } from './AudioPlayer';
@@ -10,8 +10,6 @@ interface TrackRowWithPlayerProps {
   isPlaying?: boolean;
   onPlay?: (track: Track) => void;
   onRatingChange?: (track: Track, rating: 'like' | 'love' | 'none') => void;
-  onRemove?: (track: Track) => void;
-  showRemoveButton?: boolean;
   showExpandedPlayer?: boolean;
   audioUrl?: string; // URL for the actual audio file
 }
@@ -21,8 +19,6 @@ export const TrackRowWithPlayer = memo(function TrackRowWithPlayer({
   isPlaying = false,
   onPlay,
   onRatingChange,
-  onRemove,
-  showRemoveButton = false,
   showExpandedPlayer = true,
   audioUrl
 }: TrackRowWithPlayerProps) {
@@ -35,10 +31,6 @@ export const TrackRowWithPlayer = memo(function TrackRowWithPlayer({
   const handleRatingChange = useCallback((rating: 'like' | 'love' | 'none') => {
     onRatingChange?.(track, rating);
   }, [onRatingChange, track]);
-
-  const handleRemove = useCallback(() => {
-    onRemove?.(track);
-  }, [onRemove, track]);
 
   const toggleExpanded = useCallback(() => {
     setIsExpanded(!isExpanded);
@@ -211,31 +203,6 @@ export const TrackRowWithPlayer = memo(function TrackRowWithPlayer({
           >
             {track.duration}
           </span>
-
-          {/* Remove Button (Owner only) */}
-          {showRemoveButton && (
-            <button
-              onClick={handleRemove}
-              style={{
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                padding: '4px',
-                marginLeft: designTokens.spacing.xs,
-                color: designTokens.colors.neutral.gray,
-                transition: 'color 0.2s ease'
-              }}
-              aria-label={`Remove ${track.title} from playlist`}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = designTokens.colors.system.error;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = designTokens.colors.neutral.gray;
-              }}
-            >
-              <Trash2 size={16} />
-            </button>
-          )}
         </div>
       </div>
 

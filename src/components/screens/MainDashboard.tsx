@@ -244,6 +244,10 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   const [newTitle, setNewTitle] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
+  // Edit tracks mode
+  const [isEditingTracks, setIsEditingTracks] = useState(false);
+  const [selectedTrackIds, setSelectedTrackIds] = useState<string[]>([]);
+
   const handleRatingChange = useCallback((track: Track, rating: 'like' | 'love' | 'none') => {
     console.log(`Rating changed for ${track.title}: ${rating}`);
   }, []);
@@ -509,28 +513,45 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
     }
   };
 
-  const handleRemoveTrackFromPlaylist = async (trackId: string) => {
-    if (!currentPlaylist || !isPlaylistOwner) return;
+  const handleToggleEditMode = () => {
+    setIsEditingTracks(!isEditingTracks);
+    setSelectedTrackIds([]);
+    setShowPlaylistMenu(false);
+  };
+
+  const handleToggleTrackSelection = (trackId: string) => {
+    setSelectedTrackIds(prev =>
+      prev.includes(trackId)
+        ? prev.filter(id => id !== trackId)
+        : [...prev, trackId]
+    );
+  };
+
+  const handleDeleteSelectedTracks = async () => {
+    if (!currentPlaylist || selectedTrackIds.length === 0) return;
 
     try {
-      const { error } = await db.playlistItems.removeByTrack(currentPlaylist.id, trackId);
-
-      if (error) {
-        console.error('Failed to remove track:', error);
-        setError('Failed to remove track from playlist');
-        return;
+      // Delete each selected track
+      for (const trackId of selectedTrackIds) {
+        const { error } = await db.playlistItems.removeByTrack(currentPlaylist.id, trackId);
+        if (error) {
+          console.error('Failed to remove track:', error);
+          setError('Failed to remove some tracks from playlist');
+        }
       }
 
-      // Stop playback if this track is currently playing
-      if (currentTrack?.id === trackId && isPlaying) {
+      // Stop playback if current track was deleted
+      if (currentTrack && selectedTrackIds.includes(currentTrack.id) && isPlaying) {
         handlePlayPause();
       }
 
-      // Reload playlist tracks
+      // Reset edit mode and reload tracks
+      setIsEditingTracks(false);
+      setSelectedTrackIds([]);
       await loadPlaylistTracks(currentPlaylist.id);
     } catch (err) {
-      console.error('Error removing track:', err);
-      setError('Failed to remove track from playlist');
+      console.error('Error removing tracks:', err);
+      setError('Failed to remove tracks from playlist');
     }
   };
 
@@ -1143,21 +1164,36 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
 
                     {filteredPlaylistTracks.map((item: any) => (
                       item.tracks && (
-                        <SwipeableTrackRow
-                          key={item.id}
-                          track={{
-                            id: item.tracks.id,
-                            title: item.tracks.title,
-                            duration_seconds: item.tracks.duration_seconds,
-                            folder_path: item.tracks.folder_path
-                          }}
-                          isPlaying={currentTrack?.id === item.tracks.id && isPlaying}
-                          currentRating={trackRatings[item.tracks.id]}
-                          onPlayPause={() => handlePlayPause(item.tracks)}
-                          onRate={(rating) => handleRate(item.tracks.id, rating)}
-                          onRemove={isPlaylistOwner ? () => handleRemoveTrackFromPlaylist(item.tracks.id) : undefined}
-                          showRemoveButton={isPlaylistOwner}
-                        />
+                        <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          {isEditingTracks && (
+                            <input
+                              type="checkbox"
+                              checked={selectedTrackIds.includes(item.tracks.id)}
+                              onChange={() => handleToggleTrackSelection(item.tracks.id)}
+                              style={{
+                                width: '20px',
+                                height: '20px',
+                                cursor: 'pointer',
+                                flexShrink: 0,
+                              }}
+                              aria-label={`Select ${item.tracks.title}`}
+                            />
+                          )}
+                          <div style={{ flex: 1 }}>
+                            <SwipeableTrackRow
+                              track={{
+                                id: item.tracks.id,
+                                title: item.tracks.title,
+                                duration_seconds: item.tracks.duration_seconds,
+                                folder_path: item.tracks.folder_path
+                              }}
+                              isPlaying={currentTrack?.id === item.tracks.id && isPlaying}
+                              currentRating={trackRatings[item.tracks.id]}
+                              onPlayPause={() => handlePlayPause(item.tracks)}
+                              onRate={(rating) => handleRate(item.tracks.id, rating)}
+                            />
+                          </div>
+                        </div>
                       )
                     ))}
                   </div>
@@ -1487,51 +1523,97 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
             )}
             {activeTab === 'playlists' && viewMode === 'detail' && isPlaylistOwner && (
               <div style={{ display: 'flex', gap: '8px' }}>
-                <button
-                  onClick={() => setShowTrackSelector(true)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    padding: '6px 12px',
-                    backgroundColor: '#ffffff',
-                    color: designTokens.colors.primary.blue,
-                    border: `1px solid ${designTokens.colors.primary.blue}`,
-                    borderRadius: '20px',
-                    fontSize: '13px',
-                    fontWeight: '500',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <Plus size={14} />
-                  From Library
-                </button>
-                <button
-                  onClick={() => setShowPlaylistUploader(true)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    padding: '6px 12px',
-                    backgroundColor: designTokens.colors.primary.blue,
-                    color: '#ffffff',
-                    border: 'none',
-                    borderRadius: '20px',
-                    fontSize: '13px',
-                    fontWeight: '500',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <Plus size={14} />
-                  Upload New
-                </button>
+                {isEditingTracks ? (
+                  <>
+                    <button
+                      onClick={handleToggleEditMode}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: '6px 12px',
+                        backgroundColor: '#ffffff',
+                        color: designTokens.colors.neutral.charcoal,
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '20px',
+                        fontSize: '13px',
+                        fontWeight: '500',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    {selectedTrackIds.length > 0 && (
+                      <button
+                        onClick={handleDeleteSelectedTracks}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          padding: '6px 12px',
+                          backgroundColor: designTokens.colors.system.error,
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: '20px',
+                          fontSize: '13px',
+                          fontWeight: '500',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <Trash2 size={14} />
+                        Delete ({selectedTrackIds.length})
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => setShowTrackSelector(true)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: '6px 12px',
+                        backgroundColor: '#ffffff',
+                        color: designTokens.colors.primary.blue,
+                        border: `1px solid ${designTokens.colors.primary.blue}`,
+                        borderRadius: '20px',
+                        fontSize: '13px',
+                        fontWeight: '500',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <Plus size={14} />
+                      From Library
+                    </button>
+                    <button
+                      onClick={() => setShowPlaylistUploader(true)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: '6px 12px',
+                        backgroundColor: designTokens.colors.primary.blue,
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '20px',
+                        fontSize: '13px',
+                        fontWeight: '500',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <Plus size={14} />
+                      Upload New
+                    </button>
+                  </>
+                )}
               </div>
             )}
           </div>
 
           {/* Right: Menu button for playlist detail or Spacer */}
           <div style={{ width: '40px', flexShrink: 0, position: 'relative' }}>
-            {activeTab === 'playlists' && viewMode === 'detail' && isPlaylistOwner && (
+            {activeTab === 'playlists' && viewMode === 'detail' && isPlaylistOwner && !isEditingTracks && (
               <button
                 onClick={() => setShowPlaylistMenu(!showPlaylistMenu)}
                 style={{
@@ -1589,6 +1671,26 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
             >
               <Edit2 size={16} />
               Edit Title
+            </button>
+            <button
+              onClick={handleToggleEditMode}
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                backgroundColor: 'transparent',
+                border: 'none',
+                textAlign: 'left',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                fontSize: '14px',
+                color: designTokens.colors.neutral.charcoal,
+                borderBottom: '1px solid #e2e8f0',
+              }}
+            >
+              <Edit2 size={16} />
+              Edit Tracks
             </button>
             <button
               onClick={() => {
