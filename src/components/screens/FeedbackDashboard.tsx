@@ -157,7 +157,7 @@ export function FeedbackDashboard() {
   }
 
   return (
-    <div style={{
+    <div data-admin-page="true" style={{
       fontFamily: designTokens.typography.fontFamily,
       width: '100%',
       maxWidth: '100%',
