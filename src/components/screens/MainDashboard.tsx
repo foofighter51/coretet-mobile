@@ -275,21 +275,24 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
     }
   };
 
-  const handlePlaylistClick = async (playlist: any) => {
-    setCurrentPlaylist(playlist);
-    setViewMode('detail');
-
-    // Fetch playlist tracks
+  const loadPlaylistTracks = async (playlistId: string) => {
     try {
-      const { data, error } = await db.playlistItems.getByPlaylist(playlist.id);
+      const { data, error } = await db.playlistItems.getByPlaylist(playlistId);
       if (error) {
         console.error('Failed to fetch playlist tracks:', error);
-        return;
+        throw error;
       }
       setPlaylistTracks(data || []);
     } catch (error) {
       console.error('Error fetching playlist tracks:', error);
+      throw error;
     }
+  };
+
+  const handlePlaylistClick = async (playlist: any) => {
+    setCurrentPlaylist(playlist);
+    setViewMode('detail');
+    await loadPlaylistTracks(playlist.id);
   };
 
   const handleBackToList = () => {
@@ -375,8 +378,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
       }
 
       // Refresh playlist tracks
-      const { data } = await db.playlistItems.getByPlaylist(currentPlaylist.id);
-      setPlaylistTracks(data || []);
+      await loadPlaylistTracks(currentPlaylist.id);
       setShowTrackSelector(false);
     } catch (error) {
       console.error('Error adding tracks to playlist:', error);
@@ -530,14 +532,27 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   const handleDeleteSelectedTracks = async () => {
     if (!currentPlaylist || selectedTrackIds.length === 0) return;
 
+    console.log('🗑️ Deleting tracks:', selectedTrackIds);
+    console.log('📋 From playlist:', currentPlaylist.id);
+
     try {
+      let hasError = false;
+
       // Delete each selected track
       for (const trackId of selectedTrackIds) {
+        console.log(`Attempting to delete track ${trackId}...`);
         const { error } = await db.playlistItems.removeByTrack(currentPlaylist.id, trackId);
         if (error) {
-          console.error('Failed to remove track:', error);
+          console.error('Failed to remove track:', trackId, error);
           setError('Failed to remove some tracks from playlist');
+          hasError = true;
+        } else {
+          console.log(`✅ Successfully deleted track ${trackId}`);
         }
+      }
+
+      if (!hasError) {
+        console.log('✅ All tracks deleted successfully');
       }
 
       // Stop playback if current track was deleted
@@ -548,9 +563,13 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
       // Reset edit mode and reload tracks
       setIsEditingTracks(false);
       setSelectedTrackIds([]);
+      console.log('Reloading playlist tracks...');
       await loadPlaylistTracks(currentPlaylist.id);
+      console.log('Playlist tracks reloaded');
     } catch (err) {
       console.error('Error removing tracks:', err);
+      console.error('Error type:', typeof err);
+      console.error('Error details:', JSON.stringify(err, null, 2));
       setError('Failed to remove tracks from playlist');
     }
   };
@@ -1029,8 +1048,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                           }
 
                           // Refresh playlist tracks
-                          const { data } = await db.playlistItems.getByPlaylist(currentPlaylist.id);
-                          setPlaylistTracks(data || []);
+                          await loadPlaylistTracks(currentPlaylist.id);
 
                           // Refresh tracks list
                           if (currentUser?.id) {
