@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Filter, Plus, Music, Share2, ArrowLeft, Play, Pause, X, Check, MessageSquare, MoreVertical, Edit2, Trash2 } from 'lucide-react';
+import { Search, Filter, Plus, Music, Share2, ArrowLeft, Play, Pause, X, Check, MessageSquare, MoreVertical, Edit2, Trash2, Headphones, ThumbsUp, Heart } from 'lucide-react';
 import { designTokens } from '../../design/designTokens';
 import { usePlaylist } from '../../contexts/PlaylistContext';
 import { TrackRowWithPlayer } from '../molecules/TrackRowWithPlayer';
@@ -13,6 +13,280 @@ import { db, auth } from '../../../lib/supabase';
 import { Capacitor } from '@capacitor/core';
 import { Share } from '@capacitor/share';
 import DeepLinkService from '../../utils/deepLinkHandler';
+
+// Track Detail Modal Component
+function TrackDetailModal({ track, onClose }: {
+  track: any;
+  onClose: () => void;
+}) {
+  const [ratings, setRatings] = useState<any[]>([]);
+  const [loadingRatings, setLoadingRatings] = useState(true);
+
+  // Fetch all ratings for this track
+  useEffect(() => {
+    const fetchRatings = async () => {
+      try {
+        setLoadingRatings(true);
+        const { data, error } = await db.ratings.getByTrack(track.id);
+
+        if (error) {
+          console.error('Failed to fetch ratings:', error);
+          return;
+        }
+
+        // Fetch profile names for each rating
+        if (data && data.length > 0) {
+          const ratingsWithNames = await Promise.all(
+            data.map(async (rating: any) => {
+              const { data: profile } = await db.profiles.getById(rating.user_id);
+              return {
+                ...rating,
+                userName: profile?.name || 'Unknown User',
+              };
+            })
+          );
+          setRatings(ratingsWithNames);
+        }
+      } catch (error) {
+        console.error('Error fetching ratings:', error);
+      } finally {
+        setLoadingRatings(false);
+      }
+    };
+
+    fetchRatings();
+  }, [track.id]);
+
+  // Group ratings by type
+  const listenedBy = ratings.filter(r => r.rating === 'listened').map(r => r.userName);
+  const likedBy = ratings.filter(r => r.rating === 'liked').map(r => r.userName);
+  const lovedBy = ratings.filter(r => r.rating === 'loved').map(r => r.userName);
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        display: 'flex',
+        alignItems: 'flex-end',
+        justifyContent: 'center',
+        zIndex: 1000,
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          backgroundColor: '#ffffff',
+          borderTopLeftRadius: '16px',
+          borderTopRightRadius: '16px',
+          width: '100%',
+          maxWidth: '600px',
+          maxHeight: '80vh',
+          overflowY: 'auto',
+          padding: designTokens.spacing.lg,
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '20px',
+        }}>
+          <h2 style={{
+            fontSize: '20px',
+            fontWeight: '600',
+            color: designTokens.colors.neutral.charcoal,
+            margin: 0,
+            flex: 1,
+            paddingRight: '12px',
+          }}>
+            {track.title}
+          </h2>
+          <button
+            onClick={onClose}
+            style={{
+              backgroundColor: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              padding: '4px',
+            }}
+          >
+            <X size={24} color={designTokens.colors.neutral.darkGray} />
+          </button>
+        </div>
+
+        {/* Track Info */}
+        <div style={{
+          padding: '16px',
+          backgroundColor: '#f7fafc',
+          borderRadius: '8px',
+          marginBottom: '20px',
+        }}>
+          <p style={{
+            fontSize: '14px',
+            color: designTokens.colors.neutral.darkGray,
+            margin: 0,
+          }}>
+            Duration: {track.duration_seconds ?
+              `${Math.floor(track.duration_seconds / 60)}:${String(Math.floor(track.duration_seconds % 60)).padStart(2, '0')}`
+              : 'Unknown'}
+          </p>
+        </div>
+
+        {/* Ratings Section */}
+        <div style={{
+          marginBottom: '20px',
+        }}>
+          <h3 style={{
+            fontSize: '16px',
+            fontWeight: '600',
+            color: designTokens.colors.neutral.charcoal,
+            marginBottom: '12px',
+          }}>
+            Ratings
+          </h3>
+
+          {loadingRatings ? (
+            <p style={{
+              fontSize: '14px',
+              color: designTokens.colors.neutral.darkGray,
+              textAlign: 'center',
+              padding: '20px',
+            }}>
+              Loading ratings...
+            </p>
+          ) : ratings.length === 0 ? (
+            <p style={{
+              fontSize: '14px',
+              color: designTokens.colors.neutral.darkGray,
+              textAlign: 'center',
+              padding: '20px',
+            }}>
+              No ratings yet
+            </p>
+          ) : (
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px',
+            }}>
+              {/* Listened */}
+              {listenedBy.length > 0 && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '12px',
+                  padding: '12px',
+                  backgroundColor: '#f0f9ff',
+                  borderRadius: '8px',
+                }}>
+                  <Headphones size={20} color={designTokens.colors.neutral.charcoal} style={{ flexShrink: 0, marginTop: '2px' }} />
+                  <div style={{ flex: 1 }}>
+                    <p style={{
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      color: designTokens.colors.neutral.charcoal,
+                      margin: '0 0 4px 0',
+                    }}>
+                      Listened
+                    </p>
+                    <p style={{
+                      fontSize: '14px',
+                      color: designTokens.colors.neutral.darkGray,
+                      margin: 0,
+                    }}>
+                      {listenedBy.join(', ')}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Liked */}
+              {likedBy.length > 0 && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '12px',
+                  padding: '12px',
+                  backgroundColor: '#f0fff4',
+                  borderRadius: '8px',
+                }}>
+                  <ThumbsUp size={20} color={designTokens.colors.neutral.charcoal} style={{ flexShrink: 0, marginTop: '2px' }} />
+                  <div style={{ flex: 1 }}>
+                    <p style={{
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      color: designTokens.colors.neutral.charcoal,
+                      margin: '0 0 4px 0',
+                    }}>
+                      Liked
+                    </p>
+                    <p style={{
+                      fontSize: '14px',
+                      color: designTokens.colors.neutral.darkGray,
+                      margin: 0,
+                    }}>
+                      {likedBy.join(', ')}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Loved */}
+              {lovedBy.length > 0 && (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '12px',
+                  padding: '12px',
+                  backgroundColor: '#fff5f5',
+                  borderRadius: '8px',
+                }}>
+                  <Heart size={20} color={designTokens.colors.neutral.charcoal} style={{ flexShrink: 0, marginTop: '2px' }} />
+                  <div style={{ flex: 1 }}>
+                    <p style={{
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      color: designTokens.colors.neutral.charcoal,
+                      margin: '0 0 4px 0',
+                    }}>
+                      Loved
+                    </p>
+                    <p style={{
+                      fontSize: '14px',
+                      color: designTokens.colors.neutral.darkGray,
+                      margin: 0,
+                    }}>
+                      {lovedBy.join(', ')}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Comments Placeholder */}
+        <div style={{
+          padding: '20px',
+          textAlign: 'center',
+          color: designTokens.colors.neutral.darkGray,
+          fontSize: '14px',
+          borderTop: '1px solid #e2e8f0',
+          marginTop: '20px',
+        }}>
+          Comments coming soon...
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // Track Selector Modal Component
 function TrackSelectorModal({ tracks, existingTrackIds, onAddTracks, onCancel }: {
@@ -248,6 +522,9 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   const [isEditingTracks, setIsEditingTracks] = useState(false);
   const [selectedTrackIds, setSelectedTrackIds] = useState<string[]>([]);
 
+  // Track detail modal state
+  const [selectedTrackForDetail, setSelectedTrackForDetail] = useState<any | null>(null);
+
   const handleRatingChange = useCallback((track: Track, rating: 'like' | 'love' | 'none') => {
     // Rating change handler (currently unused)
   }, []);
@@ -413,6 +690,39 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
     }
   };
 
+  /**
+   * Update iOS Now Playing / Lock Screen metadata
+   * Uses Media Session API to display track info when phone is locked
+   */
+  const updateMediaSessionMetadata = (track: any) => {
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: track.title || 'Unknown Track',
+        artist: 'CoreTet',
+        album: currentPlaylist?.title || 'My Library',
+        artwork: [
+          // Using a default artwork - could be customized per playlist/track in the future
+          { src: '/icon-512x512.png', sizes: '512x512', type: 'image/png' },
+        ],
+      });
+
+      // Setup media session action handlers
+      navigator.mediaSession.setActionHandler('play', () => {
+        handlePlayPause();
+      });
+
+      navigator.mediaSession.setActionHandler('pause', () => {
+        handlePlayPause();
+      });
+
+      navigator.mediaSession.setActionHandler('nexttrack', () => {
+        if (currentTrackRef.current) {
+          playNextTrack(currentTrackRef.current);
+        }
+      });
+    }
+  };
+
   const handlePlayPause = async (track?: any) => {
     try {
       if (!audioRef.current) {
@@ -440,6 +750,11 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
         // Pause current track
         audioRef.current.pause();
         setIsPlaying(false);
+
+        // Update playback state for lock screen
+        if ('mediaSession' in navigator) {
+          navigator.mediaSession.playbackState = 'paused';
+        }
       } else {
         // Play new or resume track
         setAudioError(null);
@@ -450,10 +765,18 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
           audioRef.current.src = targetTrack.file_url;
           setCurrentTrack(targetTrack);
           currentTrackRef.current = targetTrack; // Update ref for event listeners
+
+          // Update iOS Now Playing metadata
+          updateMediaSessionMetadata(targetTrack);
         }
 
         await audioRef.current.play();
         setIsPlaying(true);
+
+        // Update playback state for lock screen
+        if ('mediaSession' in navigator) {
+          navigator.mediaSession.playbackState = 'playing';
+        }
       }
     } catch (error) {
       console.error('Audio playback error:', error);
@@ -749,6 +1072,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                     currentRating={trackRatings[track.id]}
                     onPlayPause={() => handlePlayPause(track)}
                     onRate={(rating) => handleRate(track.id, rating)}
+                    onLongPress={() => setSelectedTrackForDetail(track)}
                   />
                 ))}
               </div>
@@ -1213,6 +1537,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                               currentRating={trackRatings[item.tracks.id]}
                               onPlayPause={() => handlePlayPause(item.tracks)}
                               onRate={(rating) => handleRate(item.tracks.id, rating)}
+                              onLongPress={() => setSelectedTrackForDetail(item.tracks)}
                             />
                           </div>
                         </div>
@@ -1283,13 +1608,16 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                           // On native platforms, use native share sheet
                           if (Capacitor.isNativePlatform()) {
                             try {
-                              // Only use text field to avoid "2 Links" issue on iOS
-                              // iOS Share treats text and url as separate items
+                              const shareText = `Check out "${playlist.title}" on CoreTet\n\n${shareUrl}`;
+                              console.log('Sharing with text:', shareText);
+
                               await Share.share({
-                                title: `Check out ${playlist.title} on CoreTet`,
-                                text: shareUrl,
+                                title: playlist.title,
+                                text: shareText,
                                 dialogTitle: 'Share Playlist',
                               });
+
+                              console.log('Share completed successfully');
                             } catch (error) {
                               console.error('Share failed:', error);
                             }
@@ -1779,6 +2107,14 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
         activeTab={activeTab}
         onTabChange={setActiveTab}
       />
+
+      {/* Track Detail Modal */}
+      {selectedTrackForDetail && (
+        <TrackDetailModal
+          track={selectedTrackForDetail}
+          onClose={() => setSelectedTrackForDetail(null)}
+        />
+      )}
     </div>
   );
 }

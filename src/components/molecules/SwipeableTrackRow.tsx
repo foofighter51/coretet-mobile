@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Play, Pause, Headphones, ThumbsUp, Heart, Folder, ChevronLeft } from 'lucide-react';
+import { Play, Pause, Headphones, ThumbsUp, Heart, Folder } from 'lucide-react';
 import { designTokens } from '../../design/designTokens';
 
 interface SwipeableTrackRowProps {
@@ -13,6 +13,7 @@ interface SwipeableTrackRowProps {
   currentRating?: 'listened' | 'liked' | 'loved' | null;
   onPlayPause: () => void;
   onRate: (rating: 'listened' | 'liked' | 'loved') => void;
+  onLongPress?: () => void;
 }
 
 export const SwipeableTrackRow: React.FC<SwipeableTrackRowProps> = ({
@@ -21,14 +22,18 @@ export const SwipeableTrackRow: React.FC<SwipeableTrackRowProps> = ({
   currentRating,
   onPlayPause,
   onRate,
+  onLongPress,
 }) => {
   const [swipeOffset, setSwipeOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const startXRef = useRef<number>(0);
   const currentXRef = useRef<number>(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const longPressTriggeredRef = useRef(false);
 
   const maxSwipe = 150;
+  const longPressDuration = 500; // 500ms for long press
 
   // Close swipe when clicking outside
   useEffect(() => {
@@ -45,6 +50,16 @@ export const SwipeableTrackRow: React.FC<SwipeableTrackRowProps> = ({
   const handleTouchStart = (e: React.TouchEvent) => {
     startXRef.current = e.touches[0].clientX;
     setIsDragging(true);
+    longPressTriggeredRef.current = false;
+
+    // Start long press timer
+    if (onLongPress) {
+      longPressTimerRef.current = setTimeout(() => {
+        longPressTriggeredRef.current = true;
+        setIsDragging(false);
+        onLongPress();
+      }, longPressDuration);
+    }
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
@@ -52,6 +67,12 @@ export const SwipeableTrackRow: React.FC<SwipeableTrackRowProps> = ({
 
     currentXRef.current = e.touches[0].clientX;
     const diff = startXRef.current - currentXRef.current;
+
+    // Cancel long press if user starts swiping
+    if (Math.abs(diff) > 10 && longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
 
     // Only allow left swipe (positive diff)
     if (diff > 0) {
@@ -62,6 +83,18 @@ export const SwipeableTrackRow: React.FC<SwipeableTrackRowProps> = ({
   };
 
   const handleTouchEnd = () => {
+    // Clear long press timer
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+
+    // Don't process swipe if long press was triggered
+    if (longPressTriggeredRef.current) {
+      longPressTriggeredRef.current = false;
+      return;
+    }
+
     setIsDragging(false);
 
     // If swiped more than 50%, keep it open
@@ -229,25 +262,6 @@ export const SwipeableTrackRow: React.FC<SwipeableTrackRowProps> = ({
           boxShadow: swipeOffset > 0 ? '2px 0 8px rgba(0,0,0,0.1)' : 'none',
         }}
       >
-        {/* Swipe hint gradient - only show when not swiped */}
-        {swipeOffset === 0 && (
-          <div style={{
-            position: 'absolute',
-            top: 0,
-            right: 0,
-            bottom: 0,
-            width: '50px',
-            background: 'linear-gradient(to left, rgba(49, 130, 206, 0.15), transparent)',
-            borderRadius: '0 8px 8px 0',
-            pointerEvents: 'none',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'flex-end',
-            paddingRight: '8px',
-          }}>
-            <ChevronLeft size={16} color="rgba(49, 130, 206, 0.4)" />
-          </div>
-        )}
         <button
           onClick={onPlayPause}
           style={{
