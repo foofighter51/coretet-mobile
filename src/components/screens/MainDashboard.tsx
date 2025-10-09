@@ -249,7 +249,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   const [selectedTrackIds, setSelectedTrackIds] = useState<string[]>([]);
 
   const handleRatingChange = useCallback((track: Track, rating: 'like' | 'love' | 'none') => {
-    console.log(`Rating changed for ${track.title}: ${rating}`);
+    // Rating change handler (currently unused)
   }, []);
 
   const handleCreatePlaylist = async () => {
@@ -302,6 +302,9 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
     setShowPlaylistMenu(false);
     setEditingPlaylistTitle(null);
     setShowDeleteConfirm(false);
+    // Reset edit tracks mode
+    setIsEditingTracks(false);
+    setSelectedTrackIds([]);
   };
 
   const handleEditPlaylistTitle = async () => {
@@ -387,38 +390,26 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
 
   const playNextTrack = () => {
     const track = currentTrackRef.current;
-    console.log('🎵 playNextTrack called, currentTrack:', track?.title);
     if (!track) return;
 
     // Determine which track list to use
     let trackList: any[] = [];
 
     if (activeTab === 'tracks') {
-      // Use filtered tracks from the Tracks tab
       trackList = filteredTracks;
-      console.log('🎵 Using filtered tracks, count:', trackList.length);
     } else if (activeTab === 'playlists' && viewMode === 'detail') {
-      // Use filtered playlist tracks
       trackList = filteredPlaylistTracks.map((item: any) => item.tracks).filter(Boolean);
-      console.log('🎵 Using playlist tracks, count:', trackList.length);
     }
 
-    if (trackList.length === 0) {
-      console.log('🎵 No tracks in list, returning');
-      return;
-    }
+    if (trackList.length === 0) return;
 
     // Find current track index
     const currentIndex = trackList.findIndex((t: any) => t.id === track.id);
-    console.log('🎵 Current index:', currentIndex, 'Total tracks:', trackList.length);
 
     // Play next track if there is one
     if (currentIndex >= 0 && currentIndex < trackList.length - 1) {
       const nextTrack = trackList[currentIndex + 1];
-      console.log('🎵 Playing next track:', nextTrack.title);
       handlePlayPause(nextTrack);
-    } else {
-      console.log('🎵 No next track available (last track or not found)');
     }
   };
 
@@ -436,9 +427,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
           setIsPlaying(false);
         });
         audioRef.current.addEventListener('ended', () => {
-          console.log('🎵 Track ended event fired');
           setIsPlaying(false);
-          // Auto-play next track
           playNextTrack();
         });
       }
@@ -515,6 +504,26 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
     }
   };
 
+  /**
+   * Edit Tracks Feature
+   *
+   * Allows playlist owners to remove multiple tracks from a playlist using checkbox selection.
+   *
+   * Flow:
+   * 1. User opens three-dot menu → "Edit Tracks"
+   * 2. Checkboxes appear next to each track
+   * 3. Header buttons change to "Cancel" and "Delete (N)"
+   * 4. User selects tracks via checkboxes
+   * 5. "Delete (N)" button removes selected tracks
+   * 6. Success message shows "N track(s) removed" for 3 seconds
+   *
+   * Features:
+   * - Parallel deletion using Promise.all for performance
+   * - Stops playback if current track is deleted
+   * - Resets edit mode and refreshes view automatically
+   * - Only visible to playlist owners
+   * - No confirmation dialog (removes from playlist, doesn't delete from library)
+   */
   const handleToggleEditMode = () => {
     setIsEditingTracks(!isEditingTracks);
     setSelectedTrackIds([]);
@@ -532,27 +541,21 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   const handleDeleteSelectedTracks = async () => {
     if (!currentPlaylist || selectedTrackIds.length === 0) return;
 
-    console.log('🗑️ Deleting tracks:', selectedTrackIds);
-    console.log('📋 From playlist:', currentPlaylist.id);
+    const trackCount = selectedTrackIds.length;
 
     try {
-      let hasError = false;
+      // Delete all selected tracks in parallel
+      const deletePromises = selectedTrackIds.map(trackId =>
+        db.playlistItems.removeByTrack(currentPlaylist.id, trackId)
+      );
 
-      // Delete each selected track
-      for (const trackId of selectedTrackIds) {
-        console.log(`Attempting to delete track ${trackId}...`);
-        const { error } = await db.playlistItems.removeByTrack(currentPlaylist.id, trackId);
-        if (error) {
-          console.error('Failed to remove track:', trackId, error);
-          setError('Failed to remove some tracks from playlist');
-          hasError = true;
-        } else {
-          console.log(`✅ Successfully deleted track ${trackId}`);
-        }
-      }
+      const results = await Promise.all(deletePromises);
 
-      if (!hasError) {
-        console.log('✅ All tracks deleted successfully');
+      // Check for errors
+      const errors = results.filter(result => result.error);
+      if (errors.length > 0) {
+        console.error('Failed to remove some tracks:', errors);
+        setError(`Failed to remove ${errors.length} of ${trackCount} tracks from playlist`);
       }
 
       // Stop playback if current track was deleted
@@ -560,16 +563,19 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
         handlePlayPause();
       }
 
+      // Show success message
+      const successCount = trackCount - errors.length;
+      if (successCount > 0) {
+        setError(`${successCount} track${successCount > 1 ? 's' : ''} removed`);
+        setTimeout(() => setError(null), 3000);
+      }
+
       // Reset edit mode and reload tracks
       setIsEditingTracks(false);
       setSelectedTrackIds([]);
-      console.log('Reloading playlist tracks...');
       await loadPlaylistTracks(currentPlaylist.id);
-      console.log('Playlist tracks reloaded');
     } catch (err) {
       console.error('Error removing tracks:', err);
-      console.error('Error type:', typeof err);
-      console.error('Error details:', JSON.stringify(err, null, 2));
       setError('Failed to remove tracks from playlist');
     }
   };
@@ -650,7 +656,6 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                 <AudioUploader
                   multiple={true}
                   onUploadComplete={(results) => {
-                    console.log('✅ Upload successful:', results);
                     setShowUploader(false);
                     // Refresh tracks list
                     if (currentUser?.id) {
@@ -1029,7 +1034,6 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                     <AudioUploader
                       multiple={true}
                       onUploadComplete={async (results) => {
-                        console.log('✅ Upload successful:', results);
                         setShowPlaylistUploader(false);
 
                         // Add all uploaded tracks to current playlist
