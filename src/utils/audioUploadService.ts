@@ -82,7 +82,8 @@ export class AudioUploadService {
       // Step 4: Upload to Supabase Storage
       this.updateProgress('uploading', 70, 'Uploading to cloud storage...');
 
-      const filePath = `audio/${filename}`;
+      // Use userId subfolder structure for organization
+      const filePath = `${this.currentUser.id}/${filename}`;
       const { data: uploadData, error: uploadError } = await storage.uploadAudio(
         new File([processedAudio.audioBuffer], filename, { type: file.type }),
         filePath
