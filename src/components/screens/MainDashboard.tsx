@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Filter, Plus, Music, Upload, ArrowLeft, Play, Pause, X, Check, MessageSquare, MoreVertical, Edit2, Trash2, Headphones, ThumbsUp, Heart } from 'lucide-react';
+import { Search, Filter, Plus, Music, Upload, ArrowLeft, Play, Pause, X, Check, MessageSquare, MoreVertical, Edit2, Trash2, Headphones, ThumbsUp, Heart, HelpCircle } from 'lucide-react';
 import { designTokens } from '../../design/designTokens';
 import { usePlaylist } from '../../contexts/PlaylistContext';
 import { TrackRowWithPlayer } from '../molecules/TrackRowWithPlayer';
@@ -8,6 +8,7 @@ import { TabBar } from '../molecules/TabBar';
 import { AudioUploader } from '../molecules/AudioUploader';
 import { PlaybackBar } from '../molecules/PlaybackBar';
 import { SwipeableTrackRow } from '../molecules/SwipeableTrackRow';
+import { Tutorial } from '../molecules/Tutorial';
 import { Track, TabId } from '../../types';
 import { db, auth } from '../../../lib/supabase';
 import { Capacitor } from '@capacitor/core';
@@ -15,10 +16,12 @@ import { Share } from '@capacitor/share';
 import DeepLinkService from '../../utils/deepLinkHandler';
 
 // Track Detail Modal Component
-function TrackDetailModal({ track, onClose, currentUser }: {
+function TrackDetailModal({ track, onClose, currentUser, audioRef, currentTrack }: {
   track: any;
   onClose: () => void;
   currentUser: any;
+  audioRef: React.RefObject<HTMLAudioElement>;
+  currentTrack: any;
 }) {
   const [ratings, setRatings] = useState<any[]>([]);
   const [loadingRatings, setLoadingRatings] = useState(true);
@@ -26,6 +29,22 @@ function TrackDetailModal({ track, onClose, currentUser }: {
   const [loadingComments, setLoadingComments] = useState(true);
   const [newComment, setNewComment] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
+  const [capturedTimestamp, setCapturedTimestamp] = useState<number | null>(null);
+
+  // Capture current playback timestamp when modal opens
+  useEffect(() => {
+    // Only capture timestamp if this track is currently playing
+    if (audioRef.current && currentTrack?.id === track.id && !audioRef.current.paused) {
+      setCapturedTimestamp(Math.floor(audioRef.current.currentTime));
+    }
+  }, [audioRef, currentTrack, track.id]);
+
+  // Format seconds to MM:SS
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   // Fetch all ratings for this track
   useEffect(() => {
@@ -106,6 +125,7 @@ function TrackDetailModal({ track, onClose, currentUser }: {
         track_id: track.id,
         user_id: currentUser.id,
         content: newComment.trim(),
+        timestamp_seconds: capturedTimestamp ?? undefined,
       });
 
       if (error) {
@@ -360,26 +380,38 @@ function TrackDetailModal({ track, onClose, currentUser }: {
           </h3>
 
           {/* Comment Input */}
-          <div style={{
-            display: 'flex',
-            gap: designTokens.spacing.sm,
-            marginBottom: designTokens.spacing.lg,
-          }}>
-            <input
-              type="text"
-              value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && !submittingComment && handleSubmitComment()}
-              placeholder="Add a comment..."
-              disabled={submittingComment}
-              style={{
-                flex: 1,
-                padding: designTokens.spacing.sm,
-                border: `1px solid ${designTokens.colors.borders.default}`,
-                borderRadius: designTokens.borderRadius.sm,
+          <div>
+            {capturedTimestamp !== null && (
+              <div style={{
                 fontSize: designTokens.typography.fontSizes.bodySmall,
-              }}
-            />
+                color: designTokens.colors.text.muted,
+                marginBottom: designTokens.spacing.xs,
+              }}>
+                Comment at {formatTime(capturedTimestamp)}
+              </div>
+            )}
+            <div style={{
+              display: 'flex',
+              gap: designTokens.spacing.sm,
+              marginBottom: designTokens.spacing.lg,
+            }}>
+              <input
+                type="text"
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && !submittingComment && handleSubmitComment()}
+                placeholder={capturedTimestamp !== null ? `Comment at ${formatTime(capturedTimestamp)}...` : "Add a comment..."}
+                disabled={submittingComment}
+                style={{
+                  flex: 1,
+                  padding: designTokens.spacing.sm,
+                  border: `1px solid ${designTokens.colors.borders.default}`,
+                  borderRadius: designTokens.borderRadius.sm,
+                  fontSize: designTokens.typography.fontSizes.bodySmall,
+                  userSelect: 'text',
+                  WebkitUserSelect: 'text',
+                }}
+              />
             <button
               onClick={handleSubmitComment}
               disabled={!newComment.trim() || submittingComment}
@@ -395,6 +427,7 @@ function TrackDetailModal({ track, onClose, currentUser }: {
             >
               {submittingComment ? 'Posting...' : 'Post'}
             </button>
+            </div>
           </div>
 
           {/* Comments List */}
@@ -437,14 +470,40 @@ function TrackDetailModal({ track, onClose, currentUser }: {
                     alignItems: 'center',
                     marginBottom: designTokens.spacing.xs,
                   }}>
-                    <p style={{
-                      fontSize: designTokens.typography.fontSizes.bodySmall,
-                      fontWeight: designTokens.typography.fontWeights.medium,
-                      color: designTokens.colors.text.primary,
-                      margin: 0,
-                    }}>
-                      {comment.userName}
-                    </p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: designTokens.spacing.xs }}>
+                      <p style={{
+                        fontSize: designTokens.typography.fontSizes.bodySmall,
+                        fontWeight: designTokens.typography.fontWeights.medium,
+                        color: designTokens.colors.text.primary,
+                        margin: 0,
+                      }}>
+                        {comment.userName}
+                      </p>
+                      {comment.timestamp_seconds !== null && comment.timestamp_seconds !== undefined && (
+                        <button
+                          onClick={() => {
+                            if (audioRef.current && currentTrack?.id === track.id) {
+                              audioRef.current.currentTime = comment.timestamp_seconds;
+                              if (audioRef.current.paused) {
+                                audioRef.current.play();
+                              }
+                            }
+                          }}
+                          style={{
+                            fontSize: designTokens.typography.fontSizes.caption,
+                            fontWeight: designTokens.typography.fontWeights.medium,
+                            color: designTokens.colors.primary.blue,
+                            backgroundColor: 'transparent',
+                            border: 'none',
+                            padding: 0,
+                            cursor: 'pointer',
+                            textDecoration: 'underline',
+                          }}
+                        >
+                          {formatTime(comment.timestamp_seconds)}
+                        </button>
+                      )}
+                    </div>
                     <p style={{
                       fontSize: designTokens.typography.fontSizes.caption,
                       color: designTokens.colors.text.muted,
@@ -661,6 +720,8 @@ const baseStyle = {
   flexDirection: 'column' as const,
   overflow: 'hidden' as const,
   boxSizing: 'border-box' as const,
+  userSelect: 'none' as const,
+  WebkitUserSelect: 'none' as const,
 };
 
 export function MainDashboard({ currentUser }: MainDashboardProps) {
@@ -708,6 +769,9 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
 
   // Track detail modal state
   const [selectedTrackForDetail, setSelectedTrackForDetail] = useState<any | null>(null);
+
+  // Tutorial state
+  const [showTutorial, setShowTutorial] = useState(false);
 
   const handleRatingChange = useCallback((track: Track, rating: 'like' | 'love' | 'none') => {
     // Rating change handler (currently unused)
@@ -1381,6 +1445,8 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                     borderRadius: designTokens.borderRadius.sm,
                     fontSize: designTokens.typography.fontSizes.bodySmall,
                     marginBottom: designTokens.spacing.sm,
+                    userSelect: 'text',
+                    WebkitUserSelect: 'text',
                   }}
                   autoFocus
                 />
@@ -1511,6 +1577,8 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                         borderRadius: designTokens.borderRadius.sm,
                         fontSize: designTokens.typography.fontSizes.bodySmall,
                         marginBottom: designTokens.spacing.sm,
+                        userSelect: 'text',
+                        WebkitUserSelect: 'text',
                       }}
                       autoFocus
                     />
@@ -2048,6 +2116,29 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                 </button>
 
                 <button
+                  onClick={() => setShowTutorial(true)}
+                  style={{
+                    marginTop: designTokens.spacing.md,
+                    width: '100%',
+                    padding: designTokens.spacing.md,
+                    backgroundColor: designTokens.colors.surface.secondary,
+                    color: designTokens.colors.primary.blue,
+                    border: `1px solid ${designTokens.colors.primary.blue}`,
+                    borderRadius: designTokens.borderRadius.sm,
+                    fontSize: designTokens.typography.fontSizes.bodySmall,
+                    fontWeight: designTokens.typography.fontWeights.medium,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: designTokens.spacing.sm,
+                  }}
+                >
+                  <HelpCircle size={18} />
+                  How to Use CoreTet
+                </button>
+
+                <button
                   onClick={() => auth.signOut()}
                   style={{
                     marginTop: designTokens.spacing.md,
@@ -2461,7 +2552,14 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
           track={selectedTrackForDetail}
           onClose={() => setSelectedTrackForDetail(null)}
           currentUser={currentUser}
+          audioRef={audioRef}
+          currentTrack={currentTrack}
         />
+      )}
+
+      {/* Tutorial */}
+      {showTutorial && (
+        <Tutorial onClose={() => setShowTutorial(false)} />
       )}
     </div>
   );
