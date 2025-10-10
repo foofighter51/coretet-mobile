@@ -2206,7 +2206,10 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
             </button>
           ) : (
             <button
-              onClick={() => setShowBandModal(true)}
+              onClick={() => {
+                console.log('🎵 C icon clicked, opening Band Modal');
+                setShowBandModal(true);
+              }}
               style={{
                 width: designTokens.spacing.xxl,
                 height: designTokens.spacing.xxl,

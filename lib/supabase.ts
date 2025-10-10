@@ -500,8 +500,7 @@ export const db = {
           role,
           joined_at,
           profiles (
-            name,
-            email
+            name
           )
         `)
         .eq('band_id', bandId);

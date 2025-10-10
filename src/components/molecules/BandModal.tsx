@@ -15,6 +15,8 @@ export const BandModal: React.FC<BandModalProps> = ({ isOpen, onClose, userId })
   const [newBandName, setNewBandName] = useState('');
   const [creating, setCreating] = useState(false);
 
+  console.log('🎵 BandModal render:', { isOpen, userId, currentBand, userBands, userRole });
+
   if (!isOpen) return null;
 
   const handleSwitchBand = async (bandId: string) => {
@@ -41,28 +43,36 @@ export const BandModal: React.FC<BandModalProps> = ({ isOpen, onClose, userId })
   };
 
   return (
-    <>
+    <div
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 9998,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
       {/* Backdrop */}
       <div
         onClick={onClose}
         style={{
-          position: 'fixed',
+          position: 'absolute',
           top: 0,
           left: 0,
           right: 0,
           bottom: 0,
           backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          zIndex: 9998,
         }}
       />
 
       {/* Modal */}
       <div
         style={{
-          position: 'fixed',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
+          position: 'relative',
           backgroundColor: designTokens.colors.surface.primary,
           borderRadius: designTokens.borderRadius.lg,
           padding: designTokens.spacing.lg,
@@ -70,7 +80,7 @@ export const BandModal: React.FC<BandModalProps> = ({ isOpen, onClose, userId })
           width: '400px',
           maxHeight: '80vh',
           overflow: 'auto',
-          zIndex: 9999,
+          zIndex: 1,
           boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
         }}
       >
@@ -314,6 +324,6 @@ export const BandModal: React.FC<BandModalProps> = ({ isOpen, onClose, userId })
           </div>
         )}
       </div>
-    </>
+    </div>
   );
 };
