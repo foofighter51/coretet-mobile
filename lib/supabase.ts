@@ -534,7 +534,7 @@ export const db = {
           feedback_votes (count),
           feedback_comments (count)
         `)
-        .eq('archived', false)
+        .or('archived.is.null,archived.eq.false')
         .order('created_at', { ascending: false });
 
       return { data, error };
