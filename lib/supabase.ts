@@ -462,6 +462,162 @@ export const db = {
     },
   },
 
+  // Band operations
+  bands: {
+    async getUserBands(userId: string) {
+      const { data, error } = await supabase
+        .from('band_members')
+        .select(`
+          band_id,
+          role,
+          bands (
+            id,
+            name,
+            created_by,
+            is_personal,
+            settings,
+            created_at,
+            updated_at
+          )
+        `)
+        .eq('user_id', userId);
+
+      if (error) {
+        console.error('Error fetching user bands:', error);
+        return [];
+      }
+
+      return data?.map(item => item.bands).filter(Boolean) as any[] || [];
+    },
+
+    async getBandMembers(bandId: string) {
+      const { data, error } = await supabase
+        .from('band_members')
+        .select(`
+          id,
+          band_id,
+          user_id,
+          role,
+          joined_at,
+          profiles (
+            name,
+            email
+          )
+        `)
+        .eq('band_id', bandId);
+
+      if (error) {
+        console.error('Error fetching band members:', error);
+        return [];
+      }
+
+      return data || [];
+    },
+
+    async createBand(name: string, userId: string, isPersonal: boolean = false) {
+      const { data: band, error: bandError } = await supabase
+        .from('bands')
+        .insert({
+          name,
+          created_by: userId,
+          is_personal: isPersonal,
+        })
+        .select()
+        .single();
+
+      if (bandError || !band) {
+        console.error('Error creating band:', bandError);
+        return { data: null, error: bandError };
+      }
+
+      // Add creator as owner
+      const { error: memberError } = await supabase
+        .from('band_members')
+        .insert({
+          band_id: band.id,
+          user_id: userId,
+          role: 'owner',
+        });
+
+      if (memberError) {
+        console.error('Error adding band owner:', memberError);
+        return { data: null, error: memberError };
+      }
+
+      return { data: band, error: null };
+    },
+
+    async inviteMember(bandId: string, email: string, invitedBy: string, role: 'admin' | 'member' = 'member') {
+      const { data, error } = await supabase
+        .from('band_invites')
+        .insert({
+          band_id: bandId,
+          email,
+          invited_by: invitedBy,
+          role,
+        })
+        .select()
+        .single();
+
+      return { data, error };
+    },
+
+    async getPendingInvites(email: string) {
+      const { data, error } = await supabase
+        .from('band_invites')
+        .select(`
+          *,
+          bands (
+            name
+          )
+        `)
+        .eq('email', email)
+        .eq('status', 'pending')
+        .gt('expires_at', new Date().toISOString());
+
+      return { data, error };
+    },
+
+    async acceptInvite(inviteId: string, userId: string) {
+      // Get invite details
+      const { data: invite, error: inviteError } = await supabase
+        .from('band_invites')
+        .select('*')
+        .eq('id', inviteId)
+        .single();
+
+      if (inviteError || !invite) {
+        return { data: null, error: inviteError };
+      }
+
+      // Add user as band member
+      const { data: member, error: memberError } = await supabase
+        .from('band_members')
+        .insert({
+          band_id: invite.band_id,
+          user_id: userId,
+          role: invite.role,
+        })
+        .select()
+        .single();
+
+      if (memberError) {
+        return { data: null, error: memberError };
+      }
+
+      // Update invite status
+      await supabase
+        .from('band_invites')
+        .update({
+          status: 'accepted',
+          accepted_at: new Date().toISOString(),
+        })
+        .eq('id', inviteId);
+
+      return { data: member, error: null };
+    },
+  },
+
   // Playlist follower operations
   playlistFollowers: {
     async follow(playlistId: string, userId: string) {

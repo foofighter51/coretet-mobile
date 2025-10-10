@@ -9,6 +9,7 @@ import { AudioUploader } from '../molecules/AudioUploader';
 import { PlaybackBar } from '../molecules/PlaybackBar';
 import { SwipeableTrackRow } from '../molecules/SwipeableTrackRow';
 import { Tutorial } from '../molecules/Tutorial';
+import { BandModal } from '../molecules/BandModal';
 import { Track, TabId } from '../../types';
 import { db, auth } from '../../../lib/supabase';
 import { Capacitor } from '@capacitor/core';
@@ -738,6 +739,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   const [showUploader, setShowUploader] = useState(false);
   const [showPlaylistUploader, setShowPlaylistUploader] = useState(false);
   const [showTrackSelector, setShowTrackSelector] = useState(false);
+  const [showBandModal, setShowBandModal] = useState(false);
 
   // Audio playback state - consolidated
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -2203,21 +2205,27 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
               Back
             </button>
           ) : (
-            <div style={{
-              width: designTokens.spacing.xxl,
-              height: designTokens.spacing.xxl,
-              borderRadius: designTokens.borderRadius.full,
-              backgroundColor: designTokens.colors.primary.blue,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: designTokens.colors.text.inverse,
-              fontSize: designTokens.typography.fontSizes.h3,
-              fontWeight: designTokens.typography.fontWeights.bold,
-              flexShrink: 0,
-            }}>
+            <button
+              onClick={() => setShowBandModal(true)}
+              style={{
+                width: designTokens.spacing.xxl,
+                height: designTokens.spacing.xxl,
+                borderRadius: designTokens.borderRadius.full,
+                backgroundColor: designTokens.colors.primary.blue,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: designTokens.colors.text.inverse,
+                fontSize: designTokens.typography.fontSizes.h3,
+                fontWeight: designTokens.typography.fontWeights.bold,
+                flexShrink: 0,
+                border: 'none',
+                cursor: 'pointer',
+                padding: 0,
+              }}
+            >
               C
-            </div>
+            </button>
           )}
 
           {/* Center: Action Button */}
@@ -2561,6 +2569,13 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
       {showTutorial && (
         <Tutorial onClose={() => setShowTutorial(false)} />
       )}
+
+      {/* Band Modal */}
+      <BandModal
+        isOpen={showBandModal}
+        onClose={() => setShowBandModal(false)}
+        userId={currentUser?.id || ''}
+      />
     </div>
   );
 }

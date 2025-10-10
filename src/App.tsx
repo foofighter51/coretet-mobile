@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import './styles.css';
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import { PlaylistProvider } from './contexts/PlaylistContext';
+import { BandProvider } from './contexts/BandContext';
 import { MainDashboard } from './components/screens/MainDashboard';
 import { OnboardingScreen } from './components/screens/OnboardingScreen';
 import { PublicPlaylistView } from './components/screens/PublicPlaylistView';
@@ -86,14 +87,16 @@ function AppContent({ user }: { user: User }) {
   }
 
   return (
-    <PlaylistProvider>
-      <MainDashboard currentUser={{
-        id: user.id,
-        email: user.email || '',
-        phoneNumber: user.phone || '',
-        name: profile?.name || ''
-      }} />
-    </PlaylistProvider>
+    <BandProvider userId={user.id}>
+      <PlaylistProvider>
+        <MainDashboard currentUser={{
+          id: user.id,
+          email: user.email || '',
+          phoneNumber: user.phone || '',
+          name: profile?.name || ''
+        }} />
+      </PlaylistProvider>
+    </BandProvider>
   );
 }
 
