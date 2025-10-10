@@ -13,6 +13,8 @@ export function FeedbackDashboard() {
   const [responses, setResponses] = useState<Record<string, string>>({});
   const [comments, setComments] = useState<Record<string, any[]>>({});
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [checkingAdmin, setCheckingAdmin] = useState(true);
 
   useEffect(() => {
     loadFeedback();
@@ -22,6 +24,13 @@ export function FeedbackDashboard() {
   const getCurrentUser = async () => {
     const { user } = await auth.getCurrentUser();
     setCurrentUserId(user?.id || null);
+
+    // Check admin status
+    if (user?.id) {
+      const adminStatus = await db.profiles.isAdmin(user.id);
+      setIsAdmin(adminStatus);
+    }
+    setCheckingAdmin(false);
   };
 
   const loadFeedback = async () => {
@@ -148,10 +157,45 @@ export function FeedbackDashboard() {
     completed: feedbackList.filter(f => f.status === 'completed').length,
   };
 
-  if (loading) {
+  if (checkingAdmin || loading) {
     return (
       <div style={{ padding: '40px', textAlign: 'center', fontFamily: designTokens.typography.fontFamily }}>
-        Loading feedback...
+        {checkingAdmin ? 'Checking access...' : 'Loading feedback...'}
+      </div>
+    );
+  }
+
+  // Access denied for non-admins
+  if (!isAdmin) {
+    return (
+      <div style={{
+        padding: '40px',
+        textAlign: 'center',
+        fontFamily: designTokens.typography.fontFamily,
+        maxWidth: '500px',
+        margin: '100px auto',
+      }}>
+        <h1 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '16px', color: '#ef4444' }}>
+          Access Denied
+        </h1>
+        <p style={{ fontSize: '16px', color: '#6b7280', marginBottom: '24px' }}>
+          You do not have permission to access the admin dashboard.
+        </p>
+        <a
+          href="/"
+          style={{
+            display: 'inline-block',
+            padding: '10px 20px',
+            backgroundColor: designTokens.colors.primary.blue,
+            color: '#ffffff',
+            borderRadius: '6px',
+            textDecoration: 'none',
+            fontSize: '14px',
+            fontWeight: '500',
+          }}
+        >
+          Return to Home
+        </a>
       </div>
     );
   }

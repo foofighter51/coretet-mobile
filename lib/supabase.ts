@@ -161,6 +161,20 @@ export const db = {
       return { data, error };
     },
 
+    async isAdmin(userId: string): Promise<boolean> {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', userId)
+        .single();
+
+      if (error || !data) {
+        return false;
+      }
+
+      return data.is_admin === true;
+    },
+
     async update(id: string, updates: Partial<{
       name: string;
       avatar_url: string;
