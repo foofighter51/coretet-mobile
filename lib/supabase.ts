@@ -742,10 +742,22 @@ export const storage = {
     return { data, error };
   },
 
-  // Get signed URL for private file (expires in 1 hour)
-  async getSignedUrl(path: string, expiresIn: number = 3600) {
+  // Upload feedback image/screenshot
+  async uploadFeedbackImage(file: File, path: string) {
     const { data, error } = await supabase.storage
-      .from('audio-files')
+      .from('feedback-images')
+      .upload(path, file, {
+        cacheControl: '3600',
+        upsert: false,
+      });
+
+    return { data, error };
+  },
+
+  // Get signed URL for private file (expires in 1 hour)
+  async getSignedUrl(path: string, expiresIn: number = 3600, bucket: string = 'audio-files') {
+    const { data, error } = await supabase.storage
+      .from(bucket)
       .createSignedUrl(path, expiresIn);
 
     if (error) {

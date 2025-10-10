@@ -83,14 +83,21 @@ export function FeedbackBoard() {
       // Upload image if selected
       if (selectedImage) {
         const timestamp = Date.now();
-        const fileName = `feedback/${currentUserId}/${timestamp}_${selectedImage.name}`;
+        const fileName = `${currentUserId}/${timestamp}_${selectedImage.name}`;
 
-        const { data: uploadData, error: uploadError } = await storage.uploadAudio(selectedImage, fileName);
+        console.log('📸 Uploading screenshot to feedback-images bucket:', fileName);
+        const { data: uploadData, error: uploadError } = await storage.uploadFeedbackImage(selectedImage, fileName);
 
         if (uploadError) {
-          console.error('Failed to upload image:', uploadError);
+          console.error('❌ Failed to upload image:', uploadError);
+          alert(`Failed to upload screenshot: ${uploadError.message}`);
+          setSubmitting(false);
+          return;
         } else if (uploadData) {
-          imageUrl = storage.getPublicUrl('audio-files', fileName);
+          console.log('✅ Screenshot uploaded successfully:', uploadData);
+          // Use public URL (feedback-images bucket is public)
+          imageUrl = storage.getPublicUrl('feedback-images', fileName);
+          console.log('✅ Using public URL:', imageUrl);
         }
       }
 
