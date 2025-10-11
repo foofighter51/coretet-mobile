@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Search, Filter, Plus, Music, Upload, ArrowLeft, Play, Pause, X, Check, MessageSquare, MoreVertical, Edit2, Trash2, Headphones, ThumbsUp, Heart, HelpCircle } from 'lucide-react';
 import { designTokens } from '../../design/designTokens';
 import { usePlaylist } from '../../contexts/PlaylistContext';
+import { useBand } from '../../contexts/BandContext';
 import { TrackRowWithPlayer } from '../molecules/TrackRowWithPlayer';
 import { TabBar } from '../molecules/TabBar';
 import { AudioUploader } from '../molecules/AudioUploader';
@@ -728,6 +729,7 @@ const baseStyle = {
 export function MainDashboard({ currentUser }: MainDashboardProps) {
   const navigate = useNavigate();
   const { playlists, createdPlaylists, followedPlaylists, currentPlaylist, createPlaylist, setCurrentPlaylist } = usePlaylist();
+  const { currentBand } = useBand();
 
   const [activeTab, setActiveTab] = useState<TabId>('playlists');
   const [playlistFilter, setPlaylistFilter] = useState<'mine' | 'following'>('mine');
@@ -789,7 +791,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
     setError(null);
 
     try {
-      await createPlaylist(newPlaylistTitle.trim());
+      await createPlaylist(newPlaylistTitle.trim(), undefined, currentBand?.id);
       setNewPlaylistTitle('');
       setShowCreatePlaylist(false);
     } catch (err) {

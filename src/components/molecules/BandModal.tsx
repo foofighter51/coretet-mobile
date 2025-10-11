@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Users, Plus, Settings, Mail } from 'lucide-react';
 import { useBand } from '../../contexts/BandContext';
 import { designTokens } from '../../design/designTokens';
@@ -16,6 +16,17 @@ export const BandModal: React.FC<BandModalProps> = ({ isOpen, onClose, userId })
   const [creating, setCreating] = useState(false);
 
   console.log('🎵 BandModal render:', { isOpen, userId, currentBand, userBands, userRole });
+
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (isOpen) {
+      const originalStyle = window.getComputedStyle(document.body).overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = originalStyle;
+      };
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 

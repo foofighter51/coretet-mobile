@@ -246,6 +246,7 @@ export const db = {
       description?: string;
       created_by: string;
       is_public?: boolean;
+      band_id?: string;
     }) {
       const { data, error } = await supabase
         .from('playlists')

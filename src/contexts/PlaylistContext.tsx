@@ -19,7 +19,7 @@ interface PlaylistContextType {
   currentPlaylist: Playlist | null;
   isLoading: boolean;
   error: string | null;
-  createPlaylist: (title: string, description?: string) => Promise<void>;
+  createPlaylist: (title: string, description?: string, bandId?: string) => Promise<void>;
   setCurrentPlaylist: (playlist: Playlist | null) => void;
   refreshPlaylists: () => Promise<void>;
   deletePlaylist: (playlistId: string) => Promise<void>;
@@ -111,7 +111,7 @@ export const PlaylistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   // Create a new playlist
-  const createPlaylist = async (title: string, description?: string) => {
+  const createPlaylist = async (title: string, description?: string, bandId?: string) => {
     if (!supabaseUserId) {
       throw new Error('User not authenticated');
     }
@@ -125,6 +125,7 @@ export const PlaylistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         description,
         created_by: supabaseUserId,
         is_public: true, // Always public for MVP
+        band_id: bandId,
       });
 
       if (createError) {
