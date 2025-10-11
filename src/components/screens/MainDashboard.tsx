@@ -731,9 +731,27 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   const { playlists, createdPlaylists, followedPlaylists, currentPlaylist, createPlaylist, setCurrentPlaylist } = usePlaylist();
   const { currentBand } = useBand();
 
+  // Filter playlists by current band (show all if no band or if playlist has no band_id - legacy data)
+  const filteredCreatedPlaylists = useMemo(() => {
+    if (!currentBand) return createdPlaylists;
+    return createdPlaylists.filter((p: any) => !p.band_id || p.band_id === currentBand.id);
+  }, [createdPlaylists, currentBand]);
+
+  const filteredFollowedPlaylists = useMemo(() => {
+    if (!currentBand) return followedPlaylists;
+    return followedPlaylists.filter((p: any) => !p.band_id || p.band_id === currentBand.id);
+  }, [followedPlaylists, currentBand]);
+
   const [activeTab, setActiveTab] = useState<TabId>('playlists');
   const [playlistFilter, setPlaylistFilter] = useState<'mine' | 'following'>('mine');
   const [tracks, setTracks] = useState<any[]>([]);
+
+  // Filter tracks by current band (show all if no band or if track has no band_id - legacy data)
+  const bandScopedTracks = useMemo(() => {
+    if (!currentBand) return tracks;
+    return tracks.filter((t: any) => !t.band_id || t.band_id === currentBand.id);
+  }, [tracks, currentBand]);
+
   const [playlistTracks, setPlaylistTracks] = useState<any[]>([]);
   const [showCreatePlaylist, setShowCreatePlaylist] = useState(false);
   const [newPlaylistTitle, setNewPlaylistTitle] = useState('');
@@ -1240,7 +1258,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   };
 
   const filteredTracks = useMemo(() => {
-    return tracks
+    return bandScopedTracks
       .filter(track => {
         if (ratingFilter === 'all') return true;
         if (ratingFilter === 'unrated') return !trackRatings[track.id];
@@ -1250,7 +1268,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
         ...track,
         isPlaying: track.id === currentTrack?.id && isPlaying
       }));
-  }, [tracks, currentTrack, isPlaying, ratingFilter, trackRatings]);
+  }, [bandScopedTracks, currentTrack, isPlaying, ratingFilter, trackRatings]);
 
   const filteredPlaylistTracks = useMemo(() => {
     const filtered = playlistTracks.filter(item => {
@@ -1295,7 +1313,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   }, [playlistTracks, ratingFilter, trackRatings, playlistSortBy, sortAscending]);
 
   // Check if current playlist is owned by the user (moved to component level)
-  const isPlaylistOwner = currentPlaylist ? createdPlaylists.some(p => p.id === currentPlaylist.id) : false;
+  const isPlaylistOwner = currentPlaylist ? filteredCreatedPlaylists.some(p => p.id === currentPlaylist.id) : false;
 
   const renderContent = () => {
     switch (activeTab) {
@@ -1314,6 +1332,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
               }}>
                 <AudioUploader
                   multiple={true}
+                  options={{ bandId: currentBand?.id }}
                   onUploadComplete={(results) => {
                     setShowUploader(false);
                     // Refresh tracks list
@@ -1351,7 +1370,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
               </div>
             )}
 
-            {tracks.length === 0 ? (
+            {bandScopedTracks.length === 0 ? (
               <div style={{
                 textAlign: 'center',
                 padding: `${designTokens.spacing.xxl} ${designTokens.spacing.xl}`,
@@ -1550,7 +1569,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                     transition: 'all 0.2s',
                   }}
                 >
-                  Following {followedPlaylists.length > 0 && `(${followedPlaylists.length})`}
+                  Following {filteredFollowedPlaylists.length > 0 && `(${filteredFollowedPlaylists.length})`}
                 </button>
               </div>
             )}
@@ -1684,7 +1703,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
 
                 {showTrackSelector && (
                   <TrackSelectorModal
-                    tracks={tracks}
+                    tracks={bandScopedTracks}
                     existingTrackIds={playlistTracks.map(item => item.tracks?.id).filter(Boolean)}
                     onAddTracks={handleAddExistingTracks}
                     onCancel={() => setShowTrackSelector(false)}
@@ -1700,6 +1719,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                   }}>
                     <AudioUploader
                       multiple={true}
+                      options={{ bandId: currentBand?.id }}
                       onUploadComplete={async (results) => {
                         console.log('Upload complete, results:', results);
                         setShowPlaylistUploader(false);
@@ -1917,7 +1937,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                   </div>
                 )}
               </div>
-            ) : (playlistFilter === 'mine' ? createdPlaylists : followedPlaylists).length === 0 ? (
+            ) : (playlistFilter === 'mine' ? filteredCreatedPlaylists : filteredFollowedPlaylists).length === 0 ? (
               <div style={{
                 textAlign: 'center',
                 padding: `${designTokens.spacing.xxl} ${designTokens.spacing.xl}`,
@@ -1933,7 +1953,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: designTokens.spacing.md }}>
-                {(playlistFilter === 'mine' ? createdPlaylists : followedPlaylists).map((playlist) => (
+                {(playlistFilter === 'mine' ? filteredCreatedPlaylists : filteredFollowedPlaylists).map((playlist) => (
                   <div
                     key={playlist.id}
                     onClick={() => handlePlaylistClick(playlist)}

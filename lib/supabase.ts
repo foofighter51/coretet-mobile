@@ -199,6 +199,7 @@ export const db = {
       duration_seconds?: number;
       created_by: string;
       folder_path?: string;
+      band_id?: string;
     }) {
       const { data, error } = await supabase
         .from('tracks')

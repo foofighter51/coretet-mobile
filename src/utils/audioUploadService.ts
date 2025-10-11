@@ -12,6 +12,7 @@ export interface UploadProgress {
 
 export interface UploadOptions extends AudioProcessingOptions {
   title?: string;
+  bandId?: string;
 }
 
 export interface UploadResult {
@@ -127,6 +128,7 @@ export class AudioUploadService {
         duration_seconds: Math.round(processedAudio.metadata.duration),
         created_by: this.currentUser.id, // Use Clerk user ID directly (TEXT)
         folder_path: folderPath,
+        band_id: options.bandId,
       };
 
       const { data: track, error: dbError } = await db.tracks.create(trackData);
