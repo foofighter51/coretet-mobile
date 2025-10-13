@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { Users, Music, List } from 'lucide-react';
+import { Users, Music, User } from 'lucide-react';
 import { designTokens } from '../../design/designTokens';
 import { TabId, TabItem } from '../../types';
 
@@ -9,8 +9,8 @@ interface TabBarProps {
 }
 
 const tabs: TabItem[] = [
-  { id: 'playlists', label: 'Playlists', icon: List },
-  { id: 'tracks', label: 'Tracks', icon: Music },
+  { id: 'band', label: 'Band', icon: Music },
+  { id: 'personal', label: 'Personal', icon: User },
   { id: 'profile', label: 'Profile', icon: Users }
 ];
 

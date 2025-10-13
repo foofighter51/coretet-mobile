@@ -731,7 +731,23 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   const { playlists, createdPlaylists, followedPlaylists, currentPlaylist, createPlaylist, setCurrentPlaylist, refreshPlaylists } = usePlaylist();
   const { currentBand } = useBand();
 
-  // Filter playlists by current band (show all if no band or if playlist has no band_id - legacy data)
+  // Filter playlists for Band tab - only show playlists with matching band_id
+  const bandCreatedPlaylists = useMemo(() => {
+    if (!currentBand) return [];
+    return createdPlaylists.filter((p: any) => p.band_id === currentBand.id);
+  }, [createdPlaylists, currentBand]);
+
+  // Filter playlists for Personal tab - only show playlists with NULL band_id
+  const personalCreatedPlaylists = useMemo(() => {
+    return createdPlaylists.filter((p: any) => !p.band_id);
+  }, [createdPlaylists]);
+
+  // Following playlists are user-level (not band-filtered)
+  const personalFollowedPlaylists = useMemo(() => {
+    return followedPlaylists;
+  }, [followedPlaylists]);
+
+  // Legacy filter (kept for backwards compatibility, can be removed later)
   const filteredCreatedPlaylists = useMemo(() => {
     if (!currentBand) return createdPlaylists;
     return createdPlaylists.filter((p: any) => !p.band_id || p.band_id === currentBand.id);
@@ -742,7 +758,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
     return followedPlaylists.filter((p: any) => !p.band_id || p.band_id === currentBand.id);
   }, [followedPlaylists, currentBand]);
 
-  const [activeTab, setActiveTab] = useState<TabId>('playlists');
+  const [activeTab, setActiveTab] = useState<TabId>('band');
   const [playlistFilter, setPlaylistFilter] = useState<'mine' | 'following'>('mine');
   const [tracks, setTracks] = useState<any[]>([]);
 
@@ -981,9 +997,9 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
     // Determine which track list to use
     let trackList: any[] = [];
 
-    if (activeTab === 'tracks') {
-      trackList = filteredTracks;
-    } else if (activeTab === 'playlists' && viewMode === 'detail') {
+    if (activeTab === 'band' && viewMode === 'detail') {
+      trackList = filteredPlaylistTracks.map((item: any) => item.tracks).filter(Boolean);
+    } else if (activeTab === 'personal' && viewMode === 'detail') {
       trackList = filteredPlaylistTracks.map((item: any) => item.tracks).filter(Boolean);
     }
 
@@ -1325,129 +1341,15 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   const isPlaylistOwner = currentPlaylist ? filteredCreatedPlaylists.some(p => p.id === currentPlaylist.id) : false;
 
   const renderContent = () => {
+    // Select correct playlists based on active tab
+    const currentCreatedPlaylists = activeTab === 'band' ? bandCreatedPlaylists :
+                                     activeTab === 'personal' ? personalCreatedPlaylists :
+                                     filteredCreatedPlaylists;
+    const currentFollowedPlaylists = activeTab === 'personal' ? personalFollowedPlaylists : [];
+
     switch (activeTab) {
-      case 'tracks':
-        return (
-          <div style={{
-            padding: designTokens.spacing.md,
-          }}>
-
-            {showUploader && (
-              <div style={{
-                backgroundColor: designTokens.colors.surface.secondary,
-                padding: designTokens.spacing.md,
-                borderRadius: designTokens.borderRadius.md,
-                marginBottom: designTokens.spacing.md,
-              }}>
-                <AudioUploader
-                  multiple={true}
-                  options={{ bandId: currentBand?.id }}
-                  onUploadComplete={(results) => {
-                    setShowUploader(false);
-                    // Refresh tracks list
-                    if (currentUser?.id) {
-                      db.tracks.getByUser(currentUser.id).then(({ data }) => {
-                        setTracks(data || []);
-                      });
-                    }
-                  }}
-                  onUploadError={(error) => {
-                    console.error('❌ Upload failed:', error);
-                  }}
-                  currentUser={currentUser ? {
-                    id: currentUser.id,
-                    email: currentUser.email || '',
-                    phoneNumber: currentUser.phoneNumber || '',
-                    name: currentUser.name || 'User'
-                  } : undefined}
-                />
-                <button
-                  onClick={() => setShowUploader(false)}
-                  style={{
-                    marginTop: designTokens.spacing.sm,
-                    padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
-                    backgroundColor: designTokens.colors.borders.default,
-                    color: designTokens.colors.text.muted,
-                    border: 'none',
-                    borderRadius: designTokens.borderRadius.sm,
-                    fontSize: designTokens.typography.fontSizes.bodySmall,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Cancel
-                </button>
-              </div>
-            )}
-
-            {bandScopedTracks.length === 0 ? (
-              <div style={{
-                textAlign: 'center',
-                padding: `${designTokens.spacing.xxl} ${designTokens.spacing.xl}`,
-                color: designTokens.colors.neutral.darkGray,
-              }}>
-                <Music size={48} style={{ margin: `0 auto ${designTokens.spacing.lg}`, opacity: 0.3 }} />
-                <p>No tracks uploaded yet</p>
-                <p style={{ fontSize: designTokens.typography.fontSizes.bodySmall, marginTop: designTokens.spacing.sm }}>
-                  Upload your first track to get started
-                </p>
-              </div>
-            ) : (
-              <div>
-                {/* Rating Filter */}
-                <div style={{
-                  display: 'flex',
-                  gap: designTokens.spacing.sm,
-                  marginBottom: designTokens.spacing.lg,
-                  overflowX: 'auto',
-                  paddingBottom: designTokens.spacing.xs,
-                }}>
-                  {(['all', 'listened', 'liked', 'loved', 'unrated'] as const).map(filter => (
-                    <button
-                      key={filter}
-                      onClick={() => setRatingFilter(filter)}
-                      style={{
-                        padding: `${designTokens.spacing.xs} ${designTokens.spacing.md}`,
-                        backgroundColor: ratingFilter === filter ? designTokens.colors.primary.blue : designTokens.colors.surface.secondary,
-                        color: ratingFilter === filter ? designTokens.colors.text.inverse : designTokens.colors.neutral.darkGray,
-                        border: ratingFilter === filter ? 'none' : `1px solid ${designTokens.colors.borders.default}`,
-                        borderRadius: designTokens.borderRadius.lg,
-                        fontSize: designTokens.typography.fontSizes.caption,
-                        fontWeight: designTokens.typography.fontWeights.medium,
-                        cursor: 'pointer',
-                        whiteSpace: 'nowrap',
-                        transition: 'all 0.2s',
-                      }}
-                    >
-                      {filter.charAt(0).toUpperCase() + filter.slice(1)}
-                    </button>
-                  ))}
-                </div>
-
-                {filteredTracks.map((track) => (
-                  <SwipeableTrackRow
-                    key={track.id}
-                    track={{
-                      id: track.id,
-                      title: track.title,
-                      duration_seconds: track.duration_seconds,
-                      folder_path: track.folder_path
-                    }}
-                    isPlaying={currentTrack?.id === track.id && isPlaying}
-                    currentRating={trackRatings[track.id]}
-                    aggregatedRatings={aggregatedRatings[track.id]}
-                    onPlayPause={() => handlePlayPause(track)}
-                    onRate={(rating) => handleRate(track.id, rating)}
-                    onLongPress={() => setSelectedTrackForDetail(track)}
-                  />
-                ))}
-                {/* Spacer to prevent last track from hiding behind PlaybackBar/TabBar */}
-                <div style={{ height: '16px' }} />
-              </div>
-            )}
-          </div>
-        );
-
-      case 'playlists':
+      case 'band':
+      case 'personal':
         return (
           <div style={{
             padding: designTokens.spacing.md,
@@ -1563,23 +1465,25 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                 >
                   My Playlists
                 </button>
-                <button
-                  onClick={() => setPlaylistFilter('following')}
-                  style={{
-                    flex: 1,
-                    padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
-                    backgroundColor: playlistFilter === 'following' ? designTokens.colors.primary.blue : 'transparent',
-                    color: playlistFilter === 'following' ? designTokens.colors.text.inverse : designTokens.colors.neutral.charcoal,
-                    border: 'none',
-                    borderRadius: designTokens.borderRadius.sm,
-                    fontSize: designTokens.typography.fontSizes.bodySmall,
-                    fontWeight: designTokens.typography.fontWeights.semibold,
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  Following {filteredFollowedPlaylists.length > 0 && `(${filteredFollowedPlaylists.length})`}
-                </button>
+                {activeTab === 'personal' && (
+                  <button
+                    onClick={() => setPlaylistFilter('following')}
+                    style={{
+                      flex: 1,
+                      padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
+                      backgroundColor: playlistFilter === 'following' ? designTokens.colors.primary.blue : 'transparent',
+                      color: playlistFilter === 'following' ? designTokens.colors.text.inverse : designTokens.colors.neutral.charcoal,
+                      border: 'none',
+                      borderRadius: designTokens.borderRadius.sm,
+                      fontSize: designTokens.typography.fontSizes.bodySmall,
+                      fontWeight: designTokens.typography.fontWeights.semibold,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    Following {currentFollowedPlaylists.length > 0 && `(${currentFollowedPlaylists.length})`}
+                  </button>
+                )}
               </div>
             )}
 
@@ -1946,7 +1850,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                   </div>
                 )}
               </div>
-            ) : (playlistFilter === 'mine' ? filteredCreatedPlaylists : filteredFollowedPlaylists).length === 0 ? (
+            ) : (playlistFilter === 'mine' ? currentCreatedPlaylists : currentFollowedPlaylists).length === 0 ? (
               <div style={{
                 textAlign: 'center',
                 padding: `${designTokens.spacing.xxl} ${designTokens.spacing.xl}`,
@@ -1962,7 +1866,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: designTokens.spacing.md }}>
-                {(playlistFilter === 'mine' ? filteredCreatedPlaylists : filteredFollowedPlaylists).map((playlist) => (
+                {(playlistFilter === 'mine' ? currentCreatedPlaylists : currentFollowedPlaylists).map((playlist) => (
                   <div
                     key={playlist.id}
                     onClick={() => handlePlaylistClick(playlist)}
@@ -2215,7 +2119,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
           padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
         }}>
           {/* Left: CoreTet Circle Logo or Back Button */}
-          {activeTab === 'playlists' && viewMode === 'detail' ? (
+          {(activeTab === 'band' || activeTab === 'personal') && viewMode === 'detail' ? (
             <button
               onClick={handleBackToList}
               style={{
@@ -2264,7 +2168,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
 
           {/* Center: Action Button */}
           <div style={{ flexGrow: 1, display: 'flex', justifyContent: 'center' }}>
-            {activeTab === 'playlists' && viewMode === 'list' && (
+            {activeTab === 'band' && viewMode === 'list' && (
               <button
                 onClick={() => setShowCreatePlaylist(true)}
                 style={{
@@ -2285,7 +2189,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                 New
               </button>
             )}
-            {activeTab === 'tracks' && (
+            {activeTab === 'personal' && viewMode === 'list' && (
               <button
                 onClick={() => setShowUploader(true)}
                 style={{
@@ -2306,7 +2210,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                 Upload
               </button>
             )}
-            {activeTab === 'playlists' && viewMode === 'detail' && isPlaylistOwner && (
+            {(activeTab === 'band' || activeTab === 'personal') && viewMode === 'detail' && isPlaylistOwner && (
               <div style={{ display: 'flex', gap: designTokens.spacing.sm }}>
                 {isEditingTracks ? (
                   <>
@@ -2398,7 +2302,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
 
           {/* Right: Menu button for playlist detail or Spacer */}
           <div style={{ width: designTokens.spacing.xxl, flexShrink: 0, position: 'relative' }}>
-            {activeTab === 'playlists' && viewMode === 'detail' && isPlaylistOwner && !isEditingTracks && (
+            {(activeTab === 'band' || activeTab === 'personal') && viewMode === 'detail' && isPlaylistOwner && !isEditingTracks && (
               <button
                 onClick={() => setShowPlaylistMenu(!showPlaylistMenu)}
                 style={{
@@ -2421,7 +2325,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
         </div>
 
         {/* Playlist menu dropdown */}
-        {showPlaylistMenu && activeTab === 'playlists' && viewMode === 'detail' && (
+        {showPlaylistMenu && (activeTab === 'band' || activeTab === 'personal') && viewMode === 'detail' && (
           <div style={{
             position: 'absolute',
             top: '60px',
