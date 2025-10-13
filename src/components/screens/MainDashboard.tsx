@@ -728,7 +728,7 @@ const baseStyle = {
 
 export function MainDashboard({ currentUser }: MainDashboardProps) {
   const navigate = useNavigate();
-  const { playlists, createdPlaylists, followedPlaylists, currentPlaylist, createPlaylist, setCurrentPlaylist } = usePlaylist();
+  const { playlists, createdPlaylists, followedPlaylists, currentPlaylist, createPlaylist, setCurrentPlaylist, refreshPlaylists } = usePlaylist();
   const { currentBand } = useBand();
 
   // Filter playlists by current band (show all if no band or if playlist has no band_id - legacy data)
@@ -887,17 +887,26 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   const handleDeletePlaylist = async () => {
     if (!currentPlaylist) return;
 
+    console.log('🗑️ Attempting to delete playlist:', currentPlaylist.id, currentPlaylist.title);
+
     try {
       const { error: deleteError } = await db.playlists.delete(currentPlaylist.id);
 
-      if (deleteError) throw deleteError;
+      if (deleteError) {
+        console.error('❌ Delete error:', deleteError);
+        throw deleteError;
+      }
+
+      console.log('✅ Playlist deleted successfully');
 
       // Reload playlists to update the list
-      await loadPlaylists();
+      await refreshPlaylists();
 
       // Go back to list view
       handleBackToList();
+      setShowDeleteConfirm(false);
     } catch (err) {
+      console.error('❌ Delete failed:', err);
       const errorMsg = err instanceof Error ? err.message : 'Failed to delete playlist';
       setError(errorMsg + '. Please try again.');
       setShowDeleteConfirm(false);
