@@ -291,12 +291,75 @@ export const db = {
     },
 
     async delete(playlistId: string) {
-      const { data, error } = await supabase
+      const { data, error} = await supabase
         .from('playlists')
         .delete()
         .eq('id', playlistId);
 
       return { data, error };
+    },
+
+    async copyToPersonal(playlistId: string, userId: string) {
+      // 1. Fetch original playlist
+      const { data: originalPlaylist, error: playlistError } = await supabase
+        .from('playlists')
+        .select('*')
+        .eq('id', playlistId)
+        .single();
+
+      if (playlistError || !originalPlaylist) {
+        return { data: null, error: playlistError || new Error('Playlist not found') };
+      }
+
+      // 2. Fetch playlist tracks (with order)
+      const { data: playlistTracks, error: tracksError } = await supabase
+        .from('playlist_tracks')
+        .select('track_id, position')
+        .eq('playlist_id', playlistId)
+        .order('position');
+
+      if (tracksError) {
+        return { data: null, error: tracksError };
+      }
+
+      // 3. Create new personal playlist (NO band_id)
+      const { data: newPlaylist, error: createError } = await supabase
+        .from('playlists')
+        .insert({
+          title: originalPlaylist.title,
+          description: originalPlaylist.description,
+          created_by: userId,
+          is_public: false, // User can make public later
+          band_id: null, // KEY: No band assignment - this makes it personal
+        })
+        .select()
+        .single();
+
+      if (createError || !newPlaylist) {
+        return { data: null, error: createError || new Error('Failed to create playlist') };
+      }
+
+      // 4. Copy track references (same track IDs, new playlist)
+      if (playlistTracks && playlistTracks.length > 0) {
+        const trackInserts = playlistTracks.map(pt => ({
+          playlist_id: newPlaylist.id,
+          track_id: pt.track_id,
+          position: pt.position,
+        }));
+
+        const { error: insertError } = await supabase
+          .from('playlist_tracks')
+          .insert(trackInserts);
+
+        if (insertError) {
+          // Rollback: delete the playlist we just created
+          await supabase.from('playlists').delete().eq('id', newPlaylist.id);
+          return { data: null, error: insertError };
+        }
+      }
+
+      // 5. DO NOT copy ratings or comments - they stay tied to band context
+      return { data: newPlaylist, error: null };
     },
 
     async update(playlistId: string, updates: {

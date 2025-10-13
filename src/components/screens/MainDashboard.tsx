@@ -800,6 +800,8 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   const [editingPlaylistTitle, setEditingPlaylistTitle] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showCopyToPersonalConfirm, setShowCopyToPersonalConfirm] = useState(false);
+  const [copyingPlaylist, setCopyingPlaylist] = useState(false);
 
   // Edit tracks mode
   const [isEditingTracks, setIsEditingTracks] = useState(false);
@@ -926,6 +928,50 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to delete playlist';
       setError(errorMsg + '. Please try again.');
       setShowDeleteConfirm(false);
+    }
+  };
+
+  const handleCopyToPersonal = async () => {
+    if (!currentPlaylist || !currentUser) return;
+
+    console.log('📋 Copying playlist to Personal:', currentPlaylist.id, currentPlaylist.title);
+
+    setCopyingPlaylist(true);
+
+    try {
+      const { data: newPlaylist, error: copyError } = await db.playlists.copyToPersonal(
+        currentPlaylist.id,
+        currentUser.id
+      );
+
+      if (copyError) {
+        console.error('❌ Copy error:', copyError);
+        throw copyError;
+      }
+
+      console.log('✅ Playlist copied successfully:', newPlaylist);
+
+      // Reload playlists to show the new personal playlist
+      await refreshPlaylists();
+
+      // Close confirmation dialog
+      setShowCopyToPersonalConfirm(false);
+
+      // Switch to Personal tab to show the copied playlist
+      setActiveTab('personal');
+
+      // Go back to list view
+      handleBackToList();
+
+      // Show success message
+      setError(null);
+    } catch (err) {
+      console.error('❌ Copy failed:', err);
+      const errorMsg = err instanceof Error ? err.message : 'Failed to copy playlist';
+      setError(errorMsg + '. Please try again.');
+    } finally {
+      setCopyingPlaylist(false);
+      setShowCopyToPersonalConfirm(false);
     }
   };
 
@@ -1606,6 +1652,60 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                           borderRadius: designTokens.borderRadius.sm,
                           fontSize: designTokens.typography.fontSizes.bodySmall,
                           cursor: 'pointer',
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Copy to Personal confirmation modal */}
+                {showCopyToPersonalConfirm && (
+                  <div style={{
+                    backgroundColor: designTokens.colors.surface.secondary,
+                    padding: designTokens.spacing.md,
+                    borderRadius: designTokens.borderRadius.md,
+                    marginBottom: designTokens.spacing.md,
+                    border: `1px solid ${designTokens.colors.primary.blue}`,
+                  }}>
+                    <h3 style={{ margin: `0 0 ${designTokens.spacing.sm} 0`, fontSize: designTokens.typography.fontSizes.body, fontWeight: designTokens.typography.fontWeights.semibold, color: designTokens.colors.primary.blue }}>Copy to Personal?</h3>
+                    <p style={{ margin: `0 0 ${designTokens.spacing.md} 0`, fontSize: designTokens.typography.fontSizes.bodySmall, color: designTokens.colors.neutral.charcoal }}>
+                      This will create a personal copy of "{currentPlaylist.title}" that you can share outside the band.
+                    </p>
+                    <p style={{ margin: `0 0 ${designTokens.spacing.lg} 0`, fontSize: designTokens.typography.fontSizes.caption, color: designTokens.colors.text.muted }}>
+                      Note: Ratings and comments will not be copied.
+                    </p>
+                    <div style={{ display: 'flex', gap: designTokens.spacing.sm }}>
+                      <button
+                        onClick={handleCopyToPersonal}
+                        disabled={copyingPlaylist}
+                        style={{
+                          padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
+                          backgroundColor: designTokens.colors.primary.blue,
+                          color: designTokens.colors.text.inverse,
+                          border: 'none',
+                          borderRadius: designTokens.borderRadius.sm,
+                          fontSize: designTokens.typography.fontSizes.bodySmall,
+                          cursor: copyingPlaylist ? 'not-allowed' : 'pointer',
+                          fontWeight: designTokens.typography.fontWeights.medium,
+                          opacity: copyingPlaylist ? 0.6 : 1,
+                        }}
+                      >
+                        {copyingPlaylist ? 'Copying...' : 'Copy Playlist'}
+                      </button>
+                      <button
+                        onClick={() => setShowCopyToPersonalConfirm(false)}
+                        disabled={copyingPlaylist}
+                        style={{
+                          padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
+                          backgroundColor: designTokens.colors.borders.default,
+                          color: designTokens.colors.text.muted,
+                          border: 'none',
+                          borderRadius: designTokens.borderRadius.sm,
+                          fontSize: designTokens.typography.fontSizes.bodySmall,
+                          cursor: copyingPlaylist ? 'not-allowed' : 'pointer',
+                          opacity: copyingPlaylist ? 0.6 : 1,
                         }}
                       >
                         Cancel
@@ -2426,6 +2526,31 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
               <Edit2 size={16} />
               Edit Tracks
             </button>
+            {activeTab === 'band' && currentPlaylist && (
+              <button
+                onClick={() => {
+                  setShowCopyToPersonalConfirm(true);
+                  setShowPlaylistMenu(false);
+                }}
+                style={{
+                  width: '100%',
+                  padding: `${designTokens.spacing.md} ${designTokens.spacing.lg}`,
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: designTokens.spacing.md,
+                  fontSize: designTokens.typography.fontSizes.bodySmall,
+                  color: designTokens.colors.primary.blue,
+                  borderBottom: `1px solid ${designTokens.colors.borders.default}`,
+                }}
+              >
+                <Upload size={16} />
+                Copy to Personal
+              </button>
+            )}
             <button
               onClick={() => {
                 setShowDeleteConfirm(true);
