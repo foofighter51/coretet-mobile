@@ -100,17 +100,17 @@ CREATE POLICY "Playlist creators can delete their playlists"
 
 
 -- ============================================
--- PLAYLIST_TRACKS RLS POLICIES
+-- PLAYLIST_ITEMS RLS POLICIES
 -- ============================================
 
--- Drop existing playlist_tracks policies
-DROP POLICY IF EXISTS "Anyone can view playlist tracks" ON playlist_tracks;
-DROP POLICY IF EXISTS "Anyone can add playlist tracks" ON playlist_tracks;
-DROP POLICY IF EXISTS "Anyone can delete playlist tracks" ON playlist_tracks;
+-- Drop existing playlist_items policies
+DROP POLICY IF EXISTS "Anyone can view playlist tracks" ON playlist_items;
+DROP POLICY IF EXISTS "Anyone can add playlist tracks" ON playlist_items;
+DROP POLICY IF EXISTS "Anyone can delete playlist tracks" ON playlist_items;
 
 -- Playlist tracks inherit visibility from their playlist
 CREATE POLICY "Playlist tracks visible based on playlist access"
-  ON playlist_tracks FOR SELECT
+  ON playlist_items FOR SELECT
   USING (
     playlist_id IN (
       SELECT id FROM playlists WHERE
@@ -131,7 +131,7 @@ CREATE POLICY "Playlist tracks visible based on playlist access"
 
 -- Users can add tracks to playlists they have access to
 CREATE POLICY "Users can add tracks to accessible playlists"
-  ON playlist_tracks FOR INSERT
+  ON playlist_items FOR INSERT
   WITH CHECK (
     playlist_id IN (
       SELECT id FROM playlists WHERE
@@ -149,7 +149,7 @@ CREATE POLICY "Users can add tracks to accessible playlists"
 
 -- Users can remove tracks from playlists they have access to
 CREATE POLICY "Users can remove tracks from accessible playlists"
-  ON playlist_tracks FOR DELETE
+  ON playlist_items FOR DELETE
   USING (
     playlist_id IN (
       SELECT id FROM playlists WHERE
@@ -167,7 +167,7 @@ CREATE POLICY "Users can remove tracks from accessible playlists"
 
 -- Users can update playlist tracks (for reordering)
 CREATE POLICY "Users can update playlist tracks"
-  ON playlist_tracks FOR UPDATE
+  ON playlist_items FOR UPDATE
   USING (
     playlist_id IN (
       SELECT id FROM playlists WHERE
@@ -307,5 +307,5 @@ CREATE POLICY "Users can delete their own comments"
 -- Run this after applying migration to verify policies are in place:
 -- SELECT schemaname, tablename, policyname, cmd
 -- FROM pg_policies
--- WHERE tablename IN ('tracks', 'playlists', 'playlist_tracks', 'ratings', 'comments')
+-- WHERE tablename IN ('tracks', 'playlists', 'playlist_items', 'ratings', 'comments')
 -- ORDER BY tablename, policyname;

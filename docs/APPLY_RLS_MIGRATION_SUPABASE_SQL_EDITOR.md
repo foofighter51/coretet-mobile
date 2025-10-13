@@ -119,14 +119,14 @@ CREATE POLICY "Playlist creators can delete their playlists"
 -- PLAYLIST_TRACKS RLS POLICIES
 -- ============================================
 
--- Drop existing playlist_tracks policies
-DROP POLICY IF EXISTS "Anyone can view playlist tracks" ON playlist_tracks;
-DROP POLICY IF EXISTS "Anyone can add playlist tracks" ON playlist_tracks;
-DROP POLICY IF EXISTS "Anyone can delete playlist tracks" ON playlist_tracks;
+-- Drop existing playlist_items policies
+DROP POLICY IF EXISTS "Anyone can view playlist tracks" ON playlist_items;
+DROP POLICY IF EXISTS "Anyone can add playlist tracks" ON playlist_items;
+DROP POLICY IF EXISTS "Anyone can delete playlist tracks" ON playlist_items;
 
 -- Playlist tracks inherit visibility from their playlist
 CREATE POLICY "Playlist tracks visible based on playlist access"
-  ON playlist_tracks FOR SELECT
+  ON playlist_items FOR SELECT
   USING (
     playlist_id IN (
       SELECT id FROM playlists WHERE
@@ -147,7 +147,7 @@ CREATE POLICY "Playlist tracks visible based on playlist access"
 
 -- Users can add tracks to playlists they have access to
 CREATE POLICY "Users can add tracks to accessible playlists"
-  ON playlist_tracks FOR INSERT
+  ON playlist_items FOR INSERT
   WITH CHECK (
     playlist_id IN (
       SELECT id FROM playlists WHERE
@@ -165,7 +165,7 @@ CREATE POLICY "Users can add tracks to accessible playlists"
 
 -- Users can remove tracks from playlists they have access to
 CREATE POLICY "Users can remove tracks from accessible playlists"
-  ON playlist_tracks FOR DELETE
+  ON playlist_items FOR DELETE
   USING (
     playlist_id IN (
       SELECT id FROM playlists WHERE
@@ -183,7 +183,7 @@ CREATE POLICY "Users can remove tracks from accessible playlists"
 
 -- Users can update playlist tracks (for reordering)
 CREATE POLICY "Users can update playlist tracks"
-  ON playlist_tracks FOR UPDATE
+  ON playlist_items FOR UPDATE
   USING (
     playlist_id IN (
       SELECT id FROM playlists WHERE
@@ -326,7 +326,7 @@ After running the migration, run this query to verify all policies were created:
 ```sql
 SELECT tablename, policyname, cmd
 FROM pg_policies
-WHERE tablename IN ('tracks', 'playlists', 'playlist_tracks', 'ratings', 'comments')
+WHERE tablename IN ('tracks', 'playlists', 'playlist_items', 'ratings', 'comments')
 ORDER BY tablename, policyname;
 ```
 
@@ -356,7 +356,7 @@ This migration secures your band content:
 ## Troubleshooting
 
 **If you get errors:**
-1. Check that all tables exist: `tracks`, `playlists`, `playlist_tracks`, `ratings`, `comments`, `band_members`
+1. Check that all tables exist: `tracks`, `playlists`, `playlist_items`, `ratings`, `comments`, `band_members`
 2. Check that the `band_id` column exists on `tracks` and `playlists` tables
 3. Check that RLS is enabled on all tables (it should be by default)
 
@@ -365,7 +365,7 @@ This migration secures your band content:
 SELECT tablename, rowsecurity
 FROM pg_tables
 WHERE schemaname = 'public'
-AND tablename IN ('tracks', 'playlists', 'playlist_tracks', 'ratings', 'comments');
+AND tablename IN ('tracks', 'playlists', 'playlist_items', 'ratings', 'comments');
 ```
 
 All tables should show `rowsecurity = true`.
