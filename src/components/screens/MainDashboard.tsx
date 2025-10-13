@@ -1484,8 +1484,8 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
               </div>
             )}
 
-            {/* Playlist Filter Toggle */}
-            {viewMode !== 'detail' && (
+            {/* Playlist Filter Toggle - only show in Personal tab */}
+            {viewMode !== 'detail' && activeTab === 'personal' && (
               <div style={{
                 display: 'flex',
                 gap: designTokens.spacing.sm,
@@ -1511,25 +1511,23 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                 >
                   My Playlists
                 </button>
-                {activeTab === 'personal' && (
-                  <button
-                    onClick={() => setPlaylistFilter('following')}
-                    style={{
-                      flex: 1,
-                      padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
-                      backgroundColor: playlistFilter === 'following' ? designTokens.colors.primary.blue : 'transparent',
-                      color: playlistFilter === 'following' ? designTokens.colors.text.inverse : designTokens.colors.neutral.charcoal,
-                      border: 'none',
-                      borderRadius: designTokens.borderRadius.sm,
-                      fontSize: designTokens.typography.fontSizes.bodySmall,
-                      fontWeight: designTokens.typography.fontWeights.semibold,
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                    }}
-                  >
-                    Following {currentFollowedPlaylists.length > 0 && `(${currentFollowedPlaylists.length})`}
-                  </button>
-                )}
+                <button
+                  onClick={() => setPlaylistFilter('following')}
+                  style={{
+                    flex: 1,
+                    padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
+                    backgroundColor: playlistFilter === 'following' ? designTokens.colors.primary.blue : 'transparent',
+                    color: playlistFilter === 'following' ? designTokens.colors.text.inverse : designTokens.colors.neutral.charcoal,
+                    border: 'none',
+                    borderRadius: designTokens.borderRadius.sm,
+                    fontSize: designTokens.typography.fontSizes.bodySmall,
+                    fontWeight: designTokens.typography.fontWeights.semibold,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  Following {currentFollowedPlaylists.length > 0 && `(${currentFollowedPlaylists.length})`}
+                </button>
               </div>
             )}
 
