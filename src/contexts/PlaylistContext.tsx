@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { db, auth } from '../../lib/supabase';
+import { useBand } from './BandContext';
 
 interface Playlist {
   id: string;
@@ -36,6 +37,7 @@ export const PlaylistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [supabaseUserId, setSupabaseUserId] = useState<string | null>(null);
+  const { currentBand } = useBand();
 
   // Get current user from Supabase auth
   useEffect(() => {
@@ -87,17 +89,38 @@ export const PlaylistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       // Extract playlist objects from followed data
       const followedPlaylistsData = followedData?.map(item => item.playlists).filter(Boolean) || [];
 
+      // Fetch band playlists if user is in a band
+      let bandPlaylistsData: any[] = [];
+      if (currentBand) {
+        const { data: bandPlaylists, error: bandError } = await db.playlists.getByBand(currentBand.id);
+        if (bandError) {
+          console.error('Failed to fetch band playlists:', bandError);
+        } else {
+          bandPlaylistsData = bandPlaylists || [];
+        }
+      }
+
       // Store created and followed separately
       setCreatedPlaylists(createdPlaylists || []);
       setFollowedPlaylists(followedPlaylistsData);
 
-      // Combine and deduplicate for backward compatibility
+      // Combine and deduplicate: created + followed + band playlists
       const allPlaylists = [...(createdPlaylists || [])];
-      const createdIds = new Set(allPlaylists.map(p => p.id));
+      const seenIds = new Set(allPlaylists.map(p => p.id));
 
+      // Add followed playlists
       followedPlaylistsData.forEach(playlist => {
-        if (!createdIds.has(playlist.id)) {
+        if (!seenIds.has(playlist.id)) {
           allPlaylists.push(playlist);
+          seenIds.add(playlist.id);
+        }
+      });
+
+      // Add band playlists (if not already included)
+      bandPlaylistsData.forEach(playlist => {
+        if (!seenIds.has(playlist.id)) {
+          allPlaylists.push(playlist);
+          seenIds.add(playlist.id);
         }
       });
 
@@ -225,6 +248,13 @@ export const PlaylistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       refreshPlaylists();
     }
   }, [supabaseUserId]);
+
+  // Refresh playlists when band changes
+  useEffect(() => {
+    if (supabaseUserId && currentBand) {
+      refreshPlaylists();
+    }
+  }, [currentBand?.id]);
 
   const value: PlaylistContextType = {
     playlists,
