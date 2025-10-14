@@ -734,6 +734,211 @@ export const db = {
     },
   },
 
+  // Band invite operations
+  bandInvites: {
+    /**
+     * Create a new band invite
+     * Generates a unique token for the invite link
+     */
+    async create(bandId: string, invitedBy: string, invitedEmail: string) {
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(invitedEmail)) {
+        return { data: null, error: new Error('Invalid email format') };
+      }
+
+      // Check if a user with this email exists and is already a member
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', invitedEmail)
+        .single();
+
+      if (profile) {
+        // User exists, check if they're already a member
+        const { data: existingMember } = await supabase
+          .from('band_members')
+          .select('id')
+          .eq('band_id', bandId)
+          .eq('user_id', profile.id)
+          .single();
+
+        if (existingMember) {
+          return { data: null, error: new Error('User is already a member of this band') };
+        }
+      }
+
+      // Check for existing pending invite
+      const { data: existingInvite } = await supabase
+        .from('band_invites')
+        .select('id')
+        .eq('band_id', bandId)
+        .eq('invited_email', invitedEmail)
+        .eq('status', 'pending')
+        .gt('expires_at', new Date().toISOString())
+        .single();
+
+      if (existingInvite) {
+        return { data: null, error: new Error('An active invite already exists for this email') };
+      }
+
+      // Generate unique invite token
+      const inviteToken = crypto.randomUUID();
+
+      const { data, error } = await supabase
+        .from('band_invites')
+        .insert({
+          band_id: bandId,
+          invited_by: invitedBy,
+          invited_email: invitedEmail,
+          invite_token: inviteToken,
+          status: 'pending',
+          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days
+        })
+        .select()
+        .single();
+
+      return { data, error };
+    },
+
+    /**
+     * Get invite details by token (for acceptance page)
+     */
+    async getByToken(token: string) {
+      const { data, error } = await supabase
+        .from('band_invites')
+        .select(`
+          *,
+          bands (
+            id,
+            name,
+            created_by
+          ),
+          profiles!band_invites_invited_by_fkey (
+            name
+          )
+        `)
+        .eq('invite_token', token)
+        .eq('status', 'pending')
+        .gt('expires_at', new Date().toISOString())
+        .single();
+
+      return { data, error };
+    },
+
+    /**
+     * Accept an invite and join the band
+     */
+    async accept(token: string, userId: string) {
+      // Get invite details
+      const { data: invite, error: inviteError } = await supabase
+        .from('band_invites')
+        .select('*')
+        .eq('invite_token', token)
+        .eq('status', 'pending')
+        .gt('expires_at', new Date().toISOString())
+        .single();
+
+      if (inviteError || !invite) {
+        return { data: null, error: inviteError || new Error('Invalid or expired invite') };
+      }
+
+      // Check if user is already a member
+      const { data: existingMember } = await supabase
+        .from('band_members')
+        .select('id')
+        .eq('band_id', invite.band_id)
+        .eq('user_id', userId)
+        .single();
+
+      if (existingMember) {
+        return { data: null, error: new Error('You are already a member of this band') };
+      }
+
+      // Add user as band member
+      const { data: member, error: memberError } = await supabase
+        .from('band_members')
+        .insert({
+          band_id: invite.band_id,
+          user_id: userId,
+          role: 'member', // Default role
+        })
+        .select()
+        .single();
+
+      if (memberError) {
+        return { data: null, error: memberError };
+      }
+
+      // Update invite status
+      const { error: updateError } = await supabase
+        .from('band_invites')
+        .update({
+          status: 'accepted',
+          accepted_at: new Date().toISOString(),
+          accepted_by: userId,
+        })
+        .eq('id', invite.id);
+
+      if (updateError) {
+        console.error('Failed to update invite status:', updateError);
+      }
+
+      return { data: { member, invite }, error: null };
+    },
+
+    /**
+     * Revoke (delete) a pending invite
+     */
+    async revoke(inviteId: string) {
+      const { error } = await supabase
+        .from('band_invites')
+        .delete()
+        .eq('id', inviteId)
+        .eq('status', 'pending');
+
+      return { error };
+    },
+
+    /**
+     * List all invites for a band (pending, accepted, expired)
+     */
+    async listForBand(bandId: string) {
+      const { data, error } = await supabase
+        .from('band_invites')
+        .select(`
+          *,
+          profiles!band_invites_invited_by_fkey (
+            name
+          )
+        `)
+        .eq('band_id', bandId)
+        .order('created_at', { ascending: false });
+
+      return { data, error };
+    },
+
+    /**
+     * List pending invites for a band
+     */
+    async listPendingForBand(bandId: string) {
+      const { data, error } = await supabase
+        .from('band_invites')
+        .select(`
+          *,
+          profiles!band_invites_invited_by_fkey (
+            name
+          )
+        `)
+        .eq('band_id', bandId)
+        .eq('status', 'pending')
+        .gt('expires_at', new Date().toISOString())
+        .order('created_at', { ascending: false });
+
+      return { data, error };
+    },
+  },
+
   // Feedback operations
   feedback: {
     async create(feedback: {
