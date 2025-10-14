@@ -220,6 +220,16 @@ export const db = {
       return { data, error };
     },
 
+    async getByBand(bandId: string) {
+      const { data, error } = await supabase
+        .from('tracks')
+        .select('*')
+        .eq('band_id', bandId)
+        .order('created_at', { ascending: false });
+
+      return { data, error };
+    },
+
     async getById(id: string) {
       const { data, error } = await supabase
         .from('tracks')

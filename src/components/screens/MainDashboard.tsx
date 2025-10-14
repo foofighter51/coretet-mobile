@@ -1274,12 +1274,34 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
       if (!currentUser?.id) return;
 
       try {
-        const { data, error } = await db.tracks.getByUser(currentUser.id);
+        // Fetch tracks created by user
+        const { data: userTracks, error } = await db.tracks.getByUser(currentUser.id);
         if (error) {
           console.error('Failed to fetch tracks:', error);
           return;
         }
-        setTracks(data || []);
+
+        // Fetch band tracks if in a band
+        let bandTracks: any[] = [];
+        if (currentBand) {
+          const { data: bandTracksData, error: bandError } = await db.tracks.getByBand(currentBand.id);
+          if (bandError) {
+            console.error('Failed to fetch band tracks:', bandError);
+          } else {
+            bandTracks = bandTracksData || [];
+          }
+        }
+
+        // Combine and deduplicate tracks
+        const allTracks = [...(userTracks || [])];
+        const seenIds = new Set(allTracks.map((t: any) => t.id));
+        bandTracks.forEach(track => {
+          if (!seenIds.has(track.id)) {
+            allTracks.push(track);
+          }
+        });
+
+        setTracks(allTracks);
 
         // Fetch user's ratings
         const { data: ratingsData } = await db.ratings.getByUser(currentUser.id);
@@ -1292,8 +1314,8 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
         }
 
         // Fetch aggregated ratings for all tracks
-        if (data && data.length > 0) {
-          await fetchAggregatedRatings(data.map((t: any) => t.id));
+        if (allTracks && allTracks.length > 0) {
+          await fetchAggregatedRatings(allTracks.map((t: any) => t.id));
         }
       } catch (error) {
         console.error('Error fetching tracks:', error);
@@ -1301,7 +1323,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
     };
 
     fetchUserTracks();
-  }, [currentUser?.id]);
+  }, [currentUser?.id, currentBand?.id]);
 
   const handleRate = async (trackId: string, rating: 'listened' | 'liked' | 'loved') => {
     if (!currentUser?.id) return;
