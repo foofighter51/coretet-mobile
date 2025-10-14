@@ -213,13 +213,15 @@ export default function App() {
     <BrowserRouter>
       <DeepLinkHandler />
       <Routes>
-        {/* Invite acceptance - requires authentication */}
+        {/* Invite acceptance - handles its own authentication */}
         <Route path="/invite/:token" element={
           user ? (
             <BandProvider userId={user.id}>
               <AcceptInvite />
             </BandProvider>
-          ) : (Capacitor.isNativePlatform() ? <PhoneAuthScreen /> : <LandingPage />)
+          ) : (
+            <AcceptInvite />
+          )
         } />
 
         {/* Playlist view - REQUIRES AUTHENTICATION (private WIP songs - NOT PUBLIC) */}
