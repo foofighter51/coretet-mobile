@@ -6,13 +6,14 @@ import { useNavigate } from 'react-router-dom';
 
 export function LandingPage() {
   const navigate = useNavigate();
+  const [showUserLogin, setShowUserLogin] = useState(false);
   const [showAdminLogin, setShowAdminLogin] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleUserLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
@@ -22,6 +23,27 @@ export function LandingPage() {
       if (error) {
         setError(error.message);
       } else {
+        // Redirect to main app
+        navigate('/');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to sign in');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAdminLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      const { error } = await auth.signInWithPassword(email, password);
+      if (error) {
+        setError(error.message);
+      } else {
+        // Redirect to admin feedback page
         navigate('/admin/feedback');
       }
     } catch (err: any) {
@@ -34,6 +56,7 @@ export function LandingPage() {
   return (
     <div style={{
       minHeight: '100vh',
+      height: '100vh',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
@@ -43,10 +66,13 @@ export function LandingPage() {
       backgroundColor: '#ffffff',
       fontFamily: designTokens.typography.fontFamily,
       overflowY: 'auto',
+      overflowX: 'hidden',
     }}>
       <div style={{
         maxWidth: '600px',
+        width: '100%',
         textAlign: 'center',
+        paddingBottom: '40px',
       }}>
         {/* Logo */}
         <div style={{
@@ -138,24 +164,183 @@ export function LandingPage() {
           </p>
         </div>
 
-        {/* Admin Login Toggle */}
-        {!showAdminLogin && (
-          <button
-            onClick={() => setShowAdminLogin(true)}
-            style={{
-              marginTop: '32px',
-              padding: '12px 24px',
-              backgroundColor: 'transparent',
-              border: `1px solid ${designTokens.colors.neutral.lightGray}`,
-              borderRadius: '8px',
-              color: designTokens.colors.neutral.darkGray,
-              fontSize: '14px',
-              cursor: 'pointer',
-              fontFamily: designTokens.typography.fontFamily,
-            }}
-          >
-            Admin Login
-          </button>
+        {/* Login Buttons */}
+        {!showUserLogin && !showAdminLogin && (
+          <div style={{
+            marginTop: '32px',
+            display: 'flex',
+            gap: '16px',
+            justifyContent: 'center',
+            flexWrap: 'wrap',
+          }}>
+            <button
+              onClick={() => setShowUserLogin(true)}
+              style={{
+                padding: '12px 24px',
+                backgroundColor: designTokens.colors.primary.blue,
+                border: 'none',
+                borderRadius: '8px',
+                color: '#ffffff',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                fontFamily: designTokens.typography.fontFamily,
+              }}
+            >
+              User Login
+            </button>
+            <button
+              onClick={() => setShowAdminLogin(true)}
+              style={{
+                padding: '12px 24px',
+                backgroundColor: 'transparent',
+                border: `1px solid ${designTokens.colors.neutral.lightGray}`,
+                borderRadius: '8px',
+                color: designTokens.colors.neutral.darkGray,
+                fontSize: '14px',
+                cursor: 'pointer',
+                fontFamily: designTokens.typography.fontFamily,
+              }}
+            >
+              Admin Login
+            </button>
+          </div>
+        )}
+
+        {/* User Login Form */}
+        {showUserLogin && (
+          <div style={{
+            marginTop: '32px',
+            padding: '24px',
+            backgroundColor: '#ffffff',
+            borderRadius: '12px',
+            border: '1px solid #e2e8f0',
+            textAlign: 'left',
+          }}>
+            <h3 style={{
+              fontSize: '18px',
+              fontWeight: '600',
+              color: designTokens.colors.neutral.charcoal,
+              margin: '0 0 16px 0',
+              textAlign: 'center',
+            }}>
+              Sign In
+            </h3>
+
+            <form onSubmit={handleUserLogin}>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{
+                  display: 'block',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  color: designTokens.colors.neutral.charcoal,
+                  marginBottom: '6px',
+                }}>
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    fontFamily: designTokens.typography.fontFamily,
+                    boxSizing: 'border-box',
+                  }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{
+                  display: 'block',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  color: designTokens.colors.neutral.charcoal,
+                  marginBottom: '6px',
+                }}>
+                  Password
+                </label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    fontFamily: designTokens.typography.fontFamily,
+                    boxSizing: 'border-box',
+                  }}
+                />
+              </div>
+
+              {error && (
+                <div style={{
+                  padding: '12px',
+                  backgroundColor: '#fef2f2',
+                  border: '1px solid #fecaca',
+                  borderRadius: '6px',
+                  color: '#dc2626',
+                  fontSize: '14px',
+                  marginBottom: '16px',
+                }}>
+                  {error}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading || !email || !password}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  backgroundColor: loading || !email || !password ? '#e2e8f0' : designTokens.colors.primary.blue,
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: loading || !email || !password ? 'not-allowed' : 'pointer',
+                  fontFamily: designTokens.typography.fontFamily,
+                }}
+              >
+                {loading ? 'Signing in...' : 'Sign In'}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowUserLogin(false);
+                  setEmail('');
+                  setPassword('');
+                  setError('');
+                }}
+                style={{
+                  width: '100%',
+                  marginTop: '8px',
+                  padding: '12px',
+                  backgroundColor: 'transparent',
+                  color: designTokens.colors.neutral.darkGray,
+                  border: 'none',
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  fontFamily: designTokens.typography.fontFamily,
+                }}
+              >
+                Cancel
+              </button>
+            </form>
+          </div>
         )}
 
         {/* Admin Login Form */}
@@ -178,7 +363,7 @@ export function LandingPage() {
               Admin Access
             </h3>
 
-            <form onSubmit={handleLogin}>
+            <form onSubmit={handleAdminLogin}>
               <div style={{ marginBottom: '16px' }}>
                 <label style={{
                   display: 'block',

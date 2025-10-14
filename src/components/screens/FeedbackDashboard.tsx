@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Bug, Lightbulb, HelpCircle, MessageCircle, ThumbsUp, Calendar, User, Send, Archive, ArchiveRestore, ChevronDown, ChevronUp } from 'lucide-react';
+import { Bug, Lightbulb, HelpCircle, MessageCircle, ThumbsUp, Calendar, User, Send, Archive, ArchiveRestore, ChevronDown, ChevronUp, LogOut } from 'lucide-react';
 import { designTokens } from '../../design/designTokens';
 import { db, auth } from '../../../lib/supabase';
+import { useNavigate } from 'react-router-dom';
 
 export function FeedbackDashboard() {
+  const navigate = useNavigate();
   const [feedbackList, setFeedbackList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'bug' | 'feature' | 'question' | 'other'>('all');
@@ -94,6 +96,11 @@ export function FeedbackDashboard() {
     } catch (error) {
       console.error('Error toggling archive:', error);
     }
+  };
+
+  const handleLogout = async () => {
+    await auth.signOut();
+    navigate('/');
   };
 
   const handleSendResponse = async (feedbackId: string) => {
@@ -212,13 +219,35 @@ export function FeedbackDashboard() {
       overflowY: 'auto',
     }}>
       {/* Header */}
-      <div style={{ marginBottom: '32px' }}>
-        <h1 style={{ fontSize: '32px', fontWeight: '700', marginBottom: '8px' }}>
-          Feedback Dashboard
-        </h1>
-        <p style={{ fontSize: '16px', color: '#6b7280' }}>
-          Community feedback and feature requests
-        </p>
+      <div style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <h1 style={{ fontSize: '32px', fontWeight: '700', marginBottom: '8px' }}>
+            Feedback Dashboard
+          </h1>
+          <p style={{ fontSize: '16px', color: '#6b7280' }}>
+            Community feedback and feature requests
+          </p>
+        </div>
+        <button
+          onClick={handleLogout}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '10px 16px',
+            backgroundColor: '#ffffff',
+            border: '1px solid #e2e8f0',
+            borderRadius: '8px',
+            color: designTokens.colors.neutral.charcoal,
+            fontSize: '14px',
+            fontWeight: '500',
+            cursor: 'pointer',
+            fontFamily: designTokens.typography.fontFamily,
+          }}
+        >
+          <LogOut size={18} />
+          Logout
+        </button>
       </div>
 
       {/* Stats */}

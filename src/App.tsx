@@ -10,6 +10,7 @@ import { PhoneAuthScreen } from './components/screens/PhoneAuthScreen';
 import { FeedbackBoard } from './components/screens/FeedbackBoard';
 import { FeedbackDashboard } from './components/screens/FeedbackDashboard';
 import { LandingPage } from './components/screens/LandingPage';
+import { AcceptInvite } from './components/screens/AcceptInvite';
 import { Spinner } from './components/atoms/Spinner';
 import DeepLinkService from './utils/deepLinkHandler';
 import { Capacitor } from '@capacitor/core';
@@ -212,6 +213,15 @@ export default function App() {
     <BrowserRouter>
       <DeepLinkHandler />
       <Routes>
+        {/* Invite acceptance - requires authentication */}
+        <Route path="/invite/:token" element={
+          user ? (
+            <BandProvider userId={user.id}>
+              <AcceptInvite />
+            </BandProvider>
+          ) : (Capacitor.isNativePlatform() ? <PhoneAuthScreen /> : <LandingPage />)
+        } />
+
         {/* Playlist view - REQUIRES AUTHENTICATION (private WIP songs - NOT PUBLIC) */}
         <Route path="/playlist/:shareCode" element={
           user ? <PublicPlaylistView /> : (Capacitor.isNativePlatform() ? <PhoneAuthScreen /> : <LandingPage />)
@@ -232,11 +242,11 @@ export default function App() {
           user ? <AppContent user={user} /> : <PhoneAuthScreen />
         } />
 
-        {/* Landing page for web visitors */}
+        {/* Landing page for web visitors, or app if authenticated */}
         <Route path="/" element={
           Capacitor.isNativePlatform()
             ? (user ? <AppContent user={user} /> : <PhoneAuthScreen />)
-            : <LandingPage />
+            : (user ? <AppContent user={user} /> : <LandingPage />)
         } />
 
         {/* Catch-all - show landing page on web, auth screen on native */}

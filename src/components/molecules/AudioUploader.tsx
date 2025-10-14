@@ -79,6 +79,12 @@ export const AudioUploader: React.FC<AudioUploaderProps> = ({
         }
       }
 
+      // Enforce 50-file limit for bulk uploads
+      const MAX_FILES = 50;
+      if (fileArray.length > MAX_FILES) {
+        throw new Error(`Too many files selected. Maximum is ${MAX_FILES} files per upload.`);
+      }
+
       const results: UploadResult[] = [];
 
       if (multiple && fileArray.length > 1) {

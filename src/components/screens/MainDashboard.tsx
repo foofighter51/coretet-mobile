@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Filter, Plus, Music, Upload, ArrowLeft, Play, Pause, X, Check, MessageSquare, MoreVertical, Edit2, Trash2, Headphones, ThumbsUp, Heart, HelpCircle } from 'lucide-react';
+import { Search, Filter, Plus, Music, Upload, ArrowLeft, Play, Pause, X, Check, MessageSquare, MoreVertical, Edit2, Trash2, Headphones, ThumbsUp, Heart, HelpCircle, Settings, GripVertical } from 'lucide-react';
 import { designTokens } from '../../design/designTokens';
 import { usePlaylist } from '../../contexts/PlaylistContext';
 import { useBand } from '../../contexts/BandContext';
@@ -11,6 +11,10 @@ import { PlaybackBar } from '../molecules/PlaybackBar';
 import { SwipeableTrackRow } from '../molecules/SwipeableTrackRow';
 import { Tutorial } from '../molecules/Tutorial';
 import { BandModal } from '../molecules/BandModal';
+import { BandSettings } from '../molecules/BandSettings';
+import { SortButton } from '../molecules/SortButton';
+import { FilterButton } from '../molecules/FilterButton';
+import { UploadButton } from '../molecules/UploadButton';
 import { Track, TabId } from '../../types';
 import { db, auth } from '../../../lib/supabase';
 import { Capacitor } from '@capacitor/core';
@@ -729,7 +733,7 @@ const baseStyle = {
 export function MainDashboard({ currentUser }: MainDashboardProps) {
   const navigate = useNavigate();
   const { playlists, createdPlaylists, followedPlaylists, currentPlaylist, createPlaylist, setCurrentPlaylist, refreshPlaylists } = usePlaylist();
-  const { currentBand } = useBand();
+  const { currentBand, userRole } = useBand();
 
   // Filter playlists for Band tab - only show playlists with matching band_id
   const bandCreatedPlaylists = useMemo(() => {
@@ -776,6 +780,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   const [showPlaylistUploader, setShowPlaylistUploader] = useState(false);
   const [showTrackSelector, setShowTrackSelector] = useState(false);
   const [showBandModal, setShowBandModal] = useState(false);
+  const [showBandSettings, setShowBandSettings] = useState(false);
 
   // Audio playback state - consolidated
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -790,6 +795,12 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   const [ratingFilter, setRatingFilter] = useState<'all' | 'listened' | 'liked' | 'loved' | 'unrated'>('all');
   const [playlistSortBy, setPlaylistSortBy] = useState<'position' | 'name' | 'duration' | 'rating'>('position');
   const [sortAscending, setSortAscending] = useState(true);
+
+  // Reorder mode state
+  const [isReordering, setIsReordering] = useState(false);
+  const [reorderedTracks, setReorderedTracks] = useState<any[]>([]);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   // Error state
   const [error, setError] = useState<string | null>(null);
@@ -984,6 +995,73 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
       setSortAscending(true);
       setPlaylistSortBy(newSort);
     }
+  };
+
+  // Reorder mode handlers
+  const handleEnterReorderMode = () => {
+    setIsReordering(true);
+    setReorderedTracks([...playlistTracks]); // Copy current tracks
+  };
+
+  const handleCancelReorder = () => {
+    setIsReordering(false);
+    setReorderedTracks([]);
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleSaveReorder = async () => {
+    if (!currentPlaylist) return;
+
+    try {
+      // Update positions for all tracks
+      const updates = reorderedTracks.map((track, index) => ({
+        id: track.id,
+        position: index + 1,
+      }));
+
+      // Batch update positions
+      await Promise.all(
+        updates.map(({ id, position }) =>
+          db.playlistItems.updatePosition(id, position)
+        )
+      );
+
+      // Refresh playlist
+      await loadPlaylistTracks(currentPlaylist.id);
+
+      // Exit reorder mode
+      setIsReordering(false);
+      setReorderedTracks([]);
+      setDraggedIndex(null);
+      setDragOverIndex(null);
+    } catch (err) {
+      console.error('Error saving track order:', err);
+      setError('Failed to save track order');
+    }
+  };
+
+  const handleDragStart = (index: number) => {
+    setDraggedIndex(index);
+  };
+
+  const handleDragOver = (index: number) => {
+    if (draggedIndex === null || draggedIndex === index) return;
+
+    setDragOverIndex(index);
+
+    // Reorder tracks in local state
+    const newTracks = [...reorderedTracks];
+    const draggedTrack = newTracks[draggedIndex];
+    newTracks.splice(draggedIndex, 1);
+    newTracks.splice(index, 0, draggedTrack);
+
+    setReorderedTracks(newTracks);
+    setDraggedIndex(index);
+  };
+
+  const handleDragEnd = () => {
+    setDragOverIndex(null);
   };
 
   const handleAddExistingTracks = async (selectedTrackIds: string[]) => {
@@ -1824,93 +1902,109 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                   </div>
                 ) : (
                   <div>
-                    {/* Sort Options */}
-                    <div style={{
-                      display: 'flex',
-                      gap: designTokens.spacing.sm,
-                      marginBottom: designTokens.spacing.md,
-                      overflowX: 'auto',
-                      paddingBottom: designTokens.spacing.xs,
-                    }}>
-                      <span style={{
-                        fontSize: designTokens.typography.fontSizes.caption,
-                        color: designTokens.colors.neutral.darkGray,
-                        padding: `${designTokens.spacing.xs} 0`,
-                        fontWeight: designTokens.typography.fontWeights.medium,
-                        whiteSpace: 'nowrap',
-                      }}>Sort:</span>
-                      {(['position', 'name', 'duration', 'rating'] as const).map(sort => {
-                        const isActive = playlistSortBy === sort;
-                        const label = sort === 'position' ? 'Default' : sort.charAt(0).toUpperCase() + sort.slice(1);
-
-                        // Show arrow only for active sort (except position/default)
-                        const showArrow = isActive && sort !== 'position';
-                        const arrow = sortAscending ? ' ↑' : ' ↓';
-
-                        return (
-                          <button
-                            key={sort}
-                            onClick={() => handleSortChange(sort)}
-                            style={{
-                              padding: `${designTokens.spacing.xs} ${designTokens.spacing.md}`,
-                              backgroundColor: isActive ? designTokens.colors.primary.blue : designTokens.colors.surface.primary,
-                              color: isActive ? designTokens.colors.text.inverse : designTokens.colors.neutral.darkGray,
-                              border: isActive ? 'none' : `1px solid ${designTokens.colors.borders.default}`,
-                              borderRadius: designTokens.borderRadius.lg,
-                              fontSize: designTokens.typography.fontSizes.caption,
-                              fontWeight: designTokens.typography.fontWeights.medium,
-                              cursor: 'pointer',
-                              whiteSpace: 'nowrap',
-                              transition: 'all 0.2s',
-                            }}
-                          >
-                            {label}{showArrow ? arrow : ''}
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    {/* Rating Filter */}
-                    <div style={{
-                      display: 'flex',
-                      gap: designTokens.spacing.sm,
-                      marginBottom: designTokens.spacing.lg,
-                      overflowX: 'auto',
-                      paddingBottom: designTokens.spacing.xs,
-                    }}>
-                      <span style={{
-                        fontSize: designTokens.typography.fontSizes.caption,
-                        color: designTokens.colors.neutral.darkGray,
-                        padding: `${designTokens.spacing.xs} 0`,
-                        fontWeight: designTokens.typography.fontWeights.medium,
-                        whiteSpace: 'nowrap',
-                      }}>Filter:</span>
-                      {(['all', 'listened', 'liked', 'loved', 'unrated'] as const).map(filter => (
+                    {/* Reorder Mode Actions */}
+                    {isReordering && (
+                      <div style={{
+                        display: 'flex',
+                        gap: designTokens.spacing.sm,
+                        marginBottom: designTokens.spacing.lg,
+                        padding: designTokens.spacing.md,
+                        backgroundColor: designTokens.colors.primary.blueLight,
+                        borderRadius: designTokens.borderRadius.md,
+                        alignItems: 'center',
+                      }}>
+                        <GripVertical size={18} color={designTokens.colors.primary.blue} />
+                        <span style={{
+                          flex: 1,
+                          fontSize: designTokens.typography.fontSizes.bodySmall,
+                          color: designTokens.colors.text.primary,
+                          fontWeight: designTokens.typography.fontWeights.medium,
+                        }}>
+                          Drag tracks to reorder
+                        </span>
                         <button
-                          key={filter}
-                          onClick={() => setRatingFilter(filter)}
+                          onClick={handleCancelReorder}
                           style={{
                             padding: `${designTokens.spacing.xs} ${designTokens.spacing.md}`,
-                            backgroundColor: ratingFilter === filter ? designTokens.colors.primary.blue : designTokens.colors.surface.secondary,
-                            color: ratingFilter === filter ? designTokens.colors.text.inverse : designTokens.colors.neutral.darkGray,
-                            border: ratingFilter === filter ? 'none' : `1px solid ${designTokens.colors.borders.default}`,
-                            borderRadius: designTokens.borderRadius.lg,
+                            backgroundColor: designTokens.colors.surface.primary,
+                            color: designTokens.colors.text.primary,
+                            border: `1px solid ${designTokens.colors.borders.default}`,
+                            borderRadius: designTokens.borderRadius.md,
                             fontSize: designTokens.typography.fontSizes.caption,
                             fontWeight: designTokens.typography.fontWeights.medium,
                             cursor: 'pointer',
-                            whiteSpace: 'nowrap',
-                            transition: 'all 0.2s',
                           }}
                         >
-                          {filter.charAt(0).toUpperCase() + filter.slice(1)}
+                          Cancel
                         </button>
-                      ))}
-                    </div>
+                        <button
+                          onClick={handleSaveReorder}
+                          style={{
+                            padding: `${designTokens.spacing.xs} ${designTokens.spacing.md}`,
+                            backgroundColor: designTokens.colors.primary.blue,
+                            color: designTokens.colors.text.inverse,
+                            border: 'none',
+                            borderRadius: designTokens.borderRadius.md,
+                            fontSize: designTokens.typography.fontSizes.caption,
+                            fontWeight: designTokens.typography.fontWeights.semibold,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Save Order
+                        </button>
+                      </div>
+                    )}
 
-                    {filteredPlaylistTracks.map((item: any) => (
+                    {(isReordering ? reorderedTracks : filteredPlaylistTracks).map((item: any, index: number) => (
                       item.tracks && (
-                        <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: designTokens.spacing.sm }}>
-                          {isEditingTracks && (
+                        <div
+                          key={item.id}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: designTokens.spacing.sm,
+                            opacity: draggedIndex === index ? 0.5 : 1,
+                            transition: 'opacity 0.2s',
+                          }}
+                          draggable={isReordering}
+                          onDragStart={() => isReordering && handleDragStart(index)}
+                          onDragOver={(e) => {
+                            e.preventDefault();
+                            isReordering && handleDragOver(index);
+                          }}
+                          onDragEnd={handleDragEnd}
+                          onTouchStart={(e) => {
+                            if (isReordering) {
+                              handleDragStart(index);
+                            }
+                          }}
+                          onTouchMove={(e) => {
+                            if (isReordering && draggedIndex !== null) {
+                              e.preventDefault();
+                              const touch = e.touches[0];
+                              const element = document.elementFromPoint(touch.clientX, touch.clientY);
+                              const row = element?.closest('[data-track-index]');
+                              if (row) {
+                                const targetIndex = parseInt(row.getAttribute('data-track-index') || '0');
+                                handleDragOver(targetIndex);
+                              }
+                            }
+                          }}
+                          onTouchEnd={handleDragEnd}
+                          data-track-index={index}
+                        >
+                          {isReordering && (
+                            <div style={{
+                              cursor: 'grab',
+                              color: designTokens.colors.text.secondary,
+                              display: 'flex',
+                              alignItems: 'center',
+                              padding: designTokens.spacing.xs,
+                            }}>
+                              <GripVertical size={20} />
+                            </div>
+                          )}
+                          {isEditingTracks && !isReordering && (
                             <input
                               type="checkbox"
                               checked={selectedTrackIds.includes(item.tracks.id)}
@@ -1924,7 +2018,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                               aria-label={`Select ${item.tracks.title}`}
                             />
                           )}
-                          <div style={{ flex: 1 }}>
+                          <div style={{ flex: 1, pointerEvents: isReordering ? 'none' : 'auto' }}>
                             <SwipeableTrackRow
                               track={{
                                 id: item.tracks.id,
@@ -2309,7 +2403,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
               </button>
             )}
             {(activeTab === 'band' || activeTab === 'personal') && viewMode === 'detail' && isPlaylistOwner && (
-              <div style={{ display: 'flex', gap: designTokens.spacing.sm }}>
+              <div style={{ display: 'flex', gap: designTokens.spacing.xs, alignItems: 'center' }}>
                 {isEditingTracks ? (
                   <>
                     <button
@@ -2354,52 +2448,50 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                   </>
                 ) : (
                   <>
-                    <button
-                      onClick={() => setShowTrackSelector(true)}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: designTokens.spacing.xs,
-                        padding: `${designTokens.spacing.xs} ${designTokens.spacing.md}`,
-                        backgroundColor: designTokens.colors.surface.primary,
-                        color: designTokens.colors.primary.blue,
-                        border: `1px solid ${designTokens.colors.primary.blue}`,
-                        borderRadius: designTokens.borderRadius.xxl,
-                        fontSize: designTokens.typography.fontSizes.caption,
-                        fontWeight: designTokens.typography.fontWeights.medium,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      <Plus size={14} />
-                      From Library
-                    </button>
-                    <button
-                      onClick={() => setShowPlaylistUploader(true)}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: designTokens.spacing.xs,
-                        padding: `${designTokens.spacing.xs} ${designTokens.spacing.md}`,
-                        backgroundColor: designTokens.colors.primary.blue,
-                        color: designTokens.colors.text.inverse,
-                        border: 'none',
-                        borderRadius: designTokens.borderRadius.xxl,
-                        fontSize: designTokens.typography.fontSizes.caption,
-                        fontWeight: designTokens.typography.fontWeights.medium,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      <Plus size={14} />
-                      Upload New
-                    </button>
+                    <UploadButton
+                      onFromLibrary={() => setShowTrackSelector(true)}
+                      onUploadNew={() => setShowPlaylistUploader(true)}
+                    />
+                    <SortButton
+                      currentSort={playlistSortBy}
+                      sortAscending={sortAscending}
+                      onSort={handleSortChange}
+                      onReorder={handleEnterReorderMode}
+                      showReorder={playlistSortBy === 'position' && playlistTracks.length > 1 && !isReordering}
+                    />
+                    <FilterButton
+                      activeFilter={ratingFilter}
+                      onFilterChange={setRatingFilter}
+                    />
                   </>
                 )}
               </div>
             )}
           </div>
 
-          {/* Right: Menu button for playlist detail or Spacer */}
+          {/* Right: Menu/Settings button */}
           <div style={{ width: designTokens.spacing.xxl, flexShrink: 0, position: 'relative' }}>
+            {/* Band Settings button (Band tab, list view, admin only) */}
+            {activeTab === 'band' && viewMode === 'list' && (userRole === 'admin' || userRole === 'owner') && currentBand && (
+              <button
+                onClick={() => setShowBandSettings(true)}
+                style={{
+                  width: designTokens.spacing.xxl,
+                  height: designTokens.spacing.xxl,
+                  borderRadius: designTokens.borderRadius.full,
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: designTokens.colors.neutral.charcoal,
+                }}
+              >
+                <Settings size={20} />
+              </button>
+            )}
+            {/* Playlist menu button (detail view, owner only) */}
             {(activeTab === 'band' || activeTab === 'personal') && viewMode === 'detail' && isPlaylistOwner && !isEditingTracks && (
               <button
                 onClick={() => setShowPlaylistMenu(!showPlaylistMenu)}
@@ -2637,6 +2729,17 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
         onClose={() => setShowBandModal(false)}
         userId={currentUser?.id || ''}
       />
+
+      {/* Band Settings Modal */}
+      {showBandSettings && currentBand && currentUser && (
+        <BandSettings
+          bandId={currentBand.id}
+          bandName={currentBand.name}
+          currentUserId={currentUser.id}
+          isAdmin={userRole === 'admin' || userRole === 'owner'}
+          onClose={() => setShowBandSettings(false)}
+        />
+      )}
     </div>
   );
 }
