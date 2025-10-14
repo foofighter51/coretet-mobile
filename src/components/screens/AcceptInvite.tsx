@@ -3,12 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Music, Check, AlertCircle, Loader, Download } from 'lucide-react';
 import { designTokens } from '../../design/designTokens';
 import { db, auth } from '../../../lib/supabase';
-import { useBand } from '../../contexts/BandContext';
 
 export const AcceptInvite: React.FC = () => {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
-  const { refreshBands } = useBand();
 
   const [loading, setLoading] = useState(true);
   const [accepting, setAccepting] = useState(false);
@@ -143,8 +141,8 @@ export const AcceptInvite: React.FC = () => {
 
       setSuccess(true);
 
-      // Refresh bands in context
-      await refreshBands();
+      // Note: Bands will be refreshed automatically when user navigates to dashboard
+      // via BandContext's useEffect that watches for user changes
 
       // Show download prompt on mobile, otherwise redirect
       if (isMobile) {
