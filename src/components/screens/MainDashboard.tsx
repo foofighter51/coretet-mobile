@@ -738,8 +738,9 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   // Filter playlists for Band tab - only show playlists with matching band_id
   const bandCreatedPlaylists = useMemo(() => {
     if (!currentBand) return [];
-    return createdPlaylists.filter((p: any) => p.band_id === currentBand.id);
-  }, [createdPlaylists, currentBand]);
+    // Use 'playlists' instead of 'createdPlaylists' to include playlists from all band members
+    return playlists.filter((p: any) => p.band_id === currentBand.id);
+  }, [playlists, currentBand]);
 
   // Filter playlists for Personal tab - only show playlists with NULL band_id
   const personalCreatedPlaylists = useMemo(() => {
