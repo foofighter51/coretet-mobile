@@ -60,7 +60,9 @@ export const BandProvider: React.FC<BandProviderProps> = ({ children, userId }) 
     }
 
     try {
+      console.log('🎸 Loading bands for user:', userId);
       const bands = await db.bands.getUserBands(userId);
+      console.log('🎸 Found', bands.length, 'bands:', bands.map(b => b.name));
       setUserBands(bands);
 
       // Load current band from localStorage or use first band
@@ -68,15 +70,19 @@ export const BandProvider: React.FC<BandProviderProps> = ({ children, userId }) 
       let bandToSet = bands.find(b => b.id === savedBandId) || bands[0] || null;
 
       if (bandToSet) {
+        console.log('🎸 Setting current band:', bandToSet.name, bandToSet.id);
         setCurrentBand(bandToSet);
 
         // Get user's role in this band
         const members = await db.bands.getBandMembers(bandToSet.id);
         const userMember = members.find(m => m.user_id === userId);
+        console.log('🎸 User role in band:', userMember?.role);
         setUserRole(userMember?.role || null);
+      } else {
+        console.log('⚠️ No band to set for user');
       }
     } catch (error) {
-      console.error('Error loading bands:', error);
+      console.error('❌ Error loading bands:', error);
     } finally {
       setIsLoading(false);
     }

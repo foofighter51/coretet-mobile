@@ -92,12 +92,16 @@ export const PlaylistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       // Fetch band playlists if user is in a band
       let bandPlaylistsData: any[] = [];
       if (currentBand) {
+        console.log('🎵 Fetching band playlists for band:', currentBand.name, currentBand.id);
         const { data: bandPlaylists, error: bandError } = await db.playlists.getByBand(currentBand.id);
         if (bandError) {
-          console.error('Failed to fetch band playlists:', bandError);
+          console.error('❌ Failed to fetch band playlists:', bandError);
         } else {
+          console.log('✅ Found', bandPlaylists?.length || 0, 'band playlists');
           bandPlaylistsData = bandPlaylists || [];
         }
+      } else {
+        console.log('⚠️ No currentBand set, skipping band playlists fetch');
       }
 
       // Store created and followed separately
@@ -251,7 +255,9 @@ export const PlaylistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // Refresh playlists when band changes
   useEffect(() => {
+    console.log('🔄 Band changed effect triggered. supabaseUserId:', supabaseUserId, 'currentBand:', currentBand?.name);
     if (supabaseUserId && currentBand) {
+      console.log('🔄 Refreshing playlists due to band change:', currentBand.name);
       refreshPlaylists();
     }
   }, [currentBand?.id]);

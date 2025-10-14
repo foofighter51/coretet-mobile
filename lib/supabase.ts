@@ -578,16 +578,7 @@ export const db = {
     async getBandMembers(bandId: string) {
       const { data, error } = await supabase
         .from('band_members')
-        .select(`
-          id,
-          band_id,
-          user_id,
-          role,
-          joined_at,
-          profiles (
-            name
-          )
-        `)
+        .select('id, band_id, user_id, role, joined_at')
         .eq('band_id', bandId);
 
       if (error) {
