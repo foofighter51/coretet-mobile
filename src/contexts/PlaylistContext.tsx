@@ -128,6 +128,8 @@ export const PlaylistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         }
       });
 
+      console.log('📋 Setting playlists state with', allPlaylists.length, 'total playlists');
+      console.log('📋 Breakdown: created=', createdPlaylists?.length || 0, 'followed=', followedPlaylistsData.length, 'band=', bandPlaylistsData.length);
       setPlaylists(allPlaylists);
     } catch (err) {
       console.error('Error fetching playlists:', err);
@@ -256,11 +258,11 @@ export const PlaylistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Refresh playlists when band changes
   useEffect(() => {
     console.log('🔄 Band changed effect triggered. supabaseUserId:', supabaseUserId, 'currentBand:', currentBand?.name);
-    if (supabaseUserId && currentBand) {
-      console.log('🔄 Refreshing playlists due to band change:', currentBand.name);
+    if (supabaseUserId) {
+      console.log('🔄 Refreshing playlists due to band change');
       refreshPlaylists();
     }
-  }, [currentBand?.id]);
+  }, [currentBand?.id, supabaseUserId]);
 
   const value: PlaylistContextType = {
     playlists,
