@@ -545,6 +545,29 @@ export const db = {
 
       return { data, error };
     },
+
+    // Check if tracks have comments (returns map of trackId -> hasComments)
+    async checkTracksHaveComments(trackIds: string[]): Promise<Record<string, boolean>> {
+      if (trackIds.length === 0) return {};
+
+      const { data, error } = await supabase
+        .from('comments')
+        .select('track_id')
+        .in('track_id', trackIds);
+
+      if (error || !data) {
+        console.error('Error checking for comments:', error);
+        return {};
+      }
+
+      // Create a map of trackId -> hasComments
+      const commentMap: Record<string, boolean> = {};
+      trackIds.forEach(id => {
+        commentMap[id] = data.some(comment => comment.track_id === id);
+      });
+
+      return commentMap;
+    },
   },
 
   // Band operations
@@ -586,7 +609,20 @@ export const db = {
         return [];
       }
 
-      return data || [];
+      if (!data) return [];
+
+      // Fetch profile data separately for each member to avoid RLS issues
+      const membersWithProfiles = await Promise.all(
+        data.map(async (member) => {
+          const { data: profile } = await db.profiles.getById(member.user_id);
+          return {
+            ...member,
+            profiles: profile || null,
+          };
+        })
+      );
+
+      return membersWithProfiles;
     },
 
     async createBand(name: string, userId: string, isPersonal: boolean = false) {

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Play, Pause, Headphones, ThumbsUp, Heart, Folder } from 'lucide-react';
+import { Play, Pause, Headphones, ThumbsUp, Heart, Folder, MessageCircle } from 'lucide-react';
 import { designTokens } from '../../design/designTokens';
 
 interface SwipeableTrackRowProps {
@@ -16,6 +16,7 @@ interface SwipeableTrackRowProps {
     liked: number;
     loved: number;
   };
+  hasComments?: boolean;
   onPlayPause: () => void;
   onRate: (rating: 'listened' | 'liked' | 'loved') => void;
   onLongPress?: () => void;
@@ -26,6 +27,7 @@ export const SwipeableTrackRow: React.FC<SwipeableTrackRowProps> = ({
   isPlaying,
   currentRating,
   aggregatedRatings,
+  hasComments,
   onPlayPause,
   onRate,
   onLongPress,
@@ -342,6 +344,23 @@ export const SwipeableTrackRow: React.FC<SwipeableTrackRowProps> = ({
             gap: '6px',
             flexShrink: 0,
           }}>
+            {/* Comment indicator */}
+            {hasComments && (
+              <span style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '3px',
+                borderRadius: '10px',
+                backgroundColor: designTokens.colors.surface.secondary,
+              }}>
+                <MessageCircle
+                  size={14}
+                  color={designTokens.colors.primary.blue}
+                  aria-label="Has comments"
+                />
+              </span>
+            )}
             {/* Show aggregated ratings */}
             {aggregatedRatings && (
               <>

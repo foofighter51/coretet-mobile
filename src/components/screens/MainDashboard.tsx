@@ -819,8 +819,42 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   const [isEditingTracks, setIsEditingTracks] = useState(false);
   const [selectedTrackIds, setSelectedTrackIds] = useState<string[]>([]);
 
+  // Comment indicators
+  const [trackCommentStatus, setTrackCommentStatus] = useState<Record<string, boolean>>({});
+
   // Track detail modal state
   const [selectedTrackForDetail, setSelectedTrackForDetail] = useState<any | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const savedScrollPosition = useRef<number>(0);
+
+  // Handle opening track detail modal with scroll position saving
+  const handleOpenTrackDetail = (track: any) => {
+    if (scrollContainerRef.current) {
+      savedScrollPosition.current = scrollContainerRef.current.scrollTop;
+    }
+    setSelectedTrackForDetail(track);
+  };
+
+  // Handle closing track detail modal with scroll position restoration
+  const handleCloseTrackDetail = async () => {
+    const trackId = selectedTrackForDetail?.id;
+    setSelectedTrackForDetail(null);
+
+    // Refresh comment status for this track after modal closes
+    if (trackId) {
+      const commentStatus = await db.comments.checkTracksHaveComments([trackId]);
+      setTrackCommentStatus(prev => ({ ...prev, ...commentStatus }));
+    }
+
+    // Restore scroll position after modal closes (clamp to valid range)
+    requestAnimationFrame(() => {
+      if (scrollContainerRef.current) {
+        const maxScroll = scrollContainerRef.current.scrollHeight - scrollContainerRef.current.clientHeight;
+        const clampedScroll = Math.max(0, Math.min(savedScrollPosition.current, maxScroll));
+        scrollContainerRef.current.scrollTop = clampedScroll;
+      }
+    });
+  };
 
   // Tutorial state
   const [showTutorial, setShowTutorial] = useState(false);
@@ -865,6 +899,10 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
       if (data && data.length > 0) {
         const trackIds = data.map((item: any) => item.tracks?.id).filter(Boolean);
         await fetchAggregatedRatings(trackIds);
+
+        // Fetch comment status for playlist tracks
+        const commentStatus = await db.comments.checkTracksHaveComments(trackIds);
+        setTrackCommentStatus(commentStatus);
       }
     } catch (error) {
       console.error('Error fetching playlist tracks:', error);
@@ -888,6 +926,14 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
     // Reset edit tracks mode
     setIsEditingTracks(false);
     setSelectedTrackIds([]);
+  };
+
+  // Handle tab changes - reset view mode when switching tabs from detail view
+  const handleTabChange = (newTab: TabId) => {
+    if (viewMode === 'detail' && (activeTab === 'band' || activeTab === 'personal')) {
+      handleBackToList();
+    }
+    setActiveTab(newTab);
   };
 
   const handleEditPlaylistTitle = async () => {
@@ -2052,9 +2098,10 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                               isPlaying={currentTrack?.id === item.tracks.id && isPlaying}
                               currentRating={trackRatings[item.tracks.id]}
                               aggregatedRatings={aggregatedRatings[item.tracks.id]}
+                              hasComments={trackCommentStatus[item.tracks.id]}
                               onPlayPause={() => handlePlayPause(item.tracks)}
                               onRate={(rating) => handleRate(item.tracks.id, rating)}
-                              onLongPress={() => setSelectedTrackForDetail(item.tracks)}
+                              onLongPress={() => handleOpenTrackDetail(item.tracks)}
                             />
                           </div>
                         </div>
@@ -2691,12 +2738,23 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
       </div>
 
       {/* Scrollable Content */}
-      <div style={{
-        flex: 1,
-        overflowY: 'auto' as const,
-        overflowX: 'hidden' as const,
-        paddingBottom: currentTrack ? '164px' : '84px', // Extra space: TabBar (60px) + PlaybackBar (~84px) + gap (8px) + margin (12px)
-      }}>
+      <div
+        ref={scrollContainerRef}
+        onScroll={(e) => {
+          // Prevent scrolling into negative territory (iOS bounce effect)
+          const target = e.currentTarget;
+          if (target.scrollTop < 0) {
+            target.scrollTop = 0;
+          }
+        }}
+        style={{
+          flex: 1,
+          overflowY: 'auto' as const,
+          overflowX: 'hidden' as const,
+          paddingBottom: currentTrack ? '164px' : '84px', // Extra space: TabBar (60px) + PlaybackBar (~84px) + gap (8px) + margin (12px)
+          WebkitOverflowScrolling: 'touch' as const,
+        }}
+      >
         {renderContent()}
       </div>
 
@@ -2727,14 +2785,14 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
 
       <TabBar
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={handleTabChange}
       />
 
       {/* Track Detail Modal */}
       {selectedTrackForDetail && (
         <TrackDetailModal
           track={selectedTrackForDetail}
-          onClose={() => setSelectedTrackForDetail(null)}
+          onClose={handleCloseTrackDetail}
           currentUser={currentUser}
           audioRef={audioRef}
           currentTrack={currentTrack}
