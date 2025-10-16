@@ -17,6 +17,7 @@ interface SwipeableTrackRowProps {
     loved: number;
   };
   hasComments?: boolean;
+  hasUnreadComments?: boolean;
   onPlayPause: () => void;
   onRate: (rating: 'listened' | 'liked' | 'loved') => void;
   onLongPress?: () => void;
@@ -28,6 +29,7 @@ export const SwipeableTrackRow: React.FC<SwipeableTrackRowProps> = ({
   currentRating,
   aggregatedRatings,
   hasComments,
+  hasUnreadComments,
   onPlayPause,
   onRate,
   onLongPress,
@@ -352,13 +354,30 @@ export const SwipeableTrackRow: React.FC<SwipeableTrackRowProps> = ({
                 justifyContent: 'center',
                 padding: '3px',
                 borderRadius: '10px',
-                backgroundColor: designTokens.colors.surface.secondary,
+                backgroundColor: hasUnreadComments
+                  ? designTokens.colors.primary.blueLight
+                  : designTokens.colors.surface.secondary,
+                position: 'relative',
               }}>
                 <MessageCircle
                   size={14}
                   color={designTokens.colors.primary.blue}
-                  aria-label="Has comments"
+                  fill={hasUnreadComments ? designTokens.colors.primary.blue : 'none'}
+                  aria-label={hasUnreadComments ? "Has unread comments" : "Has comments"}
                 />
+                {/* Unread dot indicator */}
+                {hasUnreadComments && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '1px',
+                    right: '1px',
+                    width: '6px',
+                    height: '6px',
+                    backgroundColor: designTokens.colors.system.error,
+                    borderRadius: '50%',
+                    border: '1px solid white',
+                  }} />
+                )}
               </span>
             )}
             {/* Show aggregated ratings */}

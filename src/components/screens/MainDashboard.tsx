@@ -821,6 +821,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
 
   // Comment indicators
   const [trackCommentStatus, setTrackCommentStatus] = useState<Record<string, boolean>>({});
+  const [trackUnreadStatus, setTrackUnreadStatus] = useState<Record<string, boolean>>({});
 
   // Track detail modal state
   const [selectedTrackForDetail, setSelectedTrackForDetail] = useState<any | null>(null);
@@ -828,11 +829,16 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   const savedScrollPosition = useRef<number>(0);
 
   // Handle opening track detail modal with scroll position saving
-  const handleOpenTrackDetail = (track: any) => {
+  const handleOpenTrackDetail = async (track: any) => {
     if (scrollContainerRef.current) {
       savedScrollPosition.current = scrollContainerRef.current.scrollTop;
     }
     setSelectedTrackForDetail(track);
+
+    // Mark comments as viewed when opening modal
+    if (track?.id && currentUser?.id) {
+      await db.comments.markCommentsAsViewed(track.id, currentUser.id);
+    }
   };
 
   // Handle closing track detail modal with scroll position restoration
@@ -841,9 +847,13 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
     setSelectedTrackForDetail(null);
 
     // Refresh comment status for this track after modal closes
-    if (trackId) {
+    if (trackId && currentUser?.id) {
       const commentStatus = await db.comments.checkTracksHaveComments([trackId]);
       setTrackCommentStatus(prev => ({ ...prev, ...commentStatus }));
+
+      // Refresh unread status (should now be false since we just viewed)
+      const unreadStatus = await db.comments.checkTracksHaveUnreadComments([trackId], currentUser.id);
+      setTrackUnreadStatus(prev => ({ ...prev, ...unreadStatus }));
     }
 
     // Restore scroll position after modal closes (clamp to valid range)
@@ -903,6 +913,12 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
         // Fetch comment status for playlist tracks
         const commentStatus = await db.comments.checkTracksHaveComments(trackIds);
         setTrackCommentStatus(commentStatus);
+
+        // Fetch unread comment status
+        if (currentUser?.id) {
+          const unreadStatus = await db.comments.checkTracksHaveUnreadComments(trackIds, currentUser.id);
+          setTrackUnreadStatus(unreadStatus);
+        }
       }
     } catch (error) {
       console.error('Error fetching playlist tracks:', error);
@@ -1540,6 +1556,13 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                                      filteredCreatedPlaylists;
     const currentFollowedPlaylists = activeTab === 'personal' ? personalFollowedPlaylists : [];
 
+    // Determine which playlists to display based on tab and filter
+    // Band tab always shows created playlists (no following option)
+    // Personal tab respects the mine/following filter
+    const displayedPlaylists = activeTab === 'band'
+      ? currentCreatedPlaylists
+      : (playlistFilter === 'mine' ? currentCreatedPlaylists : currentFollowedPlaylists);
+
     switch (activeTab) {
       case 'band':
       case 'personal':
@@ -2099,6 +2122,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                               currentRating={trackRatings[item.tracks.id]}
                               aggregatedRatings={aggregatedRatings[item.tracks.id]}
                               hasComments={trackCommentStatus[item.tracks.id]}
+                              hasUnreadComments={trackUnreadStatus[item.tracks.id]}
                               onPlayPause={() => handlePlayPause(item.tracks)}
                               onRate={(rating) => handleRate(item.tracks.id, rating)}
                               onLongPress={() => handleOpenTrackDetail(item.tracks)}
@@ -2112,23 +2136,25 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                   </div>
                 )}
               </div>
-            ) : (playlistFilter === 'mine' ? currentCreatedPlaylists : currentFollowedPlaylists).length === 0 ? (
+            ) : displayedPlaylists.length === 0 ? (
               <div style={{
                 textAlign: 'center',
                 padding: `${designTokens.spacing.xxl} ${designTokens.spacing.xl}`,
                 color: designTokens.colors.neutral.darkGray,
               }}>
                 <Music size={48} style={{ margin: `0 auto ${designTokens.spacing.lg}`, opacity: 0.3 }} />
-                <p>{playlistFilter === 'mine' ? 'No playlists yet' : 'Not following any playlists'}</p>
+                <p>{activeTab === 'band' ? 'No playlists yet' : (playlistFilter === 'mine' ? 'No playlists yet' : 'Not following any playlists')}</p>
                 <p style={{ fontSize: designTokens.typography.fontSizes.bodySmall, marginTop: designTokens.spacing.sm }}>
-                  {playlistFilter === 'mine'
+                  {activeTab === 'band'
                     ? 'Create your first playlist to start sharing music'
-                    : 'Follow playlists shared with you to see them here'}
+                    : (playlistFilter === 'mine'
+                      ? 'Create your first playlist to start sharing music'
+                      : 'Follow playlists shared with you to see them here')}
                 </p>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: designTokens.spacing.md }}>
-                {(playlistFilter === 'mine' ? currentCreatedPlaylists : currentFollowedPlaylists).map((playlist) => (
+                {displayedPlaylists.map((playlist) => (
                   <div
                     key={playlist.id}
                     onClick={() => handlePlaylistClick(playlist)}

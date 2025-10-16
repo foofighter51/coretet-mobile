@@ -568,6 +568,86 @@ export const db = {
 
       return commentMap;
     },
+
+    // Check if tracks have unread comments (returns map of trackId -> hasUnread)
+    async checkTracksHaveUnreadComments(trackIds: string[], userId: string): Promise<Record<string, boolean>> {
+      if (trackIds.length === 0) return {};
+
+      // Get all comments for these tracks
+      const { data: comments, error: commentsError } = await supabase
+        .from('comments')
+        .select('track_id, created_at')
+        .in('track_id', trackIds)
+        .order('created_at', { ascending: false });
+
+      if (commentsError || !comments) {
+        console.error('Error checking for comments:', commentsError);
+        return {};
+      }
+
+      // Get user's last viewed times for these tracks
+      const { data: views, error: viewsError } = await supabase
+        .from('comment_views')
+        .select('track_id, last_viewed_at')
+        .eq('user_id', userId)
+        .in('track_id', trackIds);
+
+      if (viewsError) {
+        console.error('Error checking comment views:', viewsError);
+      }
+
+      // Create map of trackId -> last viewed time
+      const viewMap: Record<string, Date> = {};
+      (views || []).forEach(view => {
+        viewMap[view.track_id] = new Date(view.last_viewed_at);
+      });
+
+      // Check if any comment is newer than last viewed time
+      const unreadMap: Record<string, boolean> = {};
+      trackIds.forEach(trackId => {
+        const trackComments = comments.filter(c => c.track_id === trackId);
+        if (trackComments.length === 0) {
+          unreadMap[trackId] = false;
+          return;
+        }
+
+        const lastViewed = viewMap[trackId];
+        if (!lastViewed) {
+          // Never viewed = all comments are unread
+          unreadMap[trackId] = true;
+          return;
+        }
+
+        // Check if any comment is newer than last viewed
+        unreadMap[trackId] = trackComments.some(
+          comment => new Date(comment.created_at) > lastViewed
+        );
+      });
+
+      return unreadMap;
+    },
+
+    // Mark track comments as viewed
+    async markCommentsAsViewed(trackId: string, userId: string) {
+      const { error } = await supabase
+        .from('comment_views')
+        .upsert(
+          {
+            user_id: userId,
+            track_id: trackId,
+            last_viewed_at: new Date().toISOString(),
+          },
+          {
+            onConflict: 'user_id,track_id',
+          }
+        );
+
+      if (error) {
+        console.error('Error marking comments as viewed:', error);
+      }
+
+      return { error };
+    },
   },
 
   // Band operations
