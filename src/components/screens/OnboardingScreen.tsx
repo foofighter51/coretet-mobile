@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { supabase, db, auth } from '../../../lib/supabase';
+import { db, auth } from '../../../lib/supabase';
 import { designTokens } from '../../design/designTokens';
 
 export function OnboardingScreen() {
@@ -24,34 +24,25 @@ export function OnboardingScreen() {
         return;
       }
 
-      console.log('Updating profile for user:', user.id, 'with name:', userName.trim());
+      // Update profile with name
+      const { data, error: updateError } = await db.profiles.update(user.id, { name: userName.trim() });
 
-      // Use upsert to handle both create and update cases
-      // This will insert if profile doesn't exist, update if it does
-      const { data, error: upsertError } = await supabase
-        .from('profiles')
-        .upsert({
-          id: user.id,
-          name: userName.trim(),
-          phone_number: user.phone || '',
-        }, {
-          onConflict: 'id'
-        })
-        .select()
-        .single();
-
-      if (upsertError) {
-        console.error('Error upserting profile:', upsertError);
-        setError(upsertError.message || 'Failed to save name. Please try again.');
+      if (updateError) {
+        setError(updateError.message || 'Failed to save name');
         setIsLoading(false);
         return;
       }
 
-      console.log('Profile saved successfully:', data);
+      // Verify the update succeeded
+      if (!data || data.name !== userName.trim()) {
+        setError('Failed to verify name update. Please try again.');
+        setIsLoading(false);
+        return;
+      }
+
       // Success - reload to refresh auth state and exit onboarding
       window.location.reload();
     } catch (err) {
-      console.error('Onboarding error:', err);
       setError(err instanceof Error ? err.message : 'Failed to save name');
       setIsLoading(false);
     }
