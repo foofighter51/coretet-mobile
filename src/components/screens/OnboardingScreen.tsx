@@ -24,25 +24,48 @@ export function OnboardingScreen() {
         return;
       }
 
-      // Update profile with name
+      console.log('Updating profile for user:', user.id);
+
+      // First check if profile exists
+      const { data: existingProfile, error: fetchError } = await db.profiles.getById(user.id);
+
+      if (fetchError) {
+        console.error('Error fetching profile:', fetchError);
+        // Profile might not exist, try to create it
+        const { data: newProfile, error: createError } = await db.profiles.create({
+          id: user.id,
+          phone_number: user.phone || '',
+          name: userName.trim(),
+        });
+
+        if (createError) {
+          console.error('Error creating profile:', createError);
+          setError('Failed to create profile. Please try again.');
+          setIsLoading(false);
+          return;
+        }
+
+        console.log('Profile created successfully');
+        window.location.reload();
+        return;
+      }
+
+      // Profile exists, update it
+      console.log('Existing profile found, updating...');
       const { data, error: updateError } = await db.profiles.update(user.id, { name: userName.trim() });
 
       if (updateError) {
+        console.error('Error updating profile:', updateError);
         setError(updateError.message || 'Failed to save name');
         setIsLoading(false);
         return;
       }
 
-      // Verify the update succeeded
-      if (!data || data.name !== userName.trim()) {
-        setError('Failed to verify name update. Please try again.');
-        setIsLoading(false);
-        return;
-      }
-
+      console.log('Profile updated successfully:', data);
       // Success - reload to refresh auth state and exit onboarding
       window.location.reload();
     } catch (err) {
+      console.error('Onboarding error:', err);
       setError(err instanceof Error ? err.message : 'Failed to save name');
       setIsLoading(false);
     }

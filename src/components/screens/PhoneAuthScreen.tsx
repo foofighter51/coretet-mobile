@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { designTokens } from '../../design/designTokens';
 import { supabase } from '../../../lib/supabase';
 import { Capacitor } from '@capacitor/core';
@@ -11,6 +11,19 @@ export function PhoneAuthScreen() {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isSignUp, setIsSignUp] = useState(false);
+
+  // Clear success message when user returns after email confirmation
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        // User is authenticated, clear any lingering messages
+        setSuccessMessage(null);
+        setError(null);
+      }
+    };
+    checkSession();
+  }, []);
 
   const handleAuth = async () => {
     if (!email.trim()) {
@@ -68,7 +81,7 @@ export function PhoneAuthScreen() {
             setError(authError.message);
           }
         } else {
-          setSuccessMessage('Account created! Please check your email to confirm your account.');
+          setSuccessMessage('Account created! Please check your email to confirm your account. If you don\'t see it, check your spam/junk folder.');
           setEmail('');
           setPassword('');
           setConfirmPassword('');
