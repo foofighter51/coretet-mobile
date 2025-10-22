@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { designTokens } from '../../design/designTokens';
 import { supabase } from '../../../lib/supabase';
+import { Capacitor } from '@capacitor/core';
 
 export function PhoneAuthScreen() {
   const [email, setEmail] = useState('');
@@ -37,11 +38,13 @@ export function PhoneAuthScreen() {
     try {
       if (isSignUp) {
         // Sign up
-        // Use production URL for email redirect, fallback to current origin
+        // Use production URL for email redirect
+        // In native apps (Capacitor), we must use the production web URL
+        // because the native app URL (capacitor://localhost or coretet.local) won't work in emails
         const productionUrl = 'https://coretet-mobile.netlify.app';
-        const redirectUrl = window.location.hostname === 'localhost'
-          ? productionUrl
-          : window.location.origin;
+        const isNativeApp = Capacitor.isNativePlatform();
+        const isLocalDev = window.location.hostname === 'localhost';
+        const redirectUrl = (isNativeApp || isLocalDev) ? productionUrl : window.location.origin;
 
         const { error: authError } = await supabase.auth.signUp({
           email: email.trim(),
