@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { db, auth } from '../../../lib/supabase';
+import { supabase, db, auth } from '../../../lib/supabase';
 import { designTokens } from '../../design/designTokens';
 
 export function OnboardingScreen() {
@@ -24,44 +24,30 @@ export function OnboardingScreen() {
         return;
       }
 
-      console.log('Updating profile for user:', user.id);
+      console.log('Updating profile for user:', user.id, 'with name:', userName.trim());
 
-      // First check if profile exists
-      const { data: existingProfile, error: fetchError } = await db.profiles.getById(user.id);
-
-      if (fetchError) {
-        console.error('Error fetching profile:', fetchError);
-        // Profile might not exist, try to create it
-        const { data: newProfile, error: createError } = await db.profiles.create({
+      // Use upsert to handle both create and update cases
+      // This will insert if profile doesn't exist, update if it does
+      const { data, error: upsertError } = await supabase
+        .from('profiles')
+        .upsert({
           id: user.id,
-          phone_number: user.phone || '',
           name: userName.trim(),
-        });
+          phone_number: user.phone || '',
+        }, {
+          onConflict: 'id'
+        })
+        .select()
+        .single();
 
-        if (createError) {
-          console.error('Error creating profile:', createError);
-          setError('Failed to create profile. Please try again.');
-          setIsLoading(false);
-          return;
-        }
-
-        console.log('Profile created successfully');
-        window.location.reload();
-        return;
-      }
-
-      // Profile exists, update it
-      console.log('Existing profile found, updating...');
-      const { data, error: updateError } = await db.profiles.update(user.id, { name: userName.trim() });
-
-      if (updateError) {
-        console.error('Error updating profile:', updateError);
-        setError(updateError.message || 'Failed to save name');
+      if (upsertError) {
+        console.error('Error upserting profile:', upsertError);
+        setError(upsertError.message || 'Failed to save name. Please try again.');
         setIsLoading(false);
         return;
       }
 
-      console.log('Profile updated successfully:', data);
+      console.log('Profile saved successfully:', data);
       // Success - reload to refresh auth state and exit onboarding
       window.location.reload();
     } catch (err) {
