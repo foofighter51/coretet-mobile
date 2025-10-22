@@ -7,8 +7,10 @@ import { MainDashboard } from './components/screens/MainDashboard';
 import { OnboardingScreen } from './components/screens/OnboardingScreen';
 import { PublicPlaylistView } from './components/screens/PublicPlaylistView';
 import { PhoneAuthScreen } from './components/screens/PhoneAuthScreen';
-import { FeedbackBoard } from './components/screens/FeedbackBoard';
-import { FeedbackDashboard } from './components/screens/FeedbackDashboard';
+// TEMPORARILY HIDDEN FOR TESTFLIGHT (TestFlight has its own feedback system)
+// TODO: Re-enable after TestFlight phase
+// import { FeedbackBoard } from './components/screens/FeedbackBoard';
+// import { FeedbackDashboard } from './components/screens/FeedbackDashboard';
 import { LandingPage } from './components/screens/LandingPage';
 import { AcceptInvite } from './components/screens/AcceptInvite';
 import { Spinner } from './components/atoms/Spinner';
@@ -229,15 +231,17 @@ export default function App() {
           user ? <PublicPlaylistView /> : (Capacitor.isNativePlatform() ? <PhoneAuthScreen /> : <LandingPage />)
         } />
 
+        {/* TEMPORARILY HIDDEN FOR TESTFLIGHT (TestFlight has its own feedback system) */}
+        {/* TODO: Re-enable after TestFlight phase */}
         {/* Feedback board - requires authentication */}
-        <Route path="/feedback" element={
+        {/* <Route path="/feedback" element={
           user ? <FeedbackBoard /> : (Capacitor.isNativePlatform() ? <PhoneAuthScreen /> : <LandingPage />)
-        } />
+        } /> */}
 
         {/* Feedback dashboard - requires authentication (admin only) */}
-        <Route path="/admin/feedback" element={
+        {/* <Route path="/admin/feedback" element={
           user ? <FeedbackDashboard /> : (Capacitor.isNativePlatform() ? <PhoneAuthScreen /> : <LandingPage />)
-        } />
+        } /> */}
 
         {/* App routes - only accessible on native app or when authenticated */}
         <Route path="/app/*" element={

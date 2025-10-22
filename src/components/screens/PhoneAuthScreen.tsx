@@ -5,6 +5,7 @@ import { supabase } from '../../../lib/supabase';
 export function PhoneAuthScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -21,6 +22,14 @@ export function PhoneAuthScreen() {
       return;
     }
 
+    // Validate password confirmation for signup
+    if (isSignUp) {
+      if (password !== confirmPassword) {
+        setError('Passwords do not match');
+        return;
+      }
+    }
+
     setLoading(true);
     setError(null);
     setSuccessMessage(null);
@@ -28,18 +37,35 @@ export function PhoneAuthScreen() {
     try {
       if (isSignUp) {
         // Sign up
+        // Use production URL for email redirect, fallback to current origin
+        const productionUrl = 'https://coretet-mobile.netlify.app';
+        const redirectUrl = window.location.hostname === 'localhost'
+          ? productionUrl
+          : window.location.origin;
+
         const { error: authError } = await supabase.auth.signUp({
           email: email.trim(),
           password: password,
           options: {
-            emailRedirectTo: `${window.location.origin}/`,
+            emailRedirectTo: `${redirectUrl}/`,
           }
         });
 
         if (authError) {
-          setError(authError.message);
+          // Provide user-friendly error messages
+          if (authError.message.includes('already registered')) {
+            setError('This email is already registered. Please sign in instead.');
+            setIsSignUp(false); // Switch to sign in mode
+          } else if (authError.message.includes('Email rate limit exceeded')) {
+            setError('Too many signup attempts. Please try again in a few minutes.');
+          } else {
+            setError(authError.message);
+          }
         } else {
           setSuccessMessage('Account created! Please check your email to confirm your account.');
+          setEmail('');
+          setPassword('');
+          setConfirmPassword('');
           setIsSignUp(false);
         }
       } else {
@@ -50,7 +76,14 @@ export function PhoneAuthScreen() {
         });
 
         if (authError) {
-          setError(authError.message);
+          // Provide user-friendly error messages
+          if (authError.message.includes('Invalid login credentials')) {
+            setError('Invalid email or password. Please try again.');
+          } else if (authError.message.includes('Email not confirmed')) {
+            setError('Please confirm your email address before signing in. Check your inbox for the confirmation link.');
+          } else {
+            setError(authError.message);
+          }
         }
         // On success, auth state will update and app will navigate automatically
       }
@@ -141,17 +174,37 @@ export function PhoneAuthScreen() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           disabled={loading}
-          onKeyDown={(e) => e.key === 'Enter' && handleAuth()}
+          onKeyDown={(e) => e.key === 'Enter' && !isSignUp && handleAuth()}
           style={{
             width: '100%',
             padding: '14px',
             fontSize: '16px',
             border: `1px solid ${designTokens.colors.neutral.lightGray}`,
             borderRadius: '8px',
-            marginBottom: '16px',
+            marginBottom: isSignUp ? '12px' : '16px',
             fontFamily: designTokens.typography.fontFamily,
           }}
         />
+
+        {isSignUp && (
+          <input
+            type="password"
+            placeholder="Confirm password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            disabled={loading}
+            onKeyDown={(e) => e.key === 'Enter' && handleAuth()}
+            style={{
+              width: '100%',
+              padding: '14px',
+              fontSize: '16px',
+              border: `1px solid ${designTokens.colors.neutral.lightGray}`,
+              borderRadius: '8px',
+              marginBottom: '16px',
+              fontFamily: designTokens.typography.fontFamily,
+            }}
+          />
+        )}
 
         {successMessage && (
           <div style={{
@@ -206,6 +259,7 @@ export function PhoneAuthScreen() {
             setIsSignUp(!isSignUp);
             setError(null);
             setSuccessMessage(null);
+            setConfirmPassword(''); // Clear confirm password when toggling
           }}
           disabled={loading}
           style={{

@@ -2317,7 +2317,9 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                   </div>
                 )}
 
-                <button
+                {/* TEMPORARILY HIDDEN FOR TESTFLIGHT (TestFlight has its own feedback system) */}
+                {/* TODO: Re-enable after TestFlight phase */}
+                {/* <button
                   onClick={() => navigate('/feedback')}
                   style={{
                     marginTop: designTokens.spacing.lg,
@@ -2338,7 +2340,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                 >
                   <MessageSquare size={18} />
                   Community Feedback
-                </button>
+                </button> */}
 
                 <button
                   onClick={() => setShowTutorial(true)}
