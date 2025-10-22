@@ -38,13 +38,16 @@ export function PhoneAuthScreen() {
     try {
       if (isSignUp) {
         // Sign up
-        // Use production URL for email redirect
-        // In native apps (Capacitor), we must use the production web URL
-        // because the native app URL (capacitor://localhost or coretet.local) won't work in emails
-        const productionUrl = 'https://coretet-mobile.netlify.app';
+        // For iOS app, use deep link to open app directly after email confirmation
+        // Supabase will detect the session automatically via detectSessionInUrl
         const isNativeApp = Capacitor.isNativePlatform();
         const isLocalDev = window.location.hostname === 'localhost';
-        const redirectUrl = (isNativeApp || isLocalDev) ? productionUrl : window.location.origin;
+
+        // Use deep link for native app (opens app home screen)
+        // The session will be detected automatically
+        const redirectUrl = (isNativeApp || isLocalDev)
+          ? 'coretet://'
+          : window.location.origin;
 
         const { error: authError } = await supabase.auth.signUp({
           email: email.trim(),
