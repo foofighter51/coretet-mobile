@@ -178,11 +178,13 @@ export const db = {
     async update(id: string, updates: Partial<{
       name: string;
       avatar_url: string;
+      phone_number: string;
     }>) {
+      // Use upsert to handle both update and insert cases
+      // This prevents "Cannot coerce result to single JSON object" errors
       const { data, error } = await supabase
         .from('profiles')
-        .update(updates)
-        .eq('id', id)
+        .upsert({ id, ...updates }, { onConflict: 'id' })
         .select()
         .single();
 
