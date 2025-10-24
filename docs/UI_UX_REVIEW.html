@@ -1,0 +1,1179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CoreTet Band - UI/UX Visual Review</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --primary-blue: #2563eb;
+            --blue-light: #ebf8ff;
+            --blue-hover: #1d4ed8;
+            --charcoal: #1f2937;
+            --dark-gray: #4b5563;
+            --gray: #6b7280;
+            --light-gray: #d1d5db;
+            --white: #ffffff;
+            --surface: #f9fafb;
+            --border: #e5e7eb;
+            --success: #10b981;
+            --error: #ef4444;
+            --warning: #f59e0b;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--charcoal);
+            background-color: var(--surface);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary-blue) 0%, var(--blue-hover) 100%);
+            color: white;
+            padding: 60px 20px;
+            text-align: center;
+            margin-bottom: 40px;
+            border-radius: 12px;
+        }
+
+        header h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        header p {
+            font-size: 1.2em;
+            opacity: 0.95;
+        }
+
+        .meta {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            border-left: 4px solid var(--primary-blue);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .meta-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .meta-label {
+            font-size: 0.85em;
+            color: var(--gray);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .meta-value {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: var(--charcoal);
+        }
+
+        nav {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            position: sticky;
+            top: 20px;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+
+        nav h3 {
+            margin-bottom: 15px;
+            color: var(--primary-blue);
+            font-size: 1.1em;
+        }
+
+        nav ul {
+            list-style: none;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        nav a {
+            color: var(--charcoal);
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            background: var(--surface);
+            transition: all 0.2s;
+            font-size: 0.9em;
+            border: 1px solid var(--border);
+        }
+
+        nav a:hover {
+            background: var(--primary-blue);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3);
+        }
+
+        section {
+            background: white;
+            padding: 40px;
+            margin-bottom: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        h2 {
+            color: var(--primary-blue);
+            margin-bottom: 25px;
+            font-size: 2em;
+            border-bottom: 3px solid var(--blue-light);
+            padding-bottom: 10px;
+        }
+
+        h3 {
+            color: var(--dark-gray);
+            margin: 30px 0 15px 0;
+            font-size: 1.5em;
+        }
+
+        h4 {
+            color: var(--charcoal);
+            margin: 20px 0 10px 0;
+            font-size: 1.2em;
+        }
+
+        .mermaid {
+            background: var(--surface);
+            padding: 30px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border: 1px solid var(--border);
+        }
+
+        .screen-mockup {
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            background: var(--surface);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .screen-header {
+            background: var(--primary-blue);
+            color: white;
+            padding: 15px;
+            border-radius: 8px 8px 0 0;
+            margin: -20px -20px 20px -20px;
+            font-weight: 600;
+            font-size: 1.1em;
+        }
+
+        .screen-section {
+            margin: 15px 0;
+            padding: 15px;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid var(--light-gray);
+        }
+
+        .screen-section h5 {
+            color: var(--primary-blue);
+            margin-bottom: 10px;
+            font-size: 1em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .button-mockup {
+            display: inline-block;
+            padding: 12px 24px;
+            background: var(--primary-blue);
+            color: white;
+            border-radius: 8px;
+            margin: 8px 8px 8px 0;
+            font-weight: 500;
+            box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);
+        }
+
+        .button-secondary {
+            background: white;
+            color: var(--primary-blue);
+            border: 2px solid var(--primary-blue);
+        }
+
+        .input-mockup {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            border: 1px solid var(--light-gray);
+            border-radius: 6px;
+            background: white;
+            font-size: 0.95em;
+        }
+
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .feature-card {
+            background: var(--surface);
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+        }
+
+        .feature-card h4 {
+            color: var(--primary-blue);
+            margin-top: 0;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        .status-fixed {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-active {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .status-pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .issue-card {
+            background: var(--surface);
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 8px;
+            border-left: 4px solid var(--warning);
+        }
+
+        .issue-card.fixed {
+            border-left-color: var(--success);
+        }
+
+        .issue-card.critical {
+            border-left-color: var(--error);
+        }
+
+        .flow-step {
+            background: white;
+            padding: 15px 20px;
+            margin: 10px 0;
+            border-radius: 6px;
+            border-left: 4px solid var(--primary-blue);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+        }
+
+        .flow-step code {
+            background: var(--surface);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        ul, ol {
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }
+
+        li {
+            margin: 8px 0;
+        }
+
+        code {
+            background: var(--surface);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        pre {
+            background: var(--charcoal);
+            color: #e5e7eb;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+
+        pre code {
+            background: none;
+            padding: 0;
+            color: inherit;
+        }
+
+        .tab-bar-mockup {
+            display: flex;
+            justify-content: space-around;
+            background: white;
+            padding: 15px;
+            border-top: 1px solid var(--border);
+            margin-top: 20px;
+            border-radius: 0 0 8px 8px;
+        }
+
+        .tab-item {
+            text-align: center;
+            color: var(--gray);
+            font-size: 0.85em;
+        }
+
+        .tab-item.active {
+            color: var(--primary-blue);
+            font-weight: 600;
+        }
+
+        footer {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--gray);
+            font-size: 0.9em;
+        }
+
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 2em;
+            }
+
+            section {
+                padding: 20px;
+            }
+
+            nav ul {
+                flex-direction: column;
+            }
+
+            .feature-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>CoreTet Band</h1>
+            <p>UI/UX Visual Documentation & Flow Analysis</p>
+        </header>
+
+        <div class="meta">
+            <div class="meta-grid">
+                <div class="meta-item">
+                    <span class="meta-label">Version</span>
+                    <span class="meta-value">Build 18 (TestFlight)</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Platform</span>
+                    <span class="meta-value">iOS (React + Ionic)</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Backend</span>
+                    <span class="meta-value">Supabase</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Generated</span>
+                    <span class="meta-value">October 23, 2025</span>
+                </div>
+            </div>
+        </div>
+
+        <nav>
+            <h3>Quick Navigation</h3>
+            <ul>
+                <li><a href="#overview">Overview</a></li>
+                <li><a href="#auth-flow">Authentication Flow</a></li>
+                <li><a href="#navigation">Navigation Structure</a></li>
+                <li><a href="#screens">Screen Mockups</a></li>
+                <li><a href="#features">Key Features</a></li>
+                <li><a href="#state">State Management</a></li>
+                <li><a href="#issues">Known Issues</a></li>
+            </ul>
+        </nav>
+
+        <section id="overview">
+            <h2>App Overview</h2>
+            <p><strong>CoreTet Band</strong> is an iOS music collaboration platform built for bands and musicians to share work-in-progress tracks, provide structured feedback through comments and ratings, and collaborate on music projects in private spaces.</p>
+
+            <h3>Core Purpose</h3>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h4>Private Collaboration</h4>
+                    <p>Bands create secure spaces to share unfinished songs without public exposure. Work-in-progress tracks remain private to band members and invited followers.</p>
+                </div>
+                <div class="feature-card">
+                    <h4>Structured Feedback</h4>
+                    <p>Three-tier rating system (listened/liked/loved) combined with timestamped comments allows precise, actionable feedback on specific song moments.</p>
+                </div>
+                <div class="feature-card">
+                    <h4>Playlist Organization</h4>
+                    <p>Group tracks by album, session, or project. Share playlists via deep links and allow trusted listeners to follow and provide feedback.</p>
+                </div>
+                <div class="feature-card">
+                    <h4>Multi-Band Support</h4>
+                    <p>Musicians in multiple projects can switch between band contexts, keeping each band's tracks and feedback separate and organized.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="auth-flow">
+            <h2>Authentication & Onboarding Flow</h2>
+
+            <div class="mermaid">
+                graph TD
+                    A[App Launch] --> B{User Authenticated?}
+                    B -->|No| C[PhoneAuthScreen]
+                    B -->|Yes| D{Profile Has Name?}
+
+                    C --> E{Sign Up or Sign In?}
+                    E -->|Sign Up| F[Enter Email + Password]
+                    E -->|Sign In| G[Enter Email + Password]
+
+                    F --> H[Create Account]
+                    H --> I[Email Confirmation Sent]
+                    I --> J[User Clicks Link in Email]
+                    J --> K[Deep Link Opens App]
+                    K --> D
+
+                    G --> L[Authenticate]
+                    L --> D
+
+                    D -->|No Name| M[OnboardingScreen]
+                    D -->|Has Name| N[Main Dashboard]
+
+                    M --> O[Enter Display Name]
+                    O --> P[Update Profile]
+                    P --> Q[Reload App]
+                    Q --> N
+
+                    N --> R[Tracks Tab Default View]
+
+                    style A fill:#e0e7ff
+                    style N fill:#86efac
+                    style C fill:#fef3c7
+                    style M fill:#fef3c7
+            </div>
+
+            <h3>Authentication Details</h3>
+            <div class="flow-step">
+                <strong>Sign Up Process:</strong>
+                <ul>
+                    <li>User enters email (validated format)</li>
+                    <li>Password must be minimum 6 characters</li>
+                    <li>Confirmation password must match</li>
+                    <li>Supabase sends confirmation email with deep link</li>
+                    <li>Rate limit: 1 signup per 60 seconds per email</li>
+                </ul>
+            </div>
+
+            <div class="flow-step">
+                <strong>Email Confirmation:</strong>
+                <ul>
+                    <li>Link format: <code>coretet://</code> for native app</li>
+                    <li>User must click link to verify email</li>
+                    <li>Session automatically established after confirmation</li>
+                    <li>Profile auto-created with email or phone as fallback name</li>
+                </ul>
+            </div>
+
+            <div class="flow-step">
+                <strong>Onboarding:</strong>
+                <ul>
+                    <li>Triggers if profile.name is empty or "User"</li>
+                    <li>Single-screen experience: "What should we call you?"</li>
+                    <li>Name saved to profiles table</li>
+                    <li>Page reloads to refresh auth state</li>
+                </ul>
+            </div>
+        </section>
+
+        <section id="navigation">
+            <h2>Navigation Structure & User Flows</h2>
+
+            <h3>Complete User Journey Map</h3>
+            <div class="mermaid">
+                graph LR
+                    A[Main Dashboard] --> B[Tracks Tab]
+                    A --> C[Playlists Tab]
+                    A --> D[Bands Tab]
+                    A --> E[Settings Tab]
+
+                    B --> F[Upload Track]
+                    B --> G[Play Track]
+                    B --> H[Track Detail Modal]
+
+                    H --> I[Add Comment]
+                    H --> J[Add Rating]
+                    H --> K[View Feedback]
+
+                    C --> L[Create Playlist]
+                    C --> M[View Playlist]
+                    C --> N[Share Playlist]
+
+                    N --> O[Deep Link Shared]
+                    O --> P[Recipient Opens Link]
+                    P --> Q[Public Playlist View]
+                    Q --> R[Follow Playlist]
+
+                    D --> S[Join Band]
+                    D --> T[Create Band]
+                    D --> U[Switch Band]
+
+                    T --> V[Enter Band Name]
+                    V --> W[Invite Members]
+                    W --> X[Send Invite Link]
+                    X --> Y[Accept Invite Screen]
+
+                    E --> Z[Edit Profile]
+                    E --> AA[Band Settings]
+                    E --> AB[Logout]
+
+                    style A fill:#3b82f6,color:#fff
+                    style H fill:#fbbf24
+                    style Q fill:#10b981
+                    style Y fill:#f59e0b
+            </div>
+
+            <h3>Deep Link Patterns</h3>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h4>Playlist Share</h4>
+                    <code>coretet://playlist/{shareCode}</code>
+                    <p>Opens PublicPlaylistView with all tracks playable. Requires authentication.</p>
+                </div>
+                <div class="feature-card">
+                    <h4>Band Invite</h4>
+                    <code>coretet://invite/{token}</code>
+                    <p>Opens AcceptInvite screen. Handles both authenticated and unauthenticated users.</p>
+                </div>
+                <div class="feature-card">
+                    <h4>Home</h4>
+                    <code>coretet://</code>
+                    <p>Opens Main Dashboard at Tracks tab (default entry point).</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="screens">
+            <h2>Screen-by-Screen Mockups</h2>
+
+            <h3>1. PhoneAuthScreen (Login/Signup)</h3>
+            <div class="screen-mockup">
+                <div class="screen-header">Authentication</div>
+                <div class="screen-section">
+                    <h5>Header</h5>
+                    <p style="text-align: center; font-size: 2em; font-weight: bold; color: var(--charcoal);">CoreTet</p>
+                    <p style="text-align: center; color: var(--gray);">Music Collaboration Platform</p>
+                </div>
+                <div class="screen-section">
+                    <h5>Form (Toggles between Sign In / Sign Up)</h5>
+                    <input class="input-mockup" placeholder="your@email.com" disabled>
+                    <input class="input-mockup" type="password" placeholder="Password (min 6 characters)" disabled>
+                    <input class="input-mockup" type="password" placeholder="Confirm password (sign up only)" disabled style="opacity: 0.6;">
+                    <div class="button-mockup">Sign In</div>
+                </div>
+                <div class="screen-section">
+                    <h5>Toggle Link</h5>
+                    <p style="text-align: center; color: var(--primary-blue); cursor: pointer;">Don't have an account? Sign up</p>
+                </div>
+                <div class="tab-bar-mockup" style="opacity: 0.3;">
+                    <div class="tab-item">🎵 Tracks</div>
+                    <div class="tab-item">📋 Playlists</div>
+                    <div class="tab-item">👥 Bands</div>
+                    <div class="tab-item">⚙️ Settings</div>
+                </div>
+            </div>
+
+            <h3>2. OnboardingScreen</h3>
+            <div class="screen-mockup">
+                <div class="screen-header">Welcome</div>
+                <div class="screen-section">
+                    <h5>Prompt</h5>
+                    <p style="font-size: 1.8em; font-weight: 600; margin-bottom: 10px;">Welcome to CoreTet</p>
+                    <p style="color: var(--dark-gray);">What should we call you?</p>
+                </div>
+                <div class="screen-section">
+                    <h5>Input</h5>
+                    <input class="input-mockup" placeholder="Your name" disabled>
+                    <div class="button-mockup">Continue</div>
+                </div>
+            </div>
+
+            <h3>3. Main Dashboard (Tracks Tab)</h3>
+            <div class="screen-mockup">
+                <div class="screen-header">Main Dashboard - Tracks</div>
+                <div class="screen-section">
+                    <h5>Header</h5>
+                    <p><strong>Current Band:</strong> The Beatles ▼</p>
+                </div>
+                <div class="screen-section">
+                    <h5>Search & Filters</h5>
+                    <input class="input-mockup" placeholder="🔍 Search tracks..." disabled style="margin-bottom: 10px;">
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <div class="button-mockup" style="padding: 8px 16px; font-size: 0.9em;">All</div>
+                        <div class="button-secondary" style="padding: 8px 16px; font-size: 0.9em;">Band</div>
+                        <div class="button-secondary" style="padding: 8px 16px; font-size: 0.9em;">Personal</div>
+                        <div class="button-secondary" style="padding: 8px 16px; font-size: 0.9em;">Playlists</div>
+                    </div>
+                </div>
+                <div class="screen-section">
+                    <h5>Track List</h5>
+                    <div style="background: white; padding: 15px; margin: 8px 0; border: 1px solid var(--light-gray); border-radius: 6px; display: flex; align-items: center; gap: 10px;">
+                        <div style="width: 40px; height: 40px; background: var(--primary-blue); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white;">▶</div>
+                        <div style="flex: 1;">
+                            <div style="font-weight: 600;">Hey Jude (Demo 3)</div>
+                            <div style="font-size: 0.85em; color: var(--gray);">4:23 • 2 comments</div>
+                        </div>
+                        <div style="color: var(--primary-blue);">ℹ️</div>
+                    </div>
+                    <div style="background: white; padding: 15px; margin: 8px 0; border: 1px solid var(--light-gray); border-radius: 6px; display: flex; align-items: center; gap: 10px;">
+                        <div style="width: 40px; height: 40px; background: var(--light-gray); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--gray);">▶</div>
+                        <div style="flex: 1;">
+                            <div style="font-weight: 600;">Let It Be (Rough Mix)</div>
+                            <div style="font-size: 0.85em; color: var(--gray);">3:51 • New comments 🔴</div>
+                        </div>
+                        <div style="color: var(--primary-blue);">ℹ️</div>
+                    </div>
+                </div>
+                <div class="screen-section" style="text-align: center;">
+                    <div class="button-mockup" style="border-radius: 50%; width: 56px; height: 56px; display: inline-flex; align-items: center; justify-content: center; font-size: 1.5em;">+</div>
+                    <p style="margin-top: 10px; font-size: 0.9em; color: var(--gray);">Upload Track</p>
+                </div>
+                <div class="tab-bar-mockup">
+                    <div class="tab-item active">🎵 Tracks</div>
+                    <div class="tab-item">📋 Playlists</div>
+                    <div class="tab-item">👥 Bands</div>
+                    <div class="tab-item">⚙️ Settings</div>
+                </div>
+            </div>
+
+            <h3>4. Track Detail Modal</h3>
+            <div class="screen-mockup">
+                <div class="screen-header">Track Details</div>
+                <div class="screen-section">
+                    <h5>Track Info</h5>
+                    <div style="display: flex; justify-content: space-between; align-items: start;">
+                        <div>
+                            <p style="font-size: 1.5em; font-weight: 600; margin-bottom: 5px;">Hey Jude (Demo 3)</p>
+                            <p style="color: var(--gray);">4:23</p>
+                        </div>
+                        <div style="cursor: pointer; font-size: 1.5em;">✕</div>
+                    </div>
+                </div>
+                <div class="screen-section">
+                    <h5>Ratings</h5>
+                    <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                        <div style="background: var(--surface); padding: 10px 15px; border-radius: 6px; display: flex; align-items: center; gap: 8px;">
+                            🎧 <strong>Listened</strong> <span style="color: var(--gray);">3</span>
+                        </div>
+                        <div style="background: var(--surface); padding: 10px 15px; border-radius: 6px; display: flex; align-items: center; gap: 8px;">
+                            👍 <strong>Liked</strong> <span style="color: var(--gray);">2</span>
+                        </div>
+                        <div style="background: var(--surface); padding: 10px 15px; border-radius: 6px; display: flex; align-items: center; gap: 8px;">
+                            ❤️ <strong>Loved</strong> <span style="color: var(--gray);">1</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="screen-section">
+                    <h5>Comments</h5>
+                    <div style="background: var(--surface); padding: 12px; margin: 8px 0; border-radius: 6px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                            <strong>Paul McCartney</strong>
+                            <span style="background: var(--primary-blue); color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.8em;">1:23</span>
+                        </div>
+                        <p style="color: var(--dark-gray); font-size: 0.95em;">Love the guitar tone here! Maybe increase the reverb slightly?</p>
+                        <p style="font-size: 0.8em; color: var(--gray); margin-top: 5px;">2 hours ago</p>
+                    </div>
+                    <div style="background: var(--surface); padding: 12px; margin: 8px 0; border-radius: 6px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                            <strong>John Lennon</strong>
+                        </div>
+                        <p style="color: var(--dark-gray); font-size: 0.95em;">The vocal harmony needs work. Let's try a different approach.</p>
+                        <p style="font-size: 0.8em; color: var(--gray); margin-top: 5px;">5 hours ago</p>
+                    </div>
+                </div>
+                <div class="screen-section">
+                    <h5>Add Comment</h5>
+                    <textarea class="input-mockup" rows="3" placeholder="Add your feedback..." disabled style="resize: vertical;"></textarea>
+                    <p style="font-size: 0.85em; color: var(--gray); margin-bottom: 10px;">💡 Timestamp captured at 1:23</p>
+                    <div class="button-mockup">Post Comment</div>
+                </div>
+            </div>
+
+            <h3>5. Band Creation Screen</h3>
+            <div class="screen-mockup">
+                <div class="screen-header">Start a New Band</div>
+                <div class="screen-section">
+                    <h5>Band Details</h5>
+                    <label style="display: block; font-weight: 600; margin-bottom: 5px;">Band Name *</label>
+                    <input class="input-mockup" placeholder="Enter your band name" disabled>
+
+                    <label style="display: block; font-weight: 600; margin-bottom: 5px; margin-top: 15px;">Description (Optional)</label>
+                    <textarea class="input-mockup" rows="3" placeholder="Describe your band's style or goals" disabled style="resize: vertical;"></textarea>
+                </div>
+                <div class="screen-section">
+                    <h5>Invite Members (Optional)</h5>
+                    <p style="font-size: 0.9em; color: var(--gray); margin-bottom: 10px;">Add phone numbers of people who can join this band</p>
+                    <input class="input-mockup" type="tel" placeholder="Member 1 phone (optional)" disabled>
+                    <input class="input-mockup" type="tel" placeholder="Member 2 phone (optional)" disabled>
+                    <input class="input-mockup" type="tel" placeholder="Member 3 phone (optional)" disabled>
+                    <input class="input-mockup" type="tel" placeholder="Member 4 phone (optional)" disabled>
+                </div>
+                <div class="screen-section">
+                    <div class="button-mockup" style="width: 100%; text-align: center;">CREATE BAND</div>
+                </div>
+            </div>
+
+            <h3>6. Accept Invite Screen</h3>
+            <div class="screen-mockup">
+                <div class="screen-header">Band Invitation</div>
+                <div class="screen-section" style="text-align: center;">
+                    <div style="width: 80px; height: 80px; background: var(--blue-light); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 2em; margin-bottom: 20px;">🎵</div>
+                    <h4 style="margin-top: 0;">Join The Beatles</h4>
+                    <p style="color: var(--dark-gray);">You've been invited by <strong>John Lennon</strong></p>
+                </div>
+                <div class="screen-section">
+                    <h5>Sign Up to Join (or Login if you have an account)</h5>
+                    <label style="display: block; font-weight: 600; margin-bottom: 5px;">Name</label>
+                    <input class="input-mockup" placeholder="Your name" disabled>
+
+                    <label style="display: block; font-weight: 600; margin-bottom: 5px; margin-top: 10px;">Email</label>
+                    <input class="input-mockup" placeholder="you@example.com" disabled>
+
+                    <label style="display: block; font-weight: 600; margin-bottom: 5px; margin-top: 10px;">Password</label>
+                    <input class="input-mockup" type="password" placeholder="••••••••" disabled>
+
+                    <div class="button-mockup" style="width: 100%; text-align: center; margin-top: 15px;">Create Account & Join</div>
+                </div>
+                <div class="screen-section" style="text-align: center;">
+                    <p style="color: var(--primary-blue); cursor: pointer;">Already have an account? Log in</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="features">
+            <h2>Key Features & Interactions</h2>
+
+            <h3>Track Upload & Playback Flow</h3>
+            <div class="mermaid">
+                sequenceDiagram
+                    participant User
+                    participant UI
+                    participant Storage
+                    participant Database
+
+                    User->>UI: Click Upload Button
+                    UI->>User: Show File Picker
+                    User->>UI: Select Audio File
+                    UI->>UI: Validate File (type, size)
+                    UI->>Storage: Upload to Supabase Storage
+                    Storage-->>UI: Return file_url
+                    UI->>Database: Create track record
+                    Database-->>UI: Return track object
+                    UI->>User: Show success, close modal
+                    UI->>User: Track appears in list
+                    User->>UI: Tap track to play
+                    UI->>Storage: Request signed URL
+                    Storage-->>UI: Return signed URL
+                    UI->>UI: Load audio element
+                    UI->>User: Playback starts
+            </div>
+
+            <h3>Comment with Timestamp Flow</h3>
+            <div class="mermaid">
+                sequenceDiagram
+                    participant User
+                    participant Audio
+                    participant Modal
+                    participant Database
+
+                    User->>Audio: Playing track at 1:23
+                    User->>Modal: Opens Track Detail
+                    Modal->>Audio: Capture currentTime (83s)
+                    Modal->>User: Show comment input
+                    User->>Modal: Types comment
+                    Modal->>User: Display "Timestamp: 1:23"
+                    User->>Modal: Submits comment
+                    Modal->>Database: Save comment with timestamp_seconds: 83
+                    Database-->>Modal: Success
+                    Modal->>User: Comment appears with 1:23 pill
+                    User->>Modal: Taps 1:23 timestamp pill
+                    Modal->>Audio: Seek to 83 seconds
+                    Audio->>User: Playback resumes at 1:23
+            </div>
+
+            <h3>Interactive Features</h3>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h4>Draggable Scrubber</h4>
+                    <ul>
+                        <li>44px touch target (Apple HIG compliant)</li>
+                        <li>Timestamp tooltip while dragging</li>
+                        <li>Tap anywhere on bar to seek</li>
+                        <li>Smooth visual transitions</li>
+                        <li>Prevents page scroll during drag</li>
+                    </ul>
+                </div>
+                <div class="feature-card">
+                    <h4>Unread Comments Indicator</h4>
+                    <ul>
+                        <li>Blue MessageCircle icon with red dot for unread</li>
+                        <li>Gray outline icon for read comments</li>
+                        <li>No icon if no comments</li>
+                        <li>Tracks viewed status per user</li>
+                        <li>Updates when new comments added</li>
+                    </ul>
+                </div>
+                <div class="feature-card">
+                    <h4>Swipeable Track Rows</h4>
+                    <ul>
+                        <li>Swipe right: Quick actions (add to playlist, rate)</li>
+                        <li>Swipe left: Edit/Delete (owner only)</li>
+                        <li>Smooth animations</li>
+                        <li>Visual feedback on swipe</li>
+                    </ul>
+                </div>
+                <div class="feature-card">
+                    <h4>Band Context Switching</h4>
+                    <ul>
+                        <li>Dropdown in header</li>
+                        <li>Instant filter update</li>
+                        <li>Persisted in localStorage</li>
+                        <li>Separate personal/band views</li>
+                        <li>Multi-band support</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3>Search, Filter, and Sort</h3>
+            <div class="flow-step">
+                <strong>Search:</strong> Real-time filtering by track title as user types
+            </div>
+            <div class="flow-step">
+                <strong>Filters:</strong> All / Band / Personal / Playlists (single-select, persists during session)
+            </div>
+            <div class="flow-step">
+                <strong>Sort Options:</strong> Recent (default) / Alphabetical / Duration (shortest to longest)
+            </div>
+        </section>
+
+        <section id="state">
+            <h2>State Management Architecture</h2>
+
+            <h3>Context Providers</h3>
+            <div class="mermaid">
+                graph TD
+                    A[App.tsx Root] --> B[BandProvider]
+                    B --> C[PlaylistProvider]
+                    C --> D[MainDashboard]
+
+                    B --> E[BandContext]
+                    E --> F[currentBand]
+                    E --> G[userBands]
+                    E --> H[userRole]
+                    E --> I[switchBand]
+                    E --> J[refreshBands]
+
+                    C --> K[PlaylistContext]
+                    K --> L[playlists]
+                    K --> M[createdPlaylists]
+                    K --> N[followedPlaylists]
+                    K --> O[createPlaylist]
+                    K --> P[deletePlaylist]
+                    K --> Q[addTrackToPlaylist]
+
+                    D --> R[Tracks Tab]
+                    D --> S[Playlists Tab]
+                    D --> T[Bands Tab]
+                    D --> U[Settings Tab]
+
+                    style A fill:#3b82f6,color:#fff
+                    style B fill:#10b981
+                    style C fill:#10b981
+                    style D fill:#3b82f6,color:#fff
+            </div>
+
+            <h3>BandContext</h3>
+            <div class="feature-card">
+                <h4>Purpose</h4>
+                <p>Manages band selection, membership, and role-based permissions</p>
+
+                <h4>State</h4>
+                <ul>
+                    <li><code>currentBand</code>: Currently selected band object</li>
+                    <li><code>userBands</code>: Array of all bands user belongs to</li>
+                    <li><code>userRole</code>: User's role in current band (owner/admin/member)</li>
+                    <li><code>isLoading</code>: Loading state during band operations</li>
+                </ul>
+
+                <h4>Key Methods</h4>
+                <ul>
+                    <li><code>switchBand(bandId)</code>: Change current band context, updates localStorage</li>
+                    <li><code>refreshBands()</code>: Reload all bands from database</li>
+                </ul>
+
+                <h4>Persistence</h4>
+                <p><code>localStorage.currentBand_{userId}</code> stores selected band ID across sessions</p>
+            </div>
+
+            <h3>PlaylistContext</h3>
+            <div class="feature-card">
+                <h4>Purpose</h4>
+                <p>Manages playlist creation, deletion, and following</p>
+
+                <h4>State</h4>
+                <ul>
+                    <li><code>playlists</code>: All playlists (created + followed + band playlists, deduplicated)</li>
+                    <li><code>createdPlaylists</code>: Playlists created by current user</li>
+                    <li><code>followedPlaylists</code>: Playlists user follows</li>
+                    <li><code>currentPlaylist</code>: Currently viewing/editing playlist</li>
+                </ul>
+
+                <h4>Key Methods</h4>
+                <ul>
+                    <li><code>createPlaylist(title, desc, bandId)</code>: Create new playlist</li>
+                    <li><code>deletePlaylist(playlistId)</code>: Delete playlist (owner only)</li>
+                    <li><code>addTrackToPlaylist(playlistId, trackId)</code>: Add track to playlist</li>
+                    <li><code>refreshPlaylists()</code>: Reload all playlists</li>
+                </ul>
+
+                <h4>Auto-refresh Triggers</h4>
+                <ul>
+                    <li>User ID changes (login/logout)</li>
+                    <li>Current band changes (band switching)</li>
+                    <li>Component mount</li>
+                </ul>
+            </div>
+
+            <h3>Audio State (Local)</h3>
+            <div class="feature-card">
+                <h4>Managed via useRef and useState</h4>
+                <ul>
+                    <li><code>audioRef</code>: Reference to global HTMLAudioElement</li>
+                    <li><code>currentTrack</code>: Track object currently playing</li>
+                    <li><code>isPlaying</code>: Boolean playing state</li>
+                    <li><code>currentTime</code>: Playback position (seconds)</li>
+                    <li><code>duration</code>: Track duration (seconds)</li>
+                </ul>
+
+                <h4>Lifecycle</h4>
+                <p>1. User taps play → 2. Create audio if needed → 3. Set src → 4. Play → 5. Update UI</p>
+            </div>
+        </section>
+
+        <section id="issues">
+            <h2>Known Issues & Recent Fixes</h2>
+
+            <h3>Recently Fixed (Build 18)</h3>
+
+            <div class="issue-card fixed">
+                <h4>Email Confirmation Rate Limiting <span class="status-badge status-fixed">Fixed</span></h4>
+                <p><strong>Problem:</strong> Users hitting "Email rate limit exceeded" when signing up multiple times</p>
+                <p><strong>Solution:</strong> Added user-friendly error messages, auto-switch to sign-in if email already registered, clear instructions about spam folder</p>
+                <p><strong>File:</strong> <code>PhoneAuthScreen.tsx</code> lines 74-89</p>
+            </div>
+
+            <div class="issue-card fixed">
+                <h4>Profile Creation Failure <span class="status-badge status-fixed">Fixed</span></h4>
+                <p><strong>Problem:</strong> Onboarding screen appearing for already-authenticated users due to missing profile</p>
+                <p><strong>Solution:</strong> Auto-create profile in App.tsx after authentication with fallback name from metadata</p>
+                <p><strong>File:</strong> <code>App.tsx</code> lines 42-69</p>
+            </div>
+
+            <div class="issue-card fixed">
+                <h4>UUID Migration <span class="status-badge status-fixed">Fixed</span></h4>
+                <p><strong>Problem:</strong> Profile IDs were string type, needed UUID for Supabase Auth compatibility</p>
+                <p><strong>Solution:</strong> Created migration to convert all profile IDs to UUID, updated foreign keys</p>
+                <p><strong>Migration:</strong> <code>20251022_uuid_migration_final.sql</code></p>
+            </div>
+
+            <div class="issue-card fixed">
+                <h4>Vertical Scroll Drift <span class="status-badge status-fixed">Fixed</span></h4>
+                <p><strong>Problem:</strong> Opening track detail modal caused page to jump vertically</p>
+                <p><strong>Solution:</strong> Preserve scroll position when opening/closing modals</p>
+            </div>
+
+            <div class="issue-card fixed">
+                <h4>Unread Comments Indicator <span class="status-badge status-fixed">Fixed</span></h4>
+                <p><strong>Problem:</strong> Users couldn't see which tracks had new comments</p>
+                <p><strong>Solution:</strong> Added <code>comment_views</code> table, blue icon with red dot for unread</p>
+            </div>
+
+            <div class="issue-card fixed">
+                <h4>Clerk Cleanup (Security) <span class="status-badge status-fixed">Fixed</span></h4>
+                <p><strong>Problem:</strong> Misleading function name <code>clerk_user_id()</code> when using Supabase Auth</p>
+                <p><strong>Solution:</strong> Created <code>current_user_id()</code> function, kept old name as backwards-compatible alias, removed unused Clerk files</p>
+                <p><strong>Status:</strong> Phase 1 complete, Phase 2 pending (remove alias after 7 days)</p>
+            </div>
+
+            <h3>Known Open Issues</h3>
+
+            <div class="issue-card">
+                <h4>iOS 18.6 Simulator Bug <span class="status-badge status-active">Apple Bug</span></h4>
+                <p><strong>Problem:</strong> Cannot type in login input fields on iOS 18.6 Simulator</p>
+                <p><strong>Root Cause:</strong> Apple WKWebView bug, not our code</p>
+                <p><strong>Workaround:</strong> Test on iOS 17 simulator or physical device</p>
+                <p><strong>Impact:</strong> Simulator testing only, production unaffected</p>
+            </div>
+
+            <div class="issue-card">
+                <h4>Phase 1 RLS Monitoring <span class="status-badge status-active">Day 6/7</span></h4>
+                <p><strong>Purpose:</strong> Verify Row Level Security policies don't break functionality</p>
+                <p><strong>Duration:</strong> 7-day monitoring period (Oct 17-24, 2025)</p>
+                <p><strong>Baseline:</strong> 235 tracks total (223 band, 12 personal)</p>
+                <p><strong>Next Step:</strong> Phase 2 (tighten personal track isolation) after monitoring</p>
+            </div>
+
+            <h3>Security & Privacy Recommendations</h3>
+
+            <div class="issue-card critical">
+                <h4>Debug Logging Cleanup <span class="status-badge status-pending">Pending</span></h4>
+                <p><strong>Issue:</strong> 301 console.log statements across 30 files may leak PII in production</p>
+                <p><strong>Recommendation:</strong> Remove debug logs before public launch, keep only error logs</p>
+                <p><strong>Priority:</strong> Medium (before production launch)</p>
+            </div>
+
+            <div class="issue-card">
+                <h4>Error Message Sanitization <span class="status-badge status-pending">Pending</span></h4>
+                <p><strong>Issue:</strong> Some errors expose implementation details (database structure, queries)</p>
+                <p><strong>Recommendation:</strong> Implement structured logging (e.g., Sentry) with PII filtering</p>
+                <p><strong>Priority:</strong> Medium</p>
+            </div>
+        </section>
+
+        <section>
+            <h2>Summary & Recommendations</h2>
+
+            <h3>Strengths</h3>
+            <ul>
+                <li><strong>Clean authentication flow</strong> with proper email verification and onboarding</li>
+                <li><strong>Excellent RLS implementation</strong> ensuring data privacy between bands/users</li>
+                <li><strong>Intuitive 4-tab navigation</strong> with clear separation of concerns</li>
+                <li><strong>Rich feedback system</strong> with ratings and timestamped comments</li>
+                <li><strong>Deep linking support</strong> for playlist sharing and invitations</li>
+                <li><strong>Secure file upload</strong> with validation and private storage</li>
+                <li><strong>Multi-band support</strong> with context switching</li>
+            </ul>
+
+            <h3>UX Highlights</h3>
+            <ul>
+                <li><strong>Draggable scrubber</strong> with 44px touch target and timestamp tooltip</li>
+                <li><strong>Unread indicators</strong> make it clear where feedback awaits</li>
+                <li><strong>Swipeable rows</strong> for quick actions</li>
+                <li><strong>Real-time search & filtering</strong> for large track libraries</li>
+                <li><strong>Progressive disclosure</strong> with modals for detailed actions</li>
+            </ul>
+
+            <h3>Areas for Future Enhancement</h3>
+            <ul>
+                <li><strong>Playlist reordering:</strong> Drag-to-reorder tracks not yet implemented</li>
+                <li><strong>Batch operations:</strong> Select multiple tracks for bulk actions</li>
+                <li><strong>Advanced search:</strong> Filter by date range, duration, rating</li>
+                <li><strong>Export features:</strong> Export playlists or download tracks</li>
+                <li><strong>Push notifications:</strong> Alert users to new comments/tracks</li>
+                <li><strong>Collaborative editing:</strong> Real-time indicators when others are viewing</li>
+            </ul>
+        </section>
+
+        <footer>
+            <p><strong>CoreTet Band UI/UX Documentation</strong></p>
+            <p>Generated: October 23, 2025 | Build 18 (TestFlight)</p>
+            <p>For AI-driven UX review and analysis</p>
+        </footer>
+    </div>
+
+    <script>
+        // Initialize Mermaid
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            themeVariables: {
+                primaryColor: '#3b82f6',
+                primaryTextColor: '#1f2937',
+                primaryBorderColor: '#2563eb',
+                lineColor: '#6b7280',
+                secondaryColor: '#10b981',
+                tertiaryColor: '#f59e0b',
+                background: '#f9fafb',
+                mainBkg: '#ffffff',
+                nodeBorder: '#2563eb',
+                clusterBkg: '#ebf8ff',
+                clusterBorder: '#3b82f6',
+                fontSize: '14px',
+            },
+            flowchart: {
+                curve: 'basis',
+                padding: 20,
+            },
+            sequence: {
+                actorMargin: 50,
+                boxMargin: 10,
+                boxTextMargin: 5,
+                messageMargin: 35,
+                mirrorActors: true,
+            }
+        });
+
+        // Smooth scroll for navigation links
+        document.querySelectorAll('nav a').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>
