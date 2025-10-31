@@ -167,7 +167,6 @@ export class AudioUploadService {
     const errors: { file: string; error: string }[] = [];
     const total = files.length;
 
-    console.log(`📤 Starting batch upload of ${total} files`);
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
@@ -179,7 +178,6 @@ export class AudioUploadService {
           `Uploading ${i + 1} of ${total}: ${file.name.substring(0, 30)}${file.name.length > 30 ? '...' : ''}`
         );
 
-        console.log(`📤 Uploading file ${i + 1}/${total}: ${file.name}`);
 
         const result = await this.uploadAudio(file, {
           ...options,
@@ -187,7 +185,6 @@ export class AudioUploadService {
         });
 
         results.push(result);
-        console.log(`✅ Successfully uploaded ${file.name}`);
 
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : 'Unknown error';

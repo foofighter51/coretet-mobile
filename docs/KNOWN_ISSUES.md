@@ -1,31 +1,59 @@
 # Known Issues
 
-## iOS 18.6 Simulator: Unable to Type in Input Fields
+## iOS Keyboard Whitespace Issue
 
-**Status**: Known iOS Bug (Not Fixable in App Code)
+**Status:** Known limitation - Not blocking, cosmetic issue
+**Severity:** Low
+**Platforms Affected:** iOS Safari/WebView (Capacitor)
+**Build:** 18+
 
-**Symptoms**:
-- Unable to type in username/password fields in iOS 18.6 Simulator
-- Xcode console shows: `[RTIInputSystemClient remoteTextInputSessionWithID:textSuggestionsChanged:] Can only set suggestions for an active session`
-- AutoLayout constraint warnings for keyboard accessory view
+### Description
+After interacting with keyboard inputs (creating playlists, creating bands, adding comments), excess whitespace may appear above the app header on iOS devices. This creates a gap between the status bar and the app content.
 
-**Root Cause**:
-iOS 18.6 WKWebView has a bug where the keyboard input assistant (suggestion bar above keyboard) fails to establish a proper input session, blocking all text input.
+### Root Cause
+iOS Safari/WebView changes the viewport height when the software keyboard appears and doesn't always restore it correctly when the keyboard dismisses. This is a known iOS WebView limitation that affects many hybrid apps.
 
-**Workarounds**:
-1. **RECOMMENDED**: Test on physical iPhone device - bug is simulator-specific
-2. Use iOS 17.x simulator instead of iOS 18.6
-3. Deploy via TestFlight for real device testing
-4. Wait for iOS 18.7 / Xcode update with Apple's fix
+### Attempted Solutions
+Multiple approaches were attempted without complete success:
+- `env(safe-area-inset-top)` for dynamic safe area handling
+- Fixed pixel padding values (44px)
+- `100vh` vs `100dvh` viewport units
+- Disabling body scroll manipulation
+- Scroll locking with position: fixed
+- Input scrollIntoView on keyboard focus
+- Viewport meta tag adjustments
 
-**Verification**:
-- App works perfectly in web browser (localhost:3000)
-- App worked in iOS simulator with earlier iOS versions
-- Issue appeared after iOS 18.6 update
+None fully resolved the issue across all keyboard interaction scenarios.
 
-**References**:
-- Similar reports in Capacitor/WKWebView community
-- Apple Bug Report: (pending submission)
+### Workaround
+Users can tap/scroll within the app to trigger a layout recalculation, which usually resolves the whitespace temporarily. The issue is cosmetic and doesn't prevent app functionality.
 
-**Date Identified**: 2025-10-17
-**Last Updated**: 2025-10-17
+### Future Solutions to Explore
+1. **Capacitor Keyboard Plugin** - Use `@capacitor/keyboard` to listen for show/hide events and manually adjust layout
+2. **Native iOS handling** - Implement viewport management at the native iOS layer rather than web layer
+3. **iOS 18+ updates** - Monitor for Safari/WebView improvements in future iOS versions
+
+### Related Files
+- `/Users/exleymini/Apps/coretet-band/docs/MODAL_AUDIT_REPORT.md` - Comprehensive modal audit
+- `/Users/exleymini/Apps/coretet-band/src/components/ui/BaseModal.tsx` - Unified modal system (scroll lock disabled for iOS)
+- `/Users/exleymini/Apps/coretet-band/src/components/screens/MainDashboard.tsx` - Header safe area handling
+
+### Decision
+**Accepted as known limitation (2025-10-29)** - Focus resources on Phase 1 user-facing features rather than continuing to address this cosmetic iOS quirk. Will revisit in future sprint if user feedback indicates it's a significant issue.
+
+---
+
+## iOS Typing Suggestions Popup
+
+**Status:** Mitigated
+**Severity:** Low
+**Platforms Affected:** iOS
+
+### Description
+iOS shows "Speed up your typing by sliding your finger across the letters" tip when user first interacts with text inputs.
+
+### Solution
+Added autocomplete attributes to suppress: `autoComplete="off"`, `autoCorrect="off"`, `autoCapitalize="off"`, `spellCheck="false"`
+
+### Status
+Fixed in Build 18+

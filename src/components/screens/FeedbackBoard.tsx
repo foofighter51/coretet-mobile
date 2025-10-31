@@ -85,7 +85,6 @@ export function FeedbackBoard() {
         const timestamp = Date.now();
         const fileName = `${currentUserId}/${timestamp}_${selectedImage.name}`;
 
-        console.log('📸 Uploading screenshot to feedback-images bucket:', fileName);
         const { data: uploadData, error: uploadError } = await storage.uploadFeedbackImage(selectedImage, fileName);
 
         if (uploadError) {
@@ -94,10 +93,8 @@ export function FeedbackBoard() {
           setSubmitting(false);
           return;
         } else if (uploadData) {
-          console.log('✅ Screenshot uploaded successfully:', uploadData);
           // Use public URL (feedback-images bucket is public)
           imageUrl = storage.getPublicUrl('feedback-images', fileName);
-          console.log('✅ Using public URL:', imageUrl);
         }
       }
 

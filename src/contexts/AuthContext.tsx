@@ -73,18 +73,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const login = useCallback(async (user: AuthUser) => {
     try {
-      console.log('🔧 Login function called with user:', user);
       setCurrentUser(user);
       // Navigate based on profile completeness
       if (!user.name || user.name.trim() === '') {
-        console.log('🔧 User has no name, navigating to onboarding');
         setCurrentScreen('onboarding');
       } else {
-        console.log('🔧 User has name, navigating to main');
         setCurrentScreen('main');
       }
       setCurrentError(null);
-      console.log('✅ User logged in:', user.email);
     } catch (error) {
       console.error('❌ Error during login:', error);
       setCurrentError(ErrorHandler.parseError(error, 'authentication'));
@@ -101,7 +97,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const type = urlParams.get('type');
 
       if (type === 'recovery' && accessToken && refreshToken) {
-        console.log('🔄 Password reset flow detected');
         setCurrentScreen('passwordReset');
         return;
       }
@@ -116,29 +111,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     // Listen for auth state changes (simplified to avoid circular calls)
     const { data: { subscription } } = authService.onAuthStateChange((user) => {
-      console.log('🔄 Auth context handling user change:', user?.email);
 
       if (!user) {
-        console.log('🔧 No user, setting screen to phone');
         setCurrentUser(null);
         setCurrentScreen('phone');
         setCurrentError(null);
       } else {
-        console.log('🔧 User found, setting state directly');
         // Set user state directly without calling login() to avoid circular calls
         setCurrentUser(user);
         setCurrentError(null);
 
         // Navigate based on profile completeness
         if (!user.name || user.name.trim() === '') {
-          console.log('🔧 User has no name, navigating to onboarding');
           setCurrentScreen('onboarding');
         } else {
-          console.log('🔧 User has name, navigating to main');
           setCurrentScreen('main');
         }
 
-        console.log('✅ User authenticated:', user.email);
       }
     });
 
@@ -162,12 +151,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setCurrentError(null);
 
     try {
-      console.log('🔧 Calling signUpWithPassword for:', email);
       const result = await authService.signUpWithPassword(email, password);
-      console.log('🔧 SignUp result:', result);
 
       if (result.success) {
-        console.log('✅ Account created successfully - check email for confirmation');
         // For email/password, user needs to confirm email before signing in
         // Show verification screen with instructions
         setCurrentScreen('verify');
@@ -209,7 +195,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const result = await authService.signInWithPassword(email, password);
 
       if (result.success && result.user) {
-        console.log('✅ Signed in successfully');
         await login(result.user);
       } else {
         if (result.error) {
@@ -239,7 +224,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const result = await authService.sendVerificationCode(email);
 
       if (result.success) {
-        console.log('✅ Code sent successfully:', result.message);
         setCurrentScreen('verify');
       } else {
         // Check if this is a waitlist response
@@ -274,7 +258,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const result = await authService.verifyCode(email, verificationCode);
 
       if (result.success && result.user) {
-        console.log('✅ Phone verified successfully');
         setCurrentUser(result.user);
         // If user has no name, go to onboarding first
         if (!result.user.name || result.user.name.trim() === '') {
@@ -338,11 +321,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setCurrentError(null);
 
     try {
-      console.log('🔄 Sending password reset email to:', email);
       const result = await authService.sendPasswordResetEmail(email);
 
       if (result.success) {
-        console.log('✅ Password reset email sent successfully');
         setCurrentScreen('verify');
       } else {
         if (result.error) {
@@ -374,11 +355,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setCurrentError(null);
 
     try {
-      console.log('🔧 DEV: Force creating account for:', email);
       const result = await authService.signUpWithPassword(email, password, true); // Skip access check
 
       if (result.success) {
-        console.log('✅ DEV: Account created successfully');
         if (result.user) {
           await login(result.user);
         } else {
@@ -410,7 +389,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setVerificationCode('');
       setUserName('');
       setCurrentError(null);
-      console.log('👋 User logged out');
     } catch (error) {
       console.error('Error during logout:', error);
     } finally {

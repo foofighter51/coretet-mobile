@@ -11,7 +11,6 @@ interface TabBarProps {
 const tabs: TabItem[] = [
   { id: 'band', label: 'Band', icon: Music },
   { id: 'personal', label: 'Personal', icon: User },
-  { id: 'profile', label: 'Profile', icon: Users }
 ];
 
 export const TabBar = memo(function TabBar({ activeTab, onTabChange }: TabBarProps) {

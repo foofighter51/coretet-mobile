@@ -49,7 +49,6 @@ export class UserAccessService {
       // Check for placeholder credentials - return open testing for development
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       if (supabaseUrl?.includes('placeholder')) {
-        console.log('🔧 Development mode: Defaulting to open testing');
         return {
           allowed: true,
           reason: 'open_testing',
@@ -212,7 +211,6 @@ export class UserAccessService {
       throw error;
     }
 
-    console.log(`📝 Added ${email} to waitlist at position ${nextPosition}`);
     return data;
   }
 
@@ -232,7 +230,6 @@ export class UserAccessService {
       if (error) {
         console.error('❌ Error marking user as active:', error);
       } else {
-        console.log(`✅ Marked ${email} as active user`);
       }
     } catch (error) {
       console.error('❌ Error marking user as active:', error);
@@ -279,7 +276,6 @@ export class UserAccessService {
     }
 
     if (!usersToInvite || usersToInvite.length === 0) {
-      console.log('📝 No users on waitlist to invite');
       return [];
     }
 
@@ -300,7 +296,6 @@ export class UserAccessService {
       return [];
     }
 
-    console.log(`✅ Invited ${invitedUsers?.length || 0} users from waitlist`);
     return invitedUsers || [];
   }
 
@@ -321,7 +316,6 @@ export class UserAccessService {
       throw error;
     }
 
-    console.log(`✅ Updated access mode to: ${mode}`);
   }
 
   /**

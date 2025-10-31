@@ -43,14 +43,12 @@ export class NativeFilePicker {
       // Import dynamically to avoid issues on web
       const { FilePicker } = await import('@capawesome/capacitor-file-picker');
 
-      console.log('📁 Opening native file picker, multiple:', multiple);
 
       const result = await FilePicker.pickFiles({
         multiple: multiple,
         readData: true, // Read file content
       });
 
-      console.log('📁 File picker result:', result);
 
       // Convert picked files to our format
       const pickedFiles: PickedFile[] = [];
@@ -71,8 +69,6 @@ export class NativeFilePicker {
       return pickedFiles;
     } catch (error) {
       console.error('Native file picker error:', error);
-      console.log('⚠️ Native file picker failed - this is expected in iOS simulator');
-      console.log('⚠️ For full cloud storage access (Google Drive, Dropbox), test on a physical device');
       // Fallback to web picker if native fails
       throw error; // Re-throw to let caller handle it
     }

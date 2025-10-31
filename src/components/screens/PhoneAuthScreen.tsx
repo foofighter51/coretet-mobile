@@ -89,12 +89,14 @@ export function PhoneAuthScreen() {
         }
       } else {
         // Sign in
-        const { error: authError } = await supabase.auth.signInWithPassword({
+        const { data, error: authError } = await supabase.auth.signInWithPassword({
           email: email.trim(),
           password: password,
         });
 
+
         if (authError) {
+          console.error('🔐 Sign in error:', authError);
           // Provide user-friendly error messages
           if (authError.message.includes('Invalid login credentials')) {
             setError('Invalid email or password. Please try again.');
@@ -103,6 +105,7 @@ export function PhoneAuthScreen() {
           } else {
             setError(authError.message);
           }
+        } else {
         }
         // On success, auth state will update and app will navigate automatically
       }
@@ -175,6 +178,11 @@ export function PhoneAuthScreen() {
           onChange={(e) => setEmail(e.target.value)}
           disabled={loading}
           autoFocus
+          autoComplete="email"
+          autoCapitalize="off"
+          autoCorrect="off"
+          spellCheck="false"
+          inputMode="email"
           onKeyDown={(e) => e.key === 'Enter' && handleAuth()}
           style={{
             width: '100%',
@@ -184,6 +192,7 @@ export function PhoneAuthScreen() {
             borderRadius: '8px',
             marginBottom: '12px',
             fontFamily: designTokens.typography.fontFamily,
+            WebkitAppearance: 'none',
           }}
         />
 
@@ -193,6 +202,7 @@ export function PhoneAuthScreen() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           disabled={loading}
+          autoComplete={isSignUp ? "new-password" : "current-password"}
           onKeyDown={(e) => e.key === 'Enter' && !isSignUp && handleAuth()}
           style={{
             width: '100%',
@@ -202,6 +212,7 @@ export function PhoneAuthScreen() {
             borderRadius: '8px',
             marginBottom: isSignUp ? '12px' : '16px',
             fontFamily: designTokens.typography.fontFamily,
+            WebkitAppearance: 'none',
           }}
         />
 
@@ -212,6 +223,7 @@ export function PhoneAuthScreen() {
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
             disabled={loading}
+            autoComplete="new-password"
             onKeyDown={(e) => e.key === 'Enter' && handleAuth()}
             style={{
               width: '100%',
@@ -221,6 +233,7 @@ export function PhoneAuthScreen() {
               borderRadius: '8px',
               marginBottom: '16px',
               fontFamily: designTokens.typography.fontFamily,
+              WebkitAppearance: 'none',
             }}
           />
         )}

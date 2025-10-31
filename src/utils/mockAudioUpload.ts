@@ -77,15 +77,7 @@ export class MockAudioUploadService {
         compressionSavings
       };
 
-      // Log the result for debugging
-      console.log('🎵 Mock Upload Complete:', {
-        originalSize: AudioProcessor.formatFileSize(processedAudio.originalSize),
-        compressedSize: AudioProcessor.formatFileSize(processedAudio.compressedSize),
-        compressionRatio: `${processedAudio.compressionRatio.toFixed(1)}%`,
-        duration: AudioProcessor.formatDuration(processedAudio.metadata.duration),
-        normalizedVolume: '70%',
-        result: mockResult
-      });
+      // Log the result for debugging (removed for production)
 
       return mockResult;
 

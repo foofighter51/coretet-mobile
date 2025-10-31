@@ -24,7 +24,6 @@ export class DeepLinkService {
 
     // Only set up deep linking on native platforms
     if (!Capacitor.isNativePlatform()) {
-      console.log('Deep linking disabled on web platform');
       return;
     }
 
@@ -34,7 +33,6 @@ export class DeepLinkService {
     });
 
     this.isInitialized = true;
-    console.log('✅ Deep linking initialized');
   }
 
   /**
@@ -55,12 +53,14 @@ export class DeepLinkService {
    * Handle incoming deep link
    */
   private static handleDeepLink(url: string) {
-    console.log('📲 Deep link received:', url);
-    console.log('📲 Number of listeners:', this.listeners.length);
+
+    // Ignore file:// URLs - these are drag-and-drop file uploads, not navigation links
+    if (url.startsWith('file://')) {
+      return;
+    }
 
     try {
       const parsedUrl = new URL(url);
-      console.log('📲 Parsed URL - protocol:', parsedUrl.protocol, 'host:', parsedUrl.host, 'pathname:', parsedUrl.pathname);
 
       // Extract path and params
       let path = parsedUrl.pathname;
@@ -71,7 +71,6 @@ export class DeepLinkService {
         const host = parsedUrl.host || parsedUrl.hostname;
         if (host) {
           path = `/${host}${path}`;
-          console.log('📲 Custom scheme - reconstructed path:', path);
         }
       }
 
@@ -80,12 +79,9 @@ export class DeepLinkService {
         params[key] = value;
       });
 
-      console.log('📲 Final path to navigate:', path);
-      console.log('📲 Params:', params);
 
       // Notify all listeners
       this.listeners.forEach((handler, index) => {
-        console.log(`📲 Calling listener ${index + 1}/${this.listeners.length}`);
         handler(path, params);
       });
 

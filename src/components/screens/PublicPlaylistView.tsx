@@ -21,7 +21,6 @@ export function PublicPlaylistView() {
 
   useEffect(() => {
     const fetchPlaylist = async () => {
-      console.log('🎵 PublicPlaylistView: shareCode =', shareCode);
       if (!shareCode) {
         console.error('🎵 No shareCode provided');
         setError('Invalid share link');
@@ -30,11 +29,9 @@ export function PublicPlaylistView() {
       }
 
       try {
-        console.log('🎵 Fetching playlist with shareCode:', shareCode);
         // Fetch playlist by share_code
         const { data: playlistData, error: playlistError } = await db.playlists.getByShareCode(shareCode);
 
-        console.log('🎵 Playlist query result:', { playlistData, playlistError });
 
         if (playlistError || !playlistData) {
           console.error('🎵 Playlist not found or error:', playlistError);
@@ -43,7 +40,6 @@ export function PublicPlaylistView() {
           return;
         }
 
-        console.log('🎵 Playlist found:', playlistData.title);
         setPlaylist(playlistData);
 
         // Fetch playlist tracks
@@ -56,7 +52,6 @@ export function PublicPlaylistView() {
           return;
         }
 
-        console.log('🎵 Tracks loaded:', trackData?.length || 0);
         setTracks(trackData || []);
         setLoading(false);
       } catch (err) {
@@ -81,7 +76,6 @@ export function PublicPlaylistView() {
         }
       } catch (error) {
         // Silently fail if user is not logged in or table doesn't exist
-        console.log('Could not check follow status:', error);
       }
     };
 
@@ -111,30 +105,24 @@ export function PublicPlaylistView() {
 
   const handlePlayPause = async (track?: any) => {
     try {
-      console.log('🎵 handlePlayPause called with track:', track);
       if (!audioRef.current) {
         audioRef.current = new Audio();
       }
 
       const targetTrack = track || currentTrack;
       if (!targetTrack) {
-        console.log('🎵 No track to play');
         return;
       }
 
-      console.log('🎵 Target track:', { id: targetTrack.id, title: targetTrack.title, file_url: targetTrack.file_url });
 
       if (currentlyPlayingTrack === targetTrack.id) {
-        console.log('🎵 Pausing current track');
         audioRef.current.pause();
         setCurrentlyPlayingTrack(null);
       } else {
-        console.log('🎵 Playing new track');
         audioRef.current.src = targetTrack.file_url;
         await audioRef.current.play();
         setCurrentlyPlayingTrack(targetTrack.id);
         setCurrentTrack(targetTrack);
-        console.log('🎵 Track playing successfully');
       }
     } catch (error) {
       console.error('🎵 Error in handlePlayPause:', error);

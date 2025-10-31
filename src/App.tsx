@@ -41,7 +41,6 @@ function AppContent({ user }: { user: User }) {
   useEffect(() => {
     const setupProfile = async () => {
       try {
-        console.log('🔑 Setting up profile for user:', user.id);
 
         // Get or create profile
         let { data: existingProfile, error } = await db.profiles.getById(user.id);
@@ -115,11 +114,9 @@ function DeepLinkHandler() {
 
       // Add listener for deep links
       const handleDeepLink = (path: string, params: Record<string, string>) => {
-        console.log('📲 Deep link received, path:', path, 'params:', params);
 
         // Ensure path starts with /
         const cleanPath = path.startsWith('/') ? path : `/${path}`;
-        console.log('📲 Navigating to:', cleanPath);
 
         // Small delay to ensure router is ready
         setTimeout(() => {
@@ -134,7 +131,6 @@ function DeepLinkHandler() {
         DeepLinkService.getLaunchUrl().then(url => {
           if (url) {
             hasProcessedLaunchUrl.current = true;
-            console.log('📲 App launched from deep link:', url);
             try {
               const parsedUrl = new URL(url);
               let path = parsedUrl.pathname;
@@ -147,12 +143,9 @@ function DeepLinkHandler() {
                 path = host ? `/${host}${path}` : path;
               }
 
-              console.log('📲 Extracted path:', path);
-              console.log('📲 Will navigate to:', path);
 
               // Navigate to the deep link path with longer delay for auth
               setTimeout(() => {
-                console.log('📲 Navigating now to:', path);
                 navigate(path, { replace: true });
               }, 500);
             } catch (error) {

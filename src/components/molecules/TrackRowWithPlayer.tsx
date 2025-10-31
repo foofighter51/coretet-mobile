@@ -222,7 +222,6 @@ export const TrackRowWithPlayer = memo(function TrackRowWithPlayer({
             showVolume={true}
             showSkipButtons={true}
             onTrackEnd={() => {
-              console.log('Track ended:', track.title);
               // Could trigger next track or other actions
             }}
             onError={(error) => {

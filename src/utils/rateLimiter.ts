@@ -81,7 +81,6 @@ export class RateLimiter {
     const normalizedPhone = phoneNumber.replace(/\D/g, '');
     this.phoneAttempts.delete(normalizedPhone);
     this.saveToStorage();
-    console.log(`✅ Rate limiting reset for successful auth: ${normalizedPhone}`);
   }
 
   /**
@@ -186,7 +185,6 @@ export class RateLimiter {
     }
 
     this.saveToStorage();
-    console.log(`🚦 Rate limit recorded: phone=${normalizedPhone}, attempts=${existing?.count || 1}`);
   }
 
   /**
@@ -255,7 +253,6 @@ export class RateLimiter {
         this.sessionAttempts = data.sessionAttempts;
       }
 
-      console.log(`🔄 Rate limiter restored from storage: ${this.phoneAttempts.size} phone records`);
     } catch (error) {
       console.warn('Failed to load rate limit data:', error);
       localStorage.removeItem('coretet-rate-limits');
@@ -286,7 +283,6 @@ export class RateLimiter {
 
       if (cleaned > 0) {
         this.saveToStorage();
-        console.log(`🧹 Rate limiter cleanup: removed ${cleaned} expired records`);
       }
     }, 5 * 60 * 1000); // Run every 5 minutes
   }
@@ -298,6 +294,5 @@ export class RateLimiter {
     this.phoneAttempts.clear();
     this.sessionAttempts = null;
     localStorage.removeItem('coretet-rate-limits');
-    console.log('🗑️ All rate limiting data cleared');
   }
 }

@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Filter, Plus, Music, Upload, ArrowLeft, Play, Pause, X, Check, MessageSquare, MoreVertical, Edit2, Trash2, Headphones, ThumbsUp, Heart, HelpCircle, Settings, GripVertical } from 'lucide-react';
+import { Search, Filter, Plus, Music, Upload, ArrowLeft, Play, Pause, X, Check, MessageSquare, MoreVertical, Edit2, Trash2, Headphones, ThumbsUp, Heart, HelpCircle, Settings, GripVertical, Users } from 'lucide-react';
 import { designTokens } from '../../design/designTokens';
 import { usePlaylist } from '../../contexts/PlaylistContext';
 import { useBand } from '../../contexts/BandContext';
@@ -12,6 +12,11 @@ import { SwipeableTrackRow } from '../molecules/SwipeableTrackRow';
 import { Tutorial } from '../molecules/Tutorial';
 import { BandModal } from '../molecules/BandModal';
 import { BandSettings } from '../molecules/BandSettings';
+import { SettingsModal } from '../molecules/SettingsModal';
+import { IntroModal } from '../molecules/IntroModal';
+import { EmptyState } from '../molecules/EmptyState';
+import { InlineSpinner } from '../atoms/InlineSpinner';
+import { TrackSkeleton } from '../atoms/TrackSkeleton';
 import { SortButton } from '../molecules/SortButton';
 import { FilterButton } from '../molecules/FilterButton';
 import { UploadButton } from '../molecules/UploadButton';
@@ -255,14 +260,7 @@ function TrackDetailModal({ track, onClose, currentUser, audioRef, currentTrack 
           </h3>
 
           {loadingRatings ? (
-            <p style={{
-              fontSize: designTokens.typography.fontSizes.bodySmall,
-              color: designTokens.colors.text.secondary,
-              textAlign: 'center',
-              padding: designTokens.spacing.xl,
-            }}>
-              Loading ratings...
-            </p>
+            <InlineSpinner size={24} message="Loading ratings..." />
           ) : ratings.length === 0 ? (
             <p style={{
               fontSize: designTokens.typography.fontSizes.bodySmall,
@@ -438,14 +436,7 @@ function TrackDetailModal({ track, onClose, currentUser, audioRef, currentTrack 
 
           {/* Comments List */}
           {loadingComments ? (
-            <p style={{
-              fontSize: designTokens.typography.fontSizes.bodySmall,
-              color: designTokens.colors.text.secondary,
-              textAlign: 'center',
-              padding: designTokens.spacing.xl,
-            }}>
-              Loading comments...
-            </p>
+            <InlineSpinner size={24} message="Loading comments..." />
           ) : comments.length === 0 ? (
             <p style={{
               fontSize: designTokens.typography.fontSizes.bodySmall,
@@ -715,24 +706,25 @@ interface MainDashboardProps {
   currentUser: CurrentUser;
 }
 
-const baseStyle = {
+const baseStyle: React.CSSProperties = {
   fontFamily: designTokens.typography.fontFamily,
   width: '100%',
   maxWidth: '425px',
-  height: '100vh',
+  minHeight: '100vh',
+  height: '100vh', // Use static viewport height - prevents keyboard resize
   margin: '0 auto',
-  position: 'relative' as const,
+  position: 'relative',
   display: 'flex',
-  flexDirection: 'column' as const,
-  overflow: 'hidden' as const,
-  boxSizing: 'border-box' as const,
-  userSelect: 'none' as const,
-  WebkitUserSelect: 'none' as const,
+  flexDirection: 'column',
+  overflow: 'hidden',
+  boxSizing: 'border-box',
+  userSelect: 'none',
+  WebkitUserSelect: 'none',
 };
 
 export function MainDashboard({ currentUser }: MainDashboardProps) {
   const navigate = useNavigate();
-  const { playlists, createdPlaylists, followedPlaylists, currentPlaylist, createPlaylist, setCurrentPlaylist, refreshPlaylists } = usePlaylist();
+  const { playlists, createdPlaylists, followedPlaylists, currentPlaylist, createPlaylist, setCurrentPlaylist, refreshPlaylists, isLoading: playlistsLoading } = usePlaylist();
   const { currentBand, userRole } = useBand();
 
   // Filter playlists for Band tab - only show playlists with matching band_id
@@ -782,6 +774,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   const [showTrackSelector, setShowTrackSelector] = useState(false);
   const [showBandModal, setShowBandModal] = useState(false);
   const [showBandSettings, setShowBandSettings] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   // Audio playback state - consolidated
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -806,6 +799,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   // Error state
   const [error, setError] = useState<string | null>(null);
   const [createPlaylistLoading, setCreatePlaylistLoading] = useState(false);
+  const [loadingTracks, setLoadingTracks] = useState(false);
 
   // Playlist management state
   const [showPlaylistMenu, setShowPlaylistMenu] = useState(false);
@@ -866,8 +860,9 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
     });
   };
 
-  // Tutorial state
+  // Tutorial and Intro state
   const [showTutorial, setShowTutorial] = useState(false);
+  const [showIntro, setShowIntro] = useState(false);
 
   const handleRatingChange = useCallback((track: Track, rating: 'like' | 'love' | 'none') => {
     // Rating change handler (currently unused)
@@ -883,7 +878,9 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
     setError(null);
 
     try {
-      await createPlaylist(newPlaylistTitle.trim(), undefined, currentBand?.id);
+      // Pass band_id only if in Band tab, otherwise null for Personal playlists
+      const bandId = activeTab === 'band' ? currentBand?.id : null;
+      await createPlaylist(newPlaylistTitle.trim(), undefined, bandId);
       setNewPlaylistTitle('');
       setShowCreatePlaylist(false);
     } catch (err) {
@@ -897,6 +894,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   };
 
   const loadPlaylistTracks = async (playlistId: string) => {
+    setLoadingTracks(true);
     try {
       const { data, error } = await db.playlistItems.getByPlaylist(playlistId);
       if (error) {
@@ -923,6 +921,8 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
     } catch (error) {
       console.error('Error fetching playlist tracks:', error);
       throw error;
+    } finally {
+      setLoadingTracks(false);
     }
   };
 
@@ -979,7 +979,6 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   const handleDeletePlaylist = async () => {
     if (!currentPlaylist) return;
 
-    console.log('🗑️ Attempting to delete playlist:', currentPlaylist.id, currentPlaylist.title);
 
     try {
       const { error: deleteError } = await db.playlists.delete(currentPlaylist.id);
@@ -989,7 +988,6 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
         throw deleteError;
       }
 
-      console.log('✅ Playlist deleted successfully');
 
       // Reload playlists to update the list
       await refreshPlaylists();
@@ -1008,7 +1006,6 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   const handleCopyToPersonal = async () => {
     if (!currentPlaylist || !currentUser) return;
 
-    console.log('📋 Copying playlist to Personal:', currentPlaylist.id, currentPlaylist.title);
 
     setCopyingPlaylist(true);
 
@@ -1023,7 +1020,6 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
         throw copyError;
       }
 
-      console.log('✅ Playlist copied successfully:', newPlaylist);
 
       // Reload playlists to show the new personal playlist
       await refreshPlaylists();
@@ -1134,7 +1130,6 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
     }
 
     try {
-      console.log('Adding tracks to playlist:', { playlistId: currentPlaylist.id, trackIds: selectedTrackIds });
 
       // Get current playlist items to determine starting position
       const { data: items, error: fetchError } = await db.playlistItems.getByPlaylist(currentPlaylist.id);
@@ -1148,7 +1143,6 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
         ? Math.max(...items.map((item: any) => item.position || 0))
         : 0;
       let nextPosition = maxPosition + 1;
-      console.log('Starting position (max + 1):', nextPosition, 'from', items?.length, 'items');
 
       // Add each selected track to the playlist
       for (const trackId of selectedTrackIds) {
@@ -1163,14 +1157,11 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
           console.error('Error adding track to playlist:', { trackId, error });
           throw error;
         }
-        console.log('Successfully added track:', { trackId, data });
       }
 
       // Refresh playlist tracks
-      console.log('Refreshing playlist tracks...');
       await loadPlaylistTracks(currentPlaylist.id);
       setShowTrackSelector(false);
-      console.log('Tracks added successfully');
     } catch (error) {
       console.error('Error adding tracks to playlist:', error);
       setError('Failed to add tracks to playlist. Please try again.');
@@ -1588,6 +1579,10 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                   }}
                   onKeyPress={(e) => e.key === 'Enter' && !createPlaylistLoading && handleCreatePlaylist()}
                   disabled={createPlaylistLoading}
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="off"
+                  spellCheck="false"
                   style={{
                     width: '100%',
                     padding: designTokens.spacing.sm,
@@ -1901,13 +1896,13 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                     <AudioUploader
                       multiple={true}
                       options={{ bandId: currentBand?.id }}
+                      context={activeTab}
+                      bandName={activeTab === 'band' ? currentBand?.name : undefined}
                       onUploadComplete={async (results) => {
-                        console.log('Upload complete, results:', results);
                         setShowPlaylistUploader(false);
 
                         // Add all uploaded tracks to current playlist
                         if (results.length > 0 && currentPlaylist) {
-                          console.log('Adding uploaded tracks to playlist:', currentPlaylist.id);
 
                           const { data: items, error: fetchError } = await db.playlistItems.getByPlaylist(currentPlaylist.id);
                           if (fetchError) {
@@ -1921,7 +1916,6 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                             ? Math.max(...items.map((item: any) => item.position || 0))
                             : 0;
                           let nextPosition = maxPosition + 1;
-                          console.log('Starting position for uploaded tracks (max + 1):', nextPosition, 'from', items?.length, 'items');
 
                           // Add each track to the playlist
                           for (const result of results) {
@@ -1937,11 +1931,9 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                               setError('Failed to add tracks to playlist. Please try again.');
                               return;
                             }
-                            console.log('Successfully added uploaded track:', { trackId: result.trackId, data });
                           }
 
                           // Refresh playlist tracks
-                          console.log('Refreshing playlist tracks after upload...');
                           await loadPlaylistTracks(currentPlaylist.id);
 
                           // Refresh tracks list
@@ -1950,9 +1942,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                               setTracks(data || []);
                             });
                           }
-                          console.log('Upload to playlist complete');
                         } else {
-                          console.log('No results or no currentPlaylist:', { resultsCount: results.length, currentPlaylist });
                         }
                       }}
                       onUploadError={(error) => {
@@ -1984,14 +1974,17 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                 )}
 
                 {playlistTracks.length === 0 ? (
-                  <div style={{
-                    textAlign: 'center',
-                    padding: `${designTokens.spacing.xxl} ${designTokens.spacing.xl}`,
-                    color: designTokens.colors.neutral.darkGray,
-                  }}>
-                    <Music size={48} style={{ margin: `0 auto ${designTokens.spacing.lg}`, opacity: 0.3 }} />
-                    <p>No tracks in this playlist yet</p>
-                  </div>
+                  <EmptyState
+                    icon={Upload}
+                    title="No tracks yet"
+                    description={
+                      isPlaylistOwner
+                        ? "Tap the Upload button above to add your first track"
+                        : "The playlist owner hasn't added any tracks yet"
+                    }
+                  />
+                ) : loadingTracks ? (
+                  <TrackSkeleton count={5} />
                 ) : (
                   <div>
                     {/* Reorder Mode Actions */}
@@ -2136,22 +2129,28 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                   </div>
                 )}
               </div>
+            ) : playlistsLoading ? (
+              <InlineSpinner message="Loading playlists..." />
             ) : displayedPlaylists.length === 0 ? (
-              <div style={{
-                textAlign: 'center',
-                padding: `${designTokens.spacing.xxl} ${designTokens.spacing.xl}`,
-                color: designTokens.colors.neutral.darkGray,
-              }}>
-                <Music size={48} style={{ margin: `0 auto ${designTokens.spacing.lg}`, opacity: 0.3 }} />
-                <p>{activeTab === 'band' ? 'No playlists yet' : (playlistFilter === 'mine' ? 'No playlists yet' : 'Not following any playlists')}</p>
-                <p style={{ fontSize: designTokens.typography.fontSizes.bodySmall, marginTop: designTokens.spacing.sm }}>
-                  {activeTab === 'band'
-                    ? 'Create your first playlist to start sharing music'
+              <EmptyState
+                icon={Music}
+                title={activeTab === 'band' ? 'No playlists yet' : (playlistFilter === 'mine' ? 'No playlists yet' : 'Not following any playlists')}
+                description={
+                  activeTab === 'band'
+                    ? 'Create your first playlist to start sharing music with your band'
                     : (playlistFilter === 'mine'
-                      ? 'Create your first playlist to start sharing music'
-                      : 'Follow playlists shared with you to see them here')}
-                </p>
-              </div>
+                      ? 'Create your first playlist to organize and share your tracks'
+                      : 'Follow playlists shared with you to see them here')
+                }
+                action={
+                  activeTab === 'band' || playlistFilter === 'mine'
+                    ? {
+                        label: 'Create Playlist',
+                        onClick: () => setShowCreatePlaylist(true),
+                      }
+                    : undefined
+                }
+              />
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: designTokens.spacing.md }}>
                 {displayedPlaylists.map((playlist) => (
@@ -2202,7 +2201,6 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                             if (Capacitor.isNativePlatform()) {
                               try {
                                 const shareText = `Check out "${playlist.title}" on CoreTet\n\n${shareUrl}`;
-                                console.log('Sharing with text:', shareText);
 
                                 await Share.share({
                                   title: playlist.title,
@@ -2210,7 +2208,6 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                                   dialogTitle: 'Share Playlist',
                                 });
 
-                                console.log('Share completed successfully');
                               } catch (error) {
                                 console.error('Share failed:', error);
                               }
@@ -2249,144 +2246,6 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
           </div>
         );
 
-      case 'profile':
-        return (
-          <div style={{
-            padding: designTokens.spacing.md,
-          }}>
-            {currentUser && (
-              <div style={{
-                backgroundColor: designTokens.colors.surface.primary,
-                border: `1px solid ${designTokens.colors.borders.default}`,
-                borderRadius: designTokens.borderRadius.md,
-                padding: designTokens.spacing.lg,
-                marginBottom: designTokens.spacing.lg,
-              }}>
-                <div style={{ marginBottom: designTokens.spacing.md }}>
-                  <p style={{
-                    fontSize: designTokens.typography.fontSizes.bodySmall,
-                    color: designTokens.colors.neutral.darkGray,
-                    marginBottom: designTokens.spacing.xs,
-                  }}>
-                    Name
-                  </p>
-                  <p style={{
-                    fontSize: designTokens.typography.fontSizes.body,
-                    fontWeight: designTokens.typography.fontWeights.medium,
-                    color: designTokens.colors.neutral.charcoal,
-                  }}>
-                    {currentUser.name || 'User'}
-                  </p>
-                </div>
-
-                {currentUser.email && (
-                  <div style={{ marginBottom: designTokens.spacing.md }}>
-                    <p style={{
-                      fontSize: designTokens.typography.fontSizes.bodySmall,
-                      color: designTokens.colors.neutral.darkGray,
-                      marginBottom: designTokens.spacing.xs,
-                    }}>
-                      Email
-                    </p>
-                    <p style={{
-                      fontSize: designTokens.typography.fontSizes.body,
-                      fontWeight: designTokens.typography.fontWeights.medium,
-                      color: designTokens.colors.neutral.charcoal,
-                    }}>
-                      {currentUser.email}
-                    </p>
-                  </div>
-                )}
-
-                {currentUser.phoneNumber && (
-                  <div style={{ marginBottom: designTokens.spacing.md }}>
-                    <p style={{
-                      fontSize: designTokens.typography.fontSizes.bodySmall,
-                      color: designTokens.colors.neutral.darkGray,
-                      marginBottom: designTokens.spacing.xs,
-                    }}>
-                      Phone
-                    </p>
-                    <p style={{
-                      fontSize: designTokens.typography.fontSizes.body,
-                      fontWeight: designTokens.typography.fontWeights.medium,
-                      color: designTokens.colors.neutral.charcoal,
-                    }}>
-                      {currentUser.phoneNumber}
-                    </p>
-                  </div>
-                )}
-
-                {/* TEMPORARILY HIDDEN FOR TESTFLIGHT (TestFlight has its own feedback system) */}
-                {/* TODO: Re-enable after TestFlight phase */}
-                {/* <button
-                  onClick={() => navigate('/feedback')}
-                  style={{
-                    marginTop: designTokens.spacing.lg,
-                    width: '100%',
-                    padding: designTokens.spacing.md,
-                    backgroundColor: designTokens.colors.primary.blue,
-                    color: designTokens.colors.text.inverse,
-                    border: 'none',
-                    borderRadius: designTokens.borderRadius.sm,
-                    fontSize: designTokens.typography.fontSizes.bodySmall,
-                    fontWeight: designTokens.typography.fontWeights.medium,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: designTokens.spacing.sm,
-                  }}
-                >
-                  <MessageSquare size={18} />
-                  Community Feedback
-                </button> */}
-
-                <button
-                  onClick={() => setShowTutorial(true)}
-                  style={{
-                    marginTop: designTokens.spacing.md,
-                    width: '100%',
-                    padding: designTokens.spacing.md,
-                    backgroundColor: designTokens.colors.surface.secondary,
-                    color: designTokens.colors.primary.blue,
-                    border: `1px solid ${designTokens.colors.primary.blue}`,
-                    borderRadius: designTokens.borderRadius.sm,
-                    fontSize: designTokens.typography.fontSizes.bodySmall,
-                    fontWeight: designTokens.typography.fontWeights.medium,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: designTokens.spacing.sm,
-                  }}
-                >
-                  <HelpCircle size={18} />
-                  How to Use CoreTet
-                </button>
-
-                <button
-                  onClick={() => auth.signOut()}
-                  style={{
-                    marginTop: designTokens.spacing.md,
-                    width: '100%',
-                    padding: designTokens.spacing.md,
-                    backgroundColor: designTokens.colors.surface.secondary,
-                    color: designTokens.colors.text.muted,
-                    border: `1px solid ${designTokens.colors.borders.default}`,
-                    borderRadius: designTokens.borderRadius.sm,
-                    fontSize: designTokens.typography.fontSizes.bodySmall,
-                    fontWeight: designTokens.typography.fontWeights.medium,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Sign Out
-                </button>
-              </div>
-            )}
-          </div>
-        );
-
       default:
         return null;
     }
@@ -2399,7 +2258,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
         flexShrink: 0,
         backgroundColor: designTokens.colors.surface.primary,
         borderBottom: `1px solid ${designTokens.colors.borders.default}`,
-        paddingTop: 'env(safe-area-inset-top, 0px)',
+        paddingTop: 'max(env(safe-area-inset-top), 12px)',
       }}>
         {/* Top header with logo, action button, and user button */}
         <div style={{
@@ -2432,7 +2291,6 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
           ) : (
             <button
               onClick={() => {
-                console.log('🎵 C icon clicked, opening Band Modal');
                 setShowBandModal(true);
               }}
               style={{
@@ -2457,7 +2315,8 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
           )}
 
           {/* Center: Action Button */}
-          <div style={{ flexGrow: 1, display: 'flex', justifyContent: 'center' }}>
+          <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: designTokens.spacing.xs }}>
+            {/* Action Buttons */}
             {activeTab === 'band' && viewMode === 'list' && (
               <button
                 onClick={() => setShowCreatePlaylist(true)}
@@ -2567,9 +2426,9 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
             )}
           </div>
 
-          {/* Right: Menu/Settings button */}
-          <div style={{ width: designTokens.spacing.xxl, flexShrink: 0, position: 'relative' }}>
-            {/* Band Settings button (Band tab, list view, admin only) */}
+          {/* Right: Header action buttons */}
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
+            {/* Band Members button (Band tab, list view, admin only) */}
             {activeTab === 'band' && viewMode === 'list' && (userRole === 'admin' || userRole === 'owner') && currentBand && (
               <button
                 onClick={() => setShowBandSettings(true)}
@@ -2585,10 +2444,13 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                   cursor: 'pointer',
                   color: designTokens.colors.neutral.charcoal,
                 }}
+                aria-label="Manage band members and invites"
+                title="Band Members"
               >
-                <Settings size={20} />
+                <Users size={20} />
               </button>
             )}
+
             {/* Playlist menu button (detail view, owner only) */}
             {(activeTab === 'band' || activeTab === 'personal') && viewMode === 'detail' && isPlaylistOwner && !isEditingTracks && (
               <button
@@ -2607,6 +2469,29 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                 }}
               >
                 <MoreVertical size={20} />
+              </button>
+            )}
+
+            {/* User Settings button (always visible in list view) */}
+            {viewMode === 'list' && (
+              <button
+                onClick={() => setShowSettings(true)}
+                style={{
+                  width: designTokens.spacing.xxl,
+                  height: designTokens.spacing.xxl,
+                  borderRadius: designTokens.borderRadius.full,
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: designTokens.colors.neutral.charcoal,
+                }}
+                aria-label="User settings and account"
+                title="Settings"
+              >
+                <Settings size={20} />
               </button>
             )}
           </div>
@@ -2849,6 +2734,33 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
           onClose={() => setShowBandSettings(false)}
         />
       )}
+
+      {/* User Settings Modal */}
+      {showSettings && currentUser && (
+        <SettingsModal
+          isOpen={showSettings}
+          onClose={() => setShowSettings(false)}
+          currentUser={currentUser}
+          onShowTutorial={() => {
+            setShowSettings(false);
+            setShowTutorial(true);
+          }}
+          onShowIntro={() => {
+            setShowSettings(false);
+            setShowIntro(true);
+          }}
+          onSignOut={async () => {
+            await auth.signOut();
+            // Navigation handled by App.tsx auth listener
+          }}
+        />
+      )}
+
+      {/* Intro Modal */}
+      <IntroModal
+        isOpen={showIntro}
+        onClose={() => setShowIntro(false)}
+      />
     </div>
   );
 }

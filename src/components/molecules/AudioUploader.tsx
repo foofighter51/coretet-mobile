@@ -15,6 +15,8 @@ interface AudioUploaderProps {
   disabled?: boolean;
   className?: string;
   currentUser?: { id: string; email: string; phoneNumber: string; name: string };
+  context?: 'band' | 'personal';
+  bandName?: string;
 }
 
 export const AudioUploader: React.FC<AudioUploaderProps> = ({
@@ -24,7 +26,9 @@ export const AudioUploader: React.FC<AudioUploaderProps> = ({
   multiple = false,
   disabled = false,
   className = '',
-  currentUser
+  currentUser,
+  context = 'personal',
+  bandName
 }) => {
   const [isDragOver, setIsDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
