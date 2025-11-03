@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { Users, Music, User } from 'lucide-react';
+import { List, User } from 'lucide-react';
 import { designTokens } from '../../design/designTokens';
 import { TabId, TabItem } from '../../types';
 
@@ -9,8 +9,8 @@ interface TabBarProps {
 }
 
 const tabs: TabItem[] = [
-  { id: 'band', label: 'Band', icon: Music },
-  { id: 'personal', label: 'Personal', icon: User },
+  { id: 'playlists', label: 'Playlists', icon: List },
+  { id: 'profile', label: 'Profile', icon: User },
 ];
 
 export const TabBar = memo(function TabBar({ activeTab, onTabChange }: TabBarProps) {

@@ -72,6 +72,18 @@ export function OnboardingScreen() {
         return;
       }
 
+      // Create Personal band for new user
+      try {
+        const personalBand = await db.bands.createBand('Personal', user.id, true);
+        if (!personalBand) {
+          // Log error but don't fail onboarding - band can be created later
+          console.error('Failed to create personal band during onboarding');
+        }
+      } catch (bandError) {
+        // Log error but don't fail onboarding
+        console.error('Error creating personal band:', bandError);
+      }
+
       // Mark intro as completed
       localStorage.setItem('onboarding_v1_completed', 'true');
 
