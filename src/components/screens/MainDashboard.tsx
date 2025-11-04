@@ -725,7 +725,7 @@ const baseStyle: React.CSSProperties = {
 export function MainDashboard({ currentUser }: MainDashboardProps) {
   const navigate = useNavigate();
   const { playlists, createdPlaylists, followedPlaylists, currentPlaylist, createPlaylist, setCurrentPlaylist, refreshPlaylists, isLoading: playlistsLoading } = usePlaylist();
-  const { currentBand, userRole } = useBand();
+  const { currentBand, userBands, userRole, switchBand } = useBand();
 
   // Filter playlists for Band tab - only show playlists with matching band_id
   const bandCreatedPlaylists = useMemo(() => {
