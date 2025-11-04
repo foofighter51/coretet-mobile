@@ -36,7 +36,7 @@ UPDATE tracks t
 SET band_id = (
   SELECT b.id
   FROM bands b
-  WHERE b.created_by = t.user_id
+  WHERE b.created_by = t.created_by
     AND b.is_personal = true
   LIMIT 1
 )
@@ -47,7 +47,7 @@ UPDATE playlists p
 SET band_id = (
   SELECT b.id
   FROM bands b
-  WHERE b.created_by = p.user_id
+  WHERE b.created_by = p.created_by
     AND b.is_personal = true
   LIMIT 1
 )
