@@ -755,7 +755,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
     return followedPlaylists.filter((p: any) => !p.band_id || p.band_id === currentBand.id);
   }, [followedPlaylists, currentBand]);
 
-  const [activeTab, setActiveTab] = useState<TabId>('band');
+  const [activeTab, setActiveTab] = useState<TabId>('playlists');
   const [playlistFilter, setPlaylistFilter] = useState<'mine' | 'following'>('mine');
   const [tracks, setTracks] = useState<any[]>([]);
 
@@ -879,7 +879,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
 
     try {
       // Pass band_id only if in Band tab, otherwise null for Personal playlists
-      const bandId = activeTab === 'band' ? currentBand?.id : null;
+      const bandId = activeTab === 'playlists' ? currentBand?.id : null;
       await createPlaylist(newPlaylistTitle.trim(), undefined, bandId);
       setNewPlaylistTitle('');
       setShowCreatePlaylist(false);
@@ -946,7 +946,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
 
   // Handle tab changes - reset view mode when switching tabs from detail view
   const handleTabChange = (newTab: TabId) => {
-    if (viewMode === 'detail' && (activeTab === 'band' || activeTab === 'personal')) {
+    if (viewMode === 'detail' && (activeTab === 'playlists' || activeTab === 'playlists')) {
       handleBackToList();
     }
     setActiveTab(newTab);
@@ -1028,7 +1028,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
       setShowCopyToPersonalConfirm(false);
 
       // Switch to Personal tab to show the copied playlist
-      setActiveTab('personal');
+      setActiveTab('playlists');
 
       // Go back to list view
       handleBackToList();
@@ -1175,9 +1175,9 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
     // Determine which track list to use
     let trackList: any[] = [];
 
-    if (activeTab === 'band' && viewMode === 'detail') {
+    if (activeTab === 'playlists' && viewMode === 'detail') {
       trackList = filteredPlaylistTracks.map((item: any) => item.tracks).filter(Boolean);
-    } else if (activeTab === 'personal' && viewMode === 'detail') {
+    } else if (activeTab === 'playlists' && viewMode === 'detail') {
       trackList = filteredPlaylistTracks.map((item: any) => item.tracks).filter(Boolean);
     }
 
@@ -1542,21 +1542,21 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
 
   const renderContent = () => {
     // Select correct playlists based on active tab
-    const currentCreatedPlaylists = activeTab === 'band' ? bandCreatedPlaylists :
-                                     activeTab === 'personal' ? personalCreatedPlaylists :
+    const currentCreatedPlaylists = activeTab === 'playlists' ? bandCreatedPlaylists :
+                                     activeTab === 'playlists' ? personalCreatedPlaylists :
                                      filteredCreatedPlaylists;
-    const currentFollowedPlaylists = activeTab === 'personal' ? personalFollowedPlaylists : [];
+    const currentFollowedPlaylists = activeTab === 'playlists' ? personalFollowedPlaylists : [];
 
     // Determine which playlists to display based on tab and filter
     // Band tab always shows created playlists (no following option)
     // Personal tab respects the mine/following filter
-    const displayedPlaylists = activeTab === 'band'
+    const displayedPlaylists = activeTab === 'playlists'
       ? currentCreatedPlaylists
       : (playlistFilter === 'mine' ? currentCreatedPlaylists : currentFollowedPlaylists);
 
     switch (activeTab) {
-      case 'band':
-      case 'personal':
+      case 'playlists':
+      
         return (
           <div style={{
             padding: designTokens.spacing.md,
@@ -1650,7 +1650,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
             )}
 
             {/* Playlist Filter Toggle - only show in Personal tab */}
-            {viewMode !== 'detail' && activeTab === 'personal' && (
+            {viewMode !== 'detail' && activeTab === 'playlists' && (
               <div style={{
                 display: 'flex',
                 gap: designTokens.spacing.sm,
@@ -1897,7 +1897,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                       multiple={true}
                       options={{ bandId: currentBand?.id }}
                       context={activeTab}
-                      bandName={activeTab === 'band' ? currentBand?.name : undefined}
+                      bandName={activeTab === 'playlists' ? currentBand?.name : undefined}
                       onUploadComplete={async (results) => {
                         setShowPlaylistUploader(false);
 
@@ -2134,16 +2134,16 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
             ) : displayedPlaylists.length === 0 ? (
               <EmptyState
                 icon={Music}
-                title={activeTab === 'band' ? 'No playlists yet' : (playlistFilter === 'mine' ? 'No playlists yet' : 'Not following any playlists')}
+                title={activeTab === 'playlists' ? 'No playlists yet' : (playlistFilter === 'mine' ? 'No playlists yet' : 'Not following any playlists')}
                 description={
-                  activeTab === 'band'
+                  activeTab === 'playlists'
                     ? 'Create your first playlist to start sharing music with your band'
                     : (playlistFilter === 'mine'
                       ? 'Create your first playlist to organize and share your tracks'
                       : 'Follow playlists shared with you to see them here')
                 }
                 action={
-                  activeTab === 'band' || playlistFilter === 'mine'
+                  activeTab === 'playlists' || playlistFilter === 'mine'
                     ? {
                         label: 'Create Playlist',
                         onClick: () => setShowCreatePlaylist(true),
@@ -2246,6 +2246,226 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
           </div>
         );
 
+      case 'profile':
+        return (
+          <div style={{
+            padding: '16px',
+            paddingBottom: '100px',
+          }}>
+            {/* User Info */}
+            <section style={{ marginBottom: '32px' }}>
+              <h2 style={{
+                fontSize: '24px',
+                fontWeight: '600',
+                marginBottom: '16px',
+                color: designTokens.colors.neutral.charcoal,
+              }}>
+                Profile
+              </h2>
+
+              <div style={{
+                backgroundColor: designTokens.colors.surface.primary,
+                border: `1px solid ${designTokens.colors.borders.default}`,
+                borderRadius: '8px',
+                padding: '16px',
+              }}>
+                <div style={{ marginBottom: '12px' }}>
+                  <label style={{
+                    fontSize: '12px',
+                    color: designTokens.colors.neutral.darkGray,
+                    display: 'block',
+                    marginBottom: '4px',
+                  }}>
+                    Name
+                  </label>
+                  <p style={{
+                    fontSize: '16px',
+                    fontWeight: '500',
+                    color: designTokens.colors.neutral.charcoal,
+                  }}>
+                    {currentUser?.name || 'User'}
+                  </p>
+                </div>
+
+                {currentUser?.email && (
+                  <div style={{ marginBottom: '12px' }}>
+                    <label style={{
+                      fontSize: '12px',
+                      color: designTokens.colors.neutral.darkGray,
+                      display: 'block',
+                      marginBottom: '4px',
+                    }}>
+                      Email
+                    </label>
+                    <p style={{
+                      fontSize: '16px',
+                      fontWeight: '500',
+                      color: designTokens.colors.neutral.charcoal,
+                    }}>
+                      {currentUser.email}
+                    </p>
+                  </div>
+                )}
+
+                {(currentUser?.phone || currentUser?.phoneNumber) && (
+                  <div>
+                    <label style={{
+                      fontSize: '12px',
+                      color: designTokens.colors.neutral.darkGray,
+                      display: 'block',
+                      marginBottom: '4px',
+                    }}>
+                      Phone
+                    </label>
+                    <p style={{
+                      fontSize: '16px',
+                      fontWeight: '500',
+                      color: designTokens.colors.neutral.charcoal,
+                    }}>
+                      {currentUser.phoneNumber || currentUser.phone}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </section>
+
+            {/* My Bands */}
+            <section style={{ marginBottom: '32px' }}>
+              <h3 style={{
+                fontSize: '18px',
+                fontWeight: '600',
+                marginBottom: '12px',
+                color: designTokens.colors.neutral.charcoal,
+              }}>
+                My Bands
+              </h3>
+
+              {userBands.map(band => (
+                <button
+                  key={band.id}
+                  onClick={() => {
+                    switchBand(band.id);
+                    setActiveTab('playlists');
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    width: '100%',
+                    padding: '16px',
+                    marginBottom: '8px',
+                    border: currentBand?.id === band.id
+                      ? `2px solid ${designTokens.colors.primary.blue}`
+                      : `1px solid ${designTokens.colors.neutral.lightGray}`,
+                    borderRadius: '8px',
+                    backgroundColor: currentBand?.id === band.id
+                      ? designTokens.colors.surface.secondary
+                      : designTokens.colors.neutral.white,
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                  }}
+                >
+                  <div>
+                    <div style={{
+                      fontSize: '16px',
+                      fontWeight: '600',
+                      color: designTokens.colors.neutral.charcoal,
+                      marginBottom: '4px',
+                    }}>
+                      {band.name}
+                    </div>
+                    <div style={{
+                      fontSize: '12px',
+                      color: designTokens.colors.neutral.darkGray,
+                    }}>
+                      {band.is_personal ? 'Personal Workspace' : 'Band'}
+                    </div>
+                  </div>
+                  {currentBand?.id === band.id && (
+                    <Check size={20} color={designTokens.colors.primary.blue} />
+                  )}
+                </button>
+              ))}
+
+              <button
+                onClick={() => setShowBandModal(true)}
+                style={{
+                  width: '100%',
+                  padding: '16px',
+                  marginTop: '8px',
+                  border: `1px dashed ${designTokens.colors.neutral.gray}`,
+                  borderRadius: '8px',
+                  backgroundColor: 'transparent',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  color: designTokens.colors.primary.blue,
+                  fontWeight: '500',
+                }}
+              >
+                + Create New Band
+              </button>
+            </section>
+
+            {/* Help Section */}
+            <section style={{ marginBottom: '32px' }}>
+              <button
+                onClick={() => setShowTutorial(true)}
+                style={{
+                  width: '100%',
+                  padding: '16px',
+                  marginBottom: '12px',
+                  border: `1px solid ${designTokens.colors.borders.default}`,
+                  borderRadius: '8px',
+                  backgroundColor: designTokens.colors.surface.secondary,
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  color: designTokens.colors.primary.blue,
+                  fontWeight: '500',
+                }}
+              >
+                How to Use CoreTet
+              </button>
+
+              <button
+                onClick={() => setShowIntro(true)}
+                style={{
+                  width: '100%',
+                  padding: '16px',
+                  border: `1px solid ${designTokens.colors.borders.default}`,
+                  borderRadius: '8px',
+                  backgroundColor: designTokens.colors.surface.secondary,
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  color: designTokens.colors.primary.blue,
+                  fontWeight: '500',
+                }}
+              >
+                Replay Intro Screens
+              </button>
+            </section>
+
+            {/* Sign Out */}
+            <button
+              onClick={async () => {
+                await auth.signOut();
+              }}
+              style={{
+                width: '100%',
+                padding: '16px',
+                border: `1px solid ${designTokens.colors.borders.default}`,
+                borderRadius: '8px',
+                backgroundColor: designTokens.colors.surface.secondary,
+                cursor: 'pointer',
+                fontSize: '16px',
+                color: designTokens.colors.neutral.darkGray,
+                fontWeight: '500',
+              }}
+            >
+              Sign Out
+            </button>
+          </div>
+        );
+
       default:
         return null;
     }
@@ -2268,7 +2488,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
           padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
         }}>
           {/* Left: CoreTet Circle Logo or Back Button */}
-          {(activeTab === 'band' || activeTab === 'personal') && viewMode === 'detail' ? (
+          {(activeTab === 'playlists' || activeTab === 'playlists') && viewMode === 'detail' ? (
             <button
               onClick={handleBackToList}
               style={{
@@ -2317,7 +2537,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
           {/* Center: Action Button */}
           <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: designTokens.spacing.xs }}>
             {/* Action Buttons */}
-            {activeTab === 'band' && viewMode === 'list' && (
+            {activeTab === 'playlists' && viewMode === 'list' && (
               <button
                 onClick={() => setShowCreatePlaylist(true)}
                 style={{
@@ -2338,7 +2558,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                 New
               </button>
             )}
-            {activeTab === 'personal' && viewMode === 'list' && (
+            {activeTab === 'playlists' && viewMode === 'list' && (
               <button
                 onClick={() => setShowUploader(true)}
                 style={{
@@ -2359,7 +2579,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                 Upload
               </button>
             )}
-            {(activeTab === 'band' || activeTab === 'personal') && viewMode === 'detail' && isPlaylistOwner && (
+            {(activeTab === 'playlists' || activeTab === 'playlists') && viewMode === 'detail' && isPlaylistOwner && (
               <div style={{ display: 'flex', gap: designTokens.spacing.xs, alignItems: 'center' }}>
                 {isEditingTracks ? (
                   <>
@@ -2429,7 +2649,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
           {/* Right: Header action buttons */}
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
             {/* Band Members button (Band tab, list view, admin only) */}
-            {activeTab === 'band' && viewMode === 'list' && (userRole === 'admin' || userRole === 'owner') && currentBand && (
+            {activeTab === 'playlists' && viewMode === 'list' && (userRole === 'admin' || userRole === 'owner') && currentBand && (
               <button
                 onClick={() => setShowBandSettings(true)}
                 style={{
@@ -2452,7 +2672,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
             )}
 
             {/* Playlist menu button (detail view, owner only) */}
-            {(activeTab === 'band' || activeTab === 'personal') && viewMode === 'detail' && isPlaylistOwner && !isEditingTracks && (
+            {(activeTab === 'playlists' || activeTab === 'playlists') && viewMode === 'detail' && isPlaylistOwner && !isEditingTracks && (
               <button
                 onClick={() => setShowPlaylistMenu(!showPlaylistMenu)}
                 style={{
@@ -2498,7 +2718,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
         </div>
 
         {/* Playlist menu dropdown */}
-        {showPlaylistMenu && (activeTab === 'band' || activeTab === 'personal') && viewMode === 'detail' && (
+        {showPlaylistMenu && (activeTab === 'playlists' || activeTab === 'playlists') && viewMode === 'detail' && (
           <div style={{
             position: 'absolute',
             top: '60px',
@@ -2599,7 +2819,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
               <Edit2 size={16} />
               Edit Tracks
             </button>
-            {activeTab === 'band' && currentPlaylist && (
+            {activeTab === 'playlists' && currentPlaylist && (
               <button
                 onClick={() => {
                   setShowCopyToPersonalConfirm(true);
