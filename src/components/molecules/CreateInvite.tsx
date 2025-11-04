@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
-import { X, Copy, Share as ShareIcon, Check } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Copy, Share as ShareIcon, Check } from 'lucide-react';
 import { designTokens } from '../../design/designTokens';
 import { db } from '../../../lib/supabase';
 import { Capacitor } from '@capacitor/core';
 import { Share } from '@capacitor/share';
+import { DialogModal } from '../ui/DialogModal';
+import { Z_INDEX } from '../../constants/zIndex';
 
 interface CreateInviteProps {
   bandId: string;
@@ -25,6 +27,9 @@ export const CreateInvite: React.FC<CreateInviteProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+
+  // Ref for iOS keyboard handling
+  const emailInputRef = useRef<HTMLInputElement>(null);
 
   const handleGenerateInvite = async () => {
     if (!email.trim()) {
@@ -107,75 +112,17 @@ export const CreateInvite: React.FC<CreateInviteProps> = ({
   };
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1100, // Higher than BandSettings
-        padding: designTokens.spacing.md,
-        overflow: 'auto', // Allow scrolling if content overflows
-      }}
-      onClick={onClose}
+    <DialogModal
+      isOpen={true}
+      onClose={onClose}
+      title={`Invite to ${bandName}`}
+      size="sm"
+      zIndex={Z_INDEX.MODAL_STACKED} // Higher than BandSettings (1600)
+      hasKeyboardInput={!inviteLink} // Only enable keyboard handling for email input screen
+      keyboardInputRef={!inviteLink ? emailInputRef : undefined}
     >
-      <div
-        style={{
-          backgroundColor: designTokens.colors.surface.primary,
-          borderRadius: designTokens.borderRadius.lg,
-          maxWidth: '400px',
-          width: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          boxShadow: designTokens.shadows.elevated,
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div
-          style={{
-            padding: designTokens.spacing.lg,
-            borderBottom: `1px solid ${designTokens.colors.borders.divider}`,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
-          <h3
-            style={{
-              fontSize: designTokens.typography.fontSizes.h4,
-              fontWeight: designTokens.typography.fontWeights.semibold,
-              color: designTokens.colors.text.primary,
-              margin: 0,
-            }}
-          >
-            Invite to {bandName}
-          </h3>
-          <button
-            onClick={onClose}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: designTokens.spacing.xs,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: designTokens.colors.text.secondary,
-            }}
-          >
-            <X size={20} />
-          </button>
-        </div>
-
-        {/* Content */}
-        <div style={{ padding: designTokens.spacing.lg }}>
-          {!inviteLink ? (
+      <div>
+        {!inviteLink ? (
             <>
               {/* Email Input */}
               <div style={{ marginBottom: designTokens.spacing.md }}>
@@ -191,11 +138,13 @@ export const CreateInvite: React.FC<CreateInviteProps> = ({
                   Email Address
                 </label>
                 <input
+                  ref={emailInputRef}
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="name@example.com"
                   disabled={loading}
+                  autoFocus
                   style={{
                     width: '100%',
                     padding: designTokens.spacing.md,
@@ -375,8 +324,7 @@ export const CreateInvite: React.FC<CreateInviteProps> = ({
               </button>
             </>
           )}
-        </div>
       </div>
-    </div>
+    </DialogModal>
   );
 };

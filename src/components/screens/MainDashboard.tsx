@@ -20,6 +20,7 @@ import { TrackSkeleton } from '../atoms/TrackSkeleton';
 import { SortButton } from '../molecules/SortButton';
 import { FilterButton } from '../molecules/FilterButton';
 import { UploadButton } from '../molecules/UploadButton';
+import { DropdownMenu } from '../ui/DropdownMenu';
 import { Track, TabId } from '../../types';
 import { db, auth } from '../../../lib/supabase';
 import { Capacitor } from '@capacitor/core';
@@ -802,7 +803,6 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   const [loadingTracks, setLoadingTracks] = useState(false);
 
   // Playlist management state
-  const [showPlaylistMenu, setShowPlaylistMenu] = useState(false);
   const [editingPlaylistTitle, setEditingPlaylistTitle] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -2673,23 +2673,159 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
 
             {/* Playlist menu button (detail view, owner only) */}
             {(activeTab === 'playlists' || activeTab === 'playlists') && viewMode === 'detail' && isPlaylistOwner && !isEditingTracks && (
-              <button
-                onClick={() => setShowPlaylistMenu(!showPlaylistMenu)}
-                style={{
-                  width: designTokens.spacing.xxl,
-                  height: designTokens.spacing.xxl,
-                  borderRadius: designTokens.borderRadius.full,
-                  backgroundColor: 'transparent',
-                  border: 'none',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  color: designTokens.colors.neutral.charcoal,
-                }}
+              <DropdownMenu
+                trigger={
+                  <button
+                    style={{
+                      width: designTokens.spacing.xxl,
+                      height: designTokens.spacing.xxl,
+                      borderRadius: designTokens.borderRadius.full,
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      color: designTokens.colors.neutral.charcoal,
+                    }}
+                  >
+                    <MoreVertical size={20} />
+                  </button>
+                }
+                align="right"
               >
-                <MoreVertical size={20} />
-              </button>
+                <button
+                  onClick={async () => {
+                    if (!currentPlaylist) return;
+
+                    const shareUrl = `coretet://playlist/${currentPlaylist.share_code}`;
+
+                    // On native platforms, use native share sheet
+                    if (Capacitor.isNativePlatform()) {
+                      try {
+                        const shareText = `Check out "${currentPlaylist.title}" on CoreTet\n\n${shareUrl}`;
+
+                        await Share.share({
+                          title: currentPlaylist.title,
+                          text: shareText,
+                          dialogTitle: 'Share Playlist',
+                        });
+                      } catch (error) {
+                        console.error('Share failed:', error);
+                      }
+                    } else {
+                      // On web, copy to clipboard
+                      navigator.clipboard.writeText(shareUrl);
+                      // Could add a toast notification here
+                    }
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: `${designTokens.spacing.md} ${designTokens.spacing.lg}`,
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: designTokens.spacing.md,
+                    fontSize: designTokens.typography.fontSizes.bodySmall,
+                    color: designTokens.colors.neutral.charcoal,
+                    borderBottom: `1px solid ${designTokens.colors.borders.default}`,
+                  }}
+                >
+                  <Upload size={16} />
+                  Share Playlist
+                </button>
+                <button
+                  onClick={() => {
+                    setNewTitle(currentPlaylist?.title || '');
+                    setEditingPlaylistTitle(currentPlaylist?.id || null);
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: `${designTokens.spacing.md} ${designTokens.spacing.lg}`,
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: designTokens.spacing.md,
+                    fontSize: designTokens.typography.fontSizes.bodySmall,
+                    color: designTokens.colors.neutral.charcoal,
+                    borderBottom: `1px solid ${designTokens.colors.borders.default}`,
+                  }}
+                >
+                  <Edit2 size={16} />
+                  Edit Title
+                </button>
+                <button
+                  onClick={handleToggleEditMode}
+                  style={{
+                    width: '100%',
+                    padding: `${designTokens.spacing.md} ${designTokens.spacing.lg}`,
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: designTokens.spacing.md,
+                    fontSize: designTokens.typography.fontSizes.bodySmall,
+                    color: designTokens.colors.neutral.charcoal,
+                    borderBottom: `1px solid ${designTokens.colors.borders.default}`,
+                  }}
+                >
+                  <Edit2 size={16} />
+                  Edit Tracks
+                </button>
+                {activeTab === 'playlists' && currentPlaylist && (
+                  <button
+                    onClick={() => {
+                      setShowCopyToPersonalConfirm(true);
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: `${designTokens.spacing.md} ${designTokens.spacing.lg}`,
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: designTokens.spacing.md,
+                      fontSize: designTokens.typography.fontSizes.bodySmall,
+                      color: designTokens.colors.primary.blue,
+                      borderBottom: `1px solid ${designTokens.colors.borders.default}`,
+                    }}
+                  >
+                    <Upload size={16} />
+                    Copy to Personal
+                  </button>
+                )}
+                <button
+                  onClick={() => {
+                    setShowDeleteConfirm(true);
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: `${designTokens.spacing.md} ${designTokens.spacing.lg}`,
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: designTokens.spacing.md,
+                    fontSize: designTokens.typography.fontSizes.bodySmall,
+                    color: designTokens.colors.system.error,
+                  }}
+                >
+                  <Trash2 size={16} />
+                  Delete Playlist
+                </button>
+              </DropdownMenu>
             )}
 
             {/* User Settings button (always visible in list view) */}
@@ -2716,158 +2852,6 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
             )}
           </div>
         </div>
-
-        {/* Playlist menu dropdown */}
-        {showPlaylistMenu && (activeTab === 'playlists' || activeTab === 'playlists') && viewMode === 'detail' && (
-          <div style={{
-            position: 'absolute',
-            top: '60px',
-            right: designTokens.spacing.lg,
-            backgroundColor: designTokens.colors.surface.primary,
-            border: `1px solid ${designTokens.colors.borders.default}`,
-            borderRadius: designTokens.borderRadius.md,
-            boxShadow: designTokens.shadows.elevated,
-            zIndex: 1000,
-            minWidth: '180px',
-          }}>
-            <button
-              onClick={async () => {
-                setShowPlaylistMenu(false);
-
-                if (!currentPlaylist) return;
-
-                const shareUrl = `coretet://playlist/${currentPlaylist.share_code}`;
-
-                // On native platforms, use native share sheet
-                if (Capacitor.isNativePlatform()) {
-                  try {
-                    const shareText = `Check out "${currentPlaylist.title}" on CoreTet\n\n${shareUrl}`;
-
-                    await Share.share({
-                      title: currentPlaylist.title,
-                      text: shareText,
-                      dialogTitle: 'Share Playlist',
-                    });
-                  } catch (error) {
-                    console.error('Share failed:', error);
-                  }
-                } else {
-                  // On web, copy to clipboard
-                  navigator.clipboard.writeText(shareUrl);
-                  // Could add a toast notification here
-                }
-              }}
-              style={{
-                width: '100%',
-                padding: `${designTokens.spacing.md} ${designTokens.spacing.lg}`,
-                backgroundColor: 'transparent',
-                border: 'none',
-                textAlign: 'left',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: designTokens.spacing.md,
-                fontSize: designTokens.typography.fontSizes.bodySmall,
-                color: designTokens.colors.neutral.charcoal,
-                borderBottom: `1px solid ${designTokens.colors.borders.default}`,
-              }}
-            >
-              <Upload size={16} />
-              Share Playlist
-            </button>
-            <button
-              onClick={() => {
-                setNewTitle(currentPlaylist?.title || '');
-                setEditingPlaylistTitle(currentPlaylist?.id || null);
-                setShowPlaylistMenu(false);
-              }}
-              style={{
-                width: '100%',
-                padding: `${designTokens.spacing.md} ${designTokens.spacing.lg}`,
-                backgroundColor: 'transparent',
-                border: 'none',
-                textAlign: 'left',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: designTokens.spacing.md,
-                fontSize: designTokens.typography.fontSizes.bodySmall,
-                color: designTokens.colors.neutral.charcoal,
-                borderBottom: `1px solid ${designTokens.colors.borders.default}`,
-              }}
-            >
-              <Edit2 size={16} />
-              Edit Title
-            </button>
-            <button
-              onClick={handleToggleEditMode}
-              style={{
-                width: '100%',
-                padding: `${designTokens.spacing.md} ${designTokens.spacing.lg}`,
-                backgroundColor: 'transparent',
-                border: 'none',
-                textAlign: 'left',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: designTokens.spacing.md,
-                fontSize: designTokens.typography.fontSizes.bodySmall,
-                color: designTokens.colors.neutral.charcoal,
-                borderBottom: `1px solid ${designTokens.colors.borders.default}`,
-              }}
-            >
-              <Edit2 size={16} />
-              Edit Tracks
-            </button>
-            {activeTab === 'playlists' && currentPlaylist && (
-              <button
-                onClick={() => {
-                  setShowCopyToPersonalConfirm(true);
-                  setShowPlaylistMenu(false);
-                }}
-                style={{
-                  width: '100%',
-                  padding: `${designTokens.spacing.md} ${designTokens.spacing.lg}`,
-                  backgroundColor: 'transparent',
-                  border: 'none',
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: designTokens.spacing.md,
-                  fontSize: designTokens.typography.fontSizes.bodySmall,
-                  color: designTokens.colors.primary.blue,
-                  borderBottom: `1px solid ${designTokens.colors.borders.default}`,
-                }}
-              >
-                <Upload size={16} />
-                Copy to Personal
-              </button>
-            )}
-            <button
-              onClick={() => {
-                setShowDeleteConfirm(true);
-                setShowPlaylistMenu(false);
-              }}
-              style={{
-                width: '100%',
-                padding: `${designTokens.spacing.md} ${designTokens.spacing.lg}`,
-                backgroundColor: 'transparent',
-                border: 'none',
-                textAlign: 'left',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: designTokens.spacing.md,
-                fontSize: designTokens.typography.fontSizes.bodySmall,
-                color: designTokens.colors.system.error,
-              }}
-            >
-              <Trash2 size={16} />
-              Delete Playlist
-            </button>
-          </div>
-        )}
       </div>
 
       {/* Scrollable Content */}

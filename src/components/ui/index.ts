@@ -15,3 +15,6 @@ export type { BottomSheetModalProps } from './BottomSheetModal';
 
 export { DropdownMenu } from './DropdownMenu';
 export type { DropdownMenuProps } from './DropdownMenu';
+
+export { ConfirmDialog } from './ConfirmDialog';
+export type { ConfirmDialogProps } from './ConfirmDialog';
