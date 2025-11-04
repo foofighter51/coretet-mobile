@@ -21,6 +21,7 @@ import { SortButton } from '../molecules/SortButton';
 import { FilterButton } from '../molecules/FilterButton';
 import { UploadButton } from '../molecules/UploadButton';
 import { DropdownMenu } from '../ui/DropdownMenu';
+import { DialogModal } from '../ui/DialogModal';
 import { Track, TabId } from '../../types';
 import { db, auth } from '../../../lib/supabase';
 import { Capacitor } from '@capacitor/core';
@@ -821,6 +822,9 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   const [selectedTrackForDetail, setSelectedTrackForDetail] = useState<any | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const savedScrollPosition = useRef<number>(0);
+
+  // Ref for iOS keyboard handling in edit playlist title
+  const playlistTitleInputRef = useRef<HTMLInputElement>(null);
 
   // Handle opening track detail modal with scroll position saving
   const handleOpenTrackDetail = async (track: any) => {
@@ -1700,80 +1704,92 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
               <div>
                 {/* Edit title modal */}
                 {editingPlaylistTitle && (
-                  <div style={{
-                    backgroundColor: designTokens.colors.surface.secondary,
-                    padding: designTokens.spacing.md,
-                    borderRadius: designTokens.borderRadius.md,
-                    marginBottom: designTokens.spacing.md,
-                  }}>
-                    <h3 style={{ margin: `0 0 ${designTokens.spacing.md} 0`, fontSize: designTokens.typography.fontSizes.body, fontWeight: designTokens.typography.fontWeights.semibold }}>Edit Playlist Title</h3>
-                    <input
-                      type="text"
-                      value={newTitle}
-                      onChange={(e) => {
-                        setNewTitle(e.target.value);
-                        setError(null);
-                      }}
-                      placeholder="Playlist title..."
-                      style={{
-                        width: '100%',
-                        padding: designTokens.spacing.sm,
-                        border: `1px solid ${error ? designTokens.colors.system.error : designTokens.colors.borders.default}`,
-                        borderRadius: designTokens.borderRadius.sm,
-                        fontSize: designTokens.typography.fontSizes.bodySmall,
-                        marginBottom: designTokens.spacing.sm,
-                        userSelect: 'text',
-                        WebkitUserSelect: 'text',
-                      }}
-                      autoFocus
-                    />
-                    {error && (
-                      <div style={{
-                        padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
-                        backgroundColor: designTokens.colors.feedback.error.bg,
-                        border: `1px solid ${designTokens.colors.feedback.error.border}`,
-                        borderRadius: designTokens.borderRadius.sm,
-                        color: designTokens.colors.feedback.error.text,
-                        fontSize: designTokens.typography.fontSizes.caption,
-                        marginBottom: designTokens.spacing.sm,
-                      }}>
-                        {error}
+                  <DialogModal
+                    isOpen={true}
+                    onClose={() => {
+                      setEditingPlaylistTitle(null);
+                      setError(null);
+                    }}
+                    title="Edit Playlist Title"
+                    size="sm"
+                    hasKeyboardInput={true}
+                    keyboardInputRef={playlistTitleInputRef}
+                    footer={
+                      <div style={{ display: 'flex', gap: designTokens.spacing.sm, justifyContent: 'flex-end' }}>
+                        <button
+                          onClick={() => {
+                            setEditingPlaylistTitle(null);
+                            setError(null);
+                          }}
+                          style={{
+                            padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
+                            backgroundColor: 'transparent',
+                            border: `1px solid ${designTokens.colors.borders.default}`,
+                            borderRadius: designTokens.borderRadius.sm,
+                            fontSize: designTokens.typography.fontSizes.bodySmall,
+                            cursor: 'pointer',
+                            color: designTokens.colors.text.secondary,
+                          }}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={handleEditPlaylistTitle}
+                          style={{
+                            padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
+                            backgroundColor: designTokens.colors.primary.blue,
+                            color: designTokens.colors.text.inverse,
+                            border: 'none',
+                            borderRadius: designTokens.borderRadius.sm,
+                            fontSize: designTokens.typography.fontSizes.bodySmall,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Save
+                        </button>
                       </div>
-                    )}
-                    <div style={{ display: 'flex', gap: designTokens.spacing.sm }}>
-                      <button
-                        onClick={handleEditPlaylistTitle}
-                        style={{
-                          padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
-                          backgroundColor: designTokens.colors.primary.blue,
-                          color: designTokens.colors.text.inverse,
-                          border: 'none',
-                          borderRadius: designTokens.borderRadius.sm,
-                          fontSize: designTokens.typography.fontSizes.bodySmall,
-                          cursor: 'pointer',
-                        }}
-                      >
-                        Save
-                      </button>
-                      <button
-                        onClick={() => {
-                          setEditingPlaylistTitle(null);
+                    }
+                  >
+                    <div>
+                      <input
+                        ref={playlistTitleInputRef}
+                        type="text"
+                        value={newTitle}
+                        onChange={(e) => {
+                          setNewTitle(e.target.value);
                           setError(null);
                         }}
+                        placeholder="Playlist title..."
                         style={{
-                          padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
-                          backgroundColor: designTokens.colors.borders.default,
-                          color: designTokens.colors.text.muted,
-                          border: 'none',
+                          width: '100%',
+                          padding: designTokens.spacing.md,
+                          border: `1px solid ${error ? designTokens.colors.system.error : designTokens.colors.borders.default}`,
                           borderRadius: designTokens.borderRadius.sm,
-                          fontSize: designTokens.typography.fontSizes.bodySmall,
-                          cursor: 'pointer',
+                          fontSize: designTokens.typography.fontSizes.body,
+                          marginBottom: error ? designTokens.spacing.sm : 0,
+                          boxSizing: 'border-box',
                         }}
-                      >
-                        Cancel
-                      </button>
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && newTitle.trim()) {
+                            handleEditPlaylistTitle();
+                          }
+                        }}
+                      />
+                      {error && (
+                        <div style={{
+                          padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
+                          backgroundColor: designTokens.colors.feedback.error.bg,
+                          border: `1px solid ${designTokens.colors.feedback.error.border}`,
+                          borderRadius: designTokens.borderRadius.sm,
+                          color: designTokens.colors.feedback.error.text,
+                          fontSize: designTokens.typography.fontSizes.caption,
+                        }}>
+                          {error}
+                        </div>
+                      )}
                     </div>
-                  </div>
+                  </DialogModal>
                 )}
 
                 {/* Delete confirmation modal */}
