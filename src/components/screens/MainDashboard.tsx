@@ -1653,53 +1653,6 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
               </div>
             )}
 
-            {/* Playlist Filter Toggle - only show in Personal tab */}
-            {viewMode !== 'detail' && activeTab === 'playlists' && (
-              <div style={{
-                display: 'flex',
-                gap: designTokens.spacing.sm,
-                marginBottom: designTokens.spacing.md,
-                padding: designTokens.spacing.xs,
-                backgroundColor: designTokens.colors.neutral.offWhite,
-                borderRadius: designTokens.borderRadius.md,
-              }}>
-                <button
-                  onClick={() => setPlaylistFilter('mine')}
-                  style={{
-                    flex: 1,
-                    padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
-                    backgroundColor: playlistFilter === 'mine' ? designTokens.colors.primary.blue : 'transparent',
-                    color: playlistFilter === 'mine' ? designTokens.colors.text.inverse : designTokens.colors.neutral.charcoal,
-                    border: 'none',
-                    borderRadius: designTokens.borderRadius.sm,
-                    fontSize: designTokens.typography.fontSizes.bodySmall,
-                    fontWeight: designTokens.typography.fontWeights.semibold,
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  My Playlists
-                </button>
-                <button
-                  onClick={() => setPlaylistFilter('following')}
-                  style={{
-                    flex: 1,
-                    padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
-                    backgroundColor: playlistFilter === 'following' ? designTokens.colors.primary.blue : 'transparent',
-                    color: playlistFilter === 'following' ? designTokens.colors.text.inverse : designTokens.colors.neutral.charcoal,
-                    border: 'none',
-                    borderRadius: designTokens.borderRadius.sm,
-                    fontSize: designTokens.typography.fontSizes.bodySmall,
-                    fontWeight: designTokens.typography.fontWeights.semibold,
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                  }}
-                >
-                  Following {currentFollowedPlaylists.length > 0 && `(${currentFollowedPlaylists.length})`}
-                </button>
-              </div>
-            )}
-
             {viewMode === 'detail' && currentPlaylist ? (
               <div>
                 {/* Edit title modal */}
@@ -2664,29 +2617,6 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
 
           {/* Right: Header action buttons */}
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
-            {/* Band Members button (Band tab, list view, admin only) */}
-            {activeTab === 'playlists' && viewMode === 'list' && (userRole === 'admin' || userRole === 'owner') && currentBand && (
-              <button
-                onClick={() => setShowBandSettings(true)}
-                style={{
-                  width: designTokens.spacing.xxl,
-                  height: designTokens.spacing.xxl,
-                  borderRadius: designTokens.borderRadius.full,
-                  backgroundColor: 'transparent',
-                  border: 'none',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  color: designTokens.colors.neutral.charcoal,
-                }}
-                aria-label="Manage band members and invites"
-                title="Band Members"
-              >
-                <Users size={20} />
-              </button>
-            )}
-
             {/* Playlist menu button (detail view, owner only) */}
             {(activeTab === 'playlists' || activeTab === 'playlists') && viewMode === 'detail' && isPlaylistOwner && !isEditingTracks && (
               <DropdownMenu
@@ -2842,29 +2772,6 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                   Delete Playlist
                 </button>
               </DropdownMenu>
-            )}
-
-            {/* User Settings button (always visible in list view) */}
-            {viewMode === 'list' && (
-              <button
-                onClick={() => setShowSettings(true)}
-                style={{
-                  width: designTokens.spacing.xxl,
-                  height: designTokens.spacing.xxl,
-                  borderRadius: designTokens.borderRadius.full,
-                  backgroundColor: 'transparent',
-                  border: 'none',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  color: designTokens.colors.neutral.charcoal,
-                }}
-                aria-label="User settings and account"
-                title="Settings"
-              >
-                <Settings size={20} />
-              </button>
             )}
           </div>
         </div>
