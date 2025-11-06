@@ -2027,7 +2027,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                 New
               </button>
             )}
-            {(activeTab === 'playlists' || activeTab === 'playlists') && viewMode === 'detail' && isPlaylistOwner && (
+            {(activeTab === 'playlists' || activeTab === 'playlists') && viewMode === 'detail' && (userRole === 'admin' || userRole === 'owner') && (
               <div style={{ display: 'flex', gap: designTokens.spacing.xs, alignItems: 'center' }}>
                 {isEditingTracks ? (
                   <>
@@ -2096,8 +2096,8 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
 
           {/* Right: Header action buttons */}
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
-            {/* Playlist menu button (detail view, owner only) */}
-            {(activeTab === 'playlists' || activeTab === 'playlists') && viewMode === 'detail' && isPlaylistOwner && !isEditingTracks && (
+            {/* Playlist menu button (detail view, band admin only) */}
+            {(activeTab === 'playlists' || activeTab === 'playlists') && viewMode === 'detail' && (userRole === 'admin' || userRole === 'owner') && !isEditingTracks && (
               <DropdownMenu
                 trigger={
                   <button
@@ -2119,6 +2119,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                 }
                 align="right"
               >
+                {/* Share Playlist - TODO: Review external sharing permissions for bands */}
                 <button
                   onClick={async () => {
                     if (!currentPlaylist) return;
@@ -2162,6 +2163,8 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                   <Upload size={16} />
                   Share Playlist
                 </button>
+
+                {/* Admin-only actions */}
                 <button
                   onClick={() => {
                     setNewTitle(currentPlaylist?.title || '');
@@ -2205,30 +2208,6 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                   <Edit2 size={16} />
                   Edit Tracks
                 </button>
-                {activeTab === 'playlists' && currentPlaylist && (
-                  <button
-                    onClick={() => {
-                      setShowCopyToPersonalConfirm(true);
-                    }}
-                    style={{
-                      width: '100%',
-                      padding: `${designTokens.spacing.md} ${designTokens.spacing.lg}`,
-                      backgroundColor: 'transparent',
-                      border: 'none',
-                      textAlign: 'left',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: designTokens.spacing.md,
-                      fontSize: designTokens.typography.fontSizes.bodySmall,
-                      color: designTokens.colors.primary.blue,
-                      borderBottom: `1px solid ${designTokens.colors.borders.default}`,
-                    }}
-                  >
-                    <Upload size={16} />
-                    Copy to Personal
-                  </button>
-                )}
                 <button
                   onClick={() => {
                     setShowDeleteConfirm(true);
