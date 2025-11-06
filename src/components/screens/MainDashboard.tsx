@@ -325,6 +325,8 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
 
   // Ref for iOS keyboard handling in edit playlist title
   const playlistTitleInputRef = useRef<HTMLInputElement>(null);
+  // Ref for iOS keyboard handling in create playlist
+  const createPlaylistInputRef = useRef<HTMLInputElement>(null);
 
   // Handle opening track detail modal with scroll position saving
   const handleOpenTrackDetail = async (track: any) => {
@@ -1067,90 +1069,103 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
           }}>
 
             {showCreatePlaylist && (
-              <div style={{
-                backgroundColor: designTokens.colors.surface.secondary,
-                padding: designTokens.spacing.md,
-                borderRadius: designTokens.borderRadius.md,
-                marginBottom: designTokens.spacing.md,
-              }}>
-                <input
-                  type="text"
-                  placeholder="Playlist title..."
-                  value={newPlaylistTitle}
-                  onChange={(e) => {
-                    setNewPlaylistTitle(e.target.value);
-                    setError(null);
-                  }}
-                  onKeyPress={(e) => e.key === 'Enter' && !createPlaylistLoading && handleCreatePlaylist()}
-                  disabled={createPlaylistLoading}
-                  autoComplete="off"
-                  autoCorrect="off"
-                  autoCapitalize="off"
-                  spellCheck="false"
-                  style={{
-                    width: '100%',
-                    padding: designTokens.spacing.sm,
-                    border: `1px solid ${error ? designTokens.colors.system.error : designTokens.colors.borders.default}`,
-                    borderRadius: designTokens.borderRadius.sm,
-                    fontSize: designTokens.typography.fontSizes.bodySmall,
-                    marginBottom: designTokens.spacing.sm,
-                    userSelect: 'text',
-                    WebkitUserSelect: 'text',
-                  }}
-                  autoFocus
-                />
-                {error && (
-                  <div style={{
-                    padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
-                    backgroundColor: designTokens.colors.feedback.error.bg,
-                    border: `1px solid ${designTokens.colors.feedback.error.border}`,
-                    borderRadius: designTokens.borderRadius.sm,
-                    color: designTokens.colors.feedback.error.text,
-                    fontSize: designTokens.typography.fontSizes.caption,
-                    marginBottom: designTokens.spacing.sm,
-                  }}>
-                    {error}
+              <DialogModal
+                isOpen={true}
+                onClose={() => {
+                  setShowCreatePlaylist(false);
+                  setNewPlaylistTitle('');
+                  setError(null);
+                }}
+                title="Create New Playlist"
+                size="sm"
+                hasKeyboardInput={true}
+                keyboardInputRef={createPlaylistInputRef}
+                footer={
+                  <div style={{ display: 'flex', gap: designTokens.spacing.sm, justifyContent: 'flex-end' }}>
+                    <button
+                      onClick={() => {
+                        setShowCreatePlaylist(false);
+                        setNewPlaylistTitle('');
+                        setError(null);
+                      }}
+                      disabled={createPlaylistLoading}
+                      style={{
+                        padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
+                        backgroundColor: 'transparent',
+                        border: `1px solid ${designTokens.colors.borders.default}`,
+                        borderRadius: designTokens.borderRadius.sm,
+                        fontSize: designTokens.typography.fontSizes.bodySmall,
+                        cursor: createPlaylistLoading ? 'not-allowed' : 'pointer',
+                        opacity: createPlaylistLoading ? 0.6 : 1,
+                        color: designTokens.colors.text.secondary,
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleCreatePlaylist}
+                      disabled={createPlaylistLoading}
+                      style={{
+                        padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
+                        backgroundColor: designTokens.colors.primary.blue,
+                        color: designTokens.colors.text.inverse,
+                        border: 'none',
+                        borderRadius: designTokens.borderRadius.sm,
+                        fontSize: designTokens.typography.fontSizes.bodySmall,
+                        cursor: createPlaylistLoading ? 'not-allowed' : 'pointer',
+                        opacity: createPlaylistLoading ? 0.6 : 1,
+                      }}
+                    >
+                      {createPlaylistLoading ? 'Creating...' : 'Create'}
+                    </button>
                   </div>
-                )}
-                <div style={{ display: 'flex', gap: designTokens.spacing.sm }}>
-                  <button
-                    onClick={handleCreatePlaylist}
-                    disabled={createPlaylistLoading}
-                    style={{
-                      padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
-                      backgroundColor: designTokens.colors.primary.blue,
-                      color: designTokens.colors.text.inverse,
-                      border: 'none',
-                      borderRadius: designTokens.borderRadius.sm,
-                      fontSize: designTokens.typography.fontSizes.bodySmall,
-                      cursor: createPlaylistLoading ? 'not-allowed' : 'pointer',
-                      opacity: createPlaylistLoading ? 0.6 : 1,
-                    }}
-                  >
-                    {createPlaylistLoading ? 'Creating...' : 'Create'}
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowCreatePlaylist(false);
-                      setNewPlaylistTitle('');
+                }
+              >
+                <div>
+                  <input
+                    ref={createPlaylistInputRef}
+                    type="text"
+                    placeholder="Playlist title..."
+                    value={newPlaylistTitle}
+                    onChange={(e) => {
+                      setNewPlaylistTitle(e.target.value);
                       setError(null);
                     }}
-                    disabled={createPlaylistLoading}
-                    style={{
-                      padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
-                      backgroundColor: designTokens.colors.borders.default,
-                      color: designTokens.colors.text.muted,
-                      border: 'none',
-                      borderRadius: designTokens.borderRadius.sm,
-                      fontSize: designTokens.typography.fontSizes.bodySmall,
-                      cursor: createPlaylistLoading ? 'not-allowed' : 'pointer',
-                      opacity: createPlaylistLoading ? 0.6 : 1,
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !createPlaylistLoading && newPlaylistTitle.trim()) {
+                        handleCreatePlaylist();
+                      }
                     }}
-                  >
-                    Cancel
-                  </button>
+                    disabled={createPlaylistLoading}
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    spellCheck="false"
+                    style={{
+                      width: '100%',
+                      padding: designTokens.spacing.md,
+                      border: `1px solid ${error ? designTokens.colors.system.error : designTokens.colors.borders.default}`,
+                      borderRadius: designTokens.borderRadius.sm,
+                      fontSize: designTokens.typography.fontSizes.body,
+                      marginBottom: error ? designTokens.spacing.sm : 0,
+                      boxSizing: 'border-box',
+                    }}
+                    autoFocus
+                  />
+                  {error && (
+                    <div style={{
+                      padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
+                      backgroundColor: designTokens.colors.feedback.error.bg,
+                      border: `1px solid ${designTokens.colors.feedback.error.border}`,
+                      borderRadius: designTokens.borderRadius.sm,
+                      color: designTokens.colors.feedback.error.text,
+                      fontSize: designTokens.typography.fontSizes.caption,
+                    }}>
+                      {error}
+                    </div>
+                  )}
                 </div>
-              </div>
+              </DialogModal>
             )}
 
             {viewMode === 'detail' && currentPlaylist ? (
