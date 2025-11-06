@@ -2527,27 +2527,6 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                 New
               </button>
             )}
-            {activeTab === 'playlists' && viewMode === 'list' && (
-              <button
-                onClick={() => setShowUploader(true)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: designTokens.spacing.xs,
-                  padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
-                  backgroundColor: designTokens.colors.primary.blue,
-                  color: designTokens.colors.text.inverse,
-                  border: 'none',
-                  borderRadius: designTokens.borderRadius.xxl,
-                  fontSize: designTokens.typography.fontSizes.bodySmall,
-                  fontWeight: designTokens.typography.fontWeights.medium,
-                  cursor: 'pointer',
-                }}
-              >
-                <Plus size={16} />
-                Upload
-              </button>
-            )}
             {(activeTab === 'playlists' || activeTab === 'playlists') && viewMode === 'detail' && isPlaylistOwner && (
               <div style={{ display: 'flex', gap: designTokens.spacing.xs, alignItems: 'center' }}>
                 {isEditingTracks ? (
