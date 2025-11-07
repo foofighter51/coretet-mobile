@@ -809,6 +809,34 @@ export const db = {
 
       return { data: member, error: null };
     },
+
+    /**
+     * Remove a member from a band
+     */
+    async removeMember(bandId: string, memberId: string) {
+      const { error } = await supabase
+        .from('band_members')
+        .delete()
+        .eq('band_id', bandId)
+        .eq('id', memberId);
+
+      return { error };
+    },
+
+    /**
+     * Update a member's role
+     */
+    async updateMemberRole(bandId: string, memberId: string, newRole: 'admin' | 'member') {
+      const { data, error } = await supabase
+        .from('band_members')
+        .update({ role: newRole })
+        .eq('band_id', bandId)
+        .eq('id', memberId)
+        .select()
+        .single();
+
+      return { data, error };
+    },
   },
 
   // Playlist follower operations
@@ -911,6 +939,30 @@ export const db = {
         return { data: null, error: new Error('An active invite already exists for this email') };
       }
 
+      // Debug: Check current user's role in the band
+      const { data: currentUser } = await supabase.auth.getUser();
+      console.log('[DEBUG] Current auth user:', currentUser?.user?.id);
+      console.log('[DEBUG] Passed invitedBy:', invitedBy);
+      console.log('[DEBUG] Band ID:', bandId);
+
+      // Check if current user is owner/admin
+      const { data: memberCheck, error: memberError } = await supabase
+        .from('band_members')
+        .select('role')
+        .eq('band_id', bandId)
+        .eq('user_id', currentUser?.user?.id || '')
+        .single();
+
+      console.log('[DEBUG] Member check result:', memberCheck);
+      console.log('[DEBUG] Member check error:', memberError);
+
+      if (!memberCheck || (memberCheck.role !== 'owner' && memberCheck.role !== 'admin')) {
+        return {
+          data: null,
+          error: new Error('You must be an owner or admin to invite members')
+        };
+      }
+
       // Generate unique invite token
       const inviteToken = crypto.randomUUID();
 
@@ -926,6 +978,10 @@ export const db = {
         })
         .select()
         .single();
+
+      if (error) {
+        console.error('[DEBUG] Insert error:', error);
+      }
 
       return { data, error };
     },

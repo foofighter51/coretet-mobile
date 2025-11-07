@@ -35,6 +35,8 @@
     "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "lint:fix": "eslint src --ext ts,tsx --fix",
     "type-check": "tsc --noEmit",
+    "db:types": "./scripts/generate-types.sh",
+    "db:types:check": "echo '⚠️  Checking if database types are up to date...' && git diff --exit-code lib/database.types.ts || (echo '❌ Database types are out of date! Run: npm run db:types' && exit 1)",
     "validate": "npm run lint && npm run type-check && npm run test:qa",
     "validate:full": "npm run lint && npm run type-check && npm run test:qa && npm run test:accessibility && npm run test:performance",
     "release": "npm run validate:full && npm run build && npm run build-storybook",

@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Users, Plus, Mail, Settings } from 'lucide-react';
+import { Users, Plus, Settings } from 'lucide-react';
 import { useBand } from '../../contexts/BandContext';
 import { designTokens } from '../../design/designTokens';
 import { DialogModal } from '../ui/DialogModal';
@@ -8,9 +8,10 @@ interface BandModalProps {
   isOpen: boolean;
   onClose: () => void;
   userId: string;
+  onOpenBandSettings?: () => void;
 }
 
-export const BandModal: React.FC<BandModalProps> = ({ isOpen, onClose, userId }) => {
+export const BandModal: React.FC<BandModalProps> = ({ isOpen, onClose, userId, onOpenBandSettings }) => {
   const { currentBand, userBands, userRole, switchBand, refreshBands } = useBand();
   const [showCreateBand, setShowCreateBand] = useState(false);
   const [newBandName, setNewBandName] = useState('');
@@ -216,54 +217,29 @@ export const BandModal: React.FC<BandModalProps> = ({ isOpen, onClose, userId })
               Create New Band
             </button>
 
-            {(userRole === 'owner' || userRole === 'admin') && currentBand && (
-              <>
-                <button
-                  onClick={() => {
-                    // TODO: Implement invite modal
-                    alert('Invite feature coming soon!');
-                  }}
-                  style={{
-                    width: '100%',
-                    padding: designTokens.spacing.md,
-                    backgroundColor: 'transparent',
-                    border: `1px solid ${designTokens.colors.borders.default}`,
-                    borderRadius: designTokens.borderRadius.md,
-                    color: designTokens.colors.text.secondary,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: designTokens.spacing.xs,
-                    marginBottom: designTokens.spacing.xs,
-                  }}
-                >
-                  <Mail size={18} />
-                  Invite Members
-                </button>
-                <button
-                  onClick={() => {
-                    // TODO: Implement band settings modal
-                    alert('Band settings coming soon!');
-                  }}
-                  style={{
-                    width: '100%',
-                    padding: designTokens.spacing.md,
-                    backgroundColor: 'transparent',
-                    border: `1px solid ${designTokens.colors.borders.default}`,
-                    borderRadius: designTokens.borderRadius.md,
-                    color: designTokens.colors.text.secondary,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: designTokens.spacing.xs,
-                  }}
-                >
-                  <Settings size={18} />
-                  Band Settings
-                </button>
-              </>
+            {(userRole === 'owner' || userRole === 'admin') && currentBand && !currentBand.is_personal && (
+              <button
+                onClick={() => {
+                  onClose();
+                  onOpenBandSettings?.();
+                }}
+                style={{
+                  width: '100%',
+                  padding: designTokens.spacing.md,
+                  backgroundColor: 'transparent',
+                  border: `1px solid ${designTokens.colors.borders.default}`,
+                  borderRadius: designTokens.borderRadius.md,
+                  color: designTokens.colors.text.secondary,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: designTokens.spacing.xs,
+                }}
+              >
+                <Settings size={18} />
+                Band Settings
+              </button>
             )}
           </div>
         </div>

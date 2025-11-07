@@ -12,31 +12,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "13.0.5"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       app_settings: {
@@ -63,8 +38,186 @@ export type Database = {
         }
         Relationships: []
       }
+      band_invites: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          band_id: string
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          invite_token: string
+          invited_by: string
+          invited_email: string
+          status: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          band_id: string
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          invite_token: string
+          invited_by: string
+          invited_email: string
+          status?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          band_id?: string
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          invite_token?: string
+          invited_by?: string
+          invited_email?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_invites_accepted_by_fkey"
+            columns: ["accepted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_invites_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_invites_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      band_members: {
+        Row: {
+          band_id: string
+          id: string
+          joined_at: string | null
+          role: string
+          user_id: string
+        }
+        Insert: {
+          band_id: string
+          id?: string
+          joined_at?: string | null
+          role: string
+          user_id: string
+        }
+        Update: {
+          band_id?: string
+          id?: string
+          joined_at?: string | null
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "band_members_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "band_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bands: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          id: string
+          is_personal: boolean | null
+          name: string
+          settings: Json | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          id?: string
+          is_personal?: boolean | null
+          name: string
+          settings?: Json | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          id?: string
+          is_personal?: boolean | null
+          name?: string
+          settings?: Json | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bands_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      comment_views: {
+        Row: {
+          created_at: string | null
+          id: string
+          last_viewed_at: string | null
+          track_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          last_viewed_at?: string | null
+          track_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          last_viewed_at?: string | null
+          track_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comment_views_track_id_fkey"
+            columns: ["track_id"]
+            isOneToOne: false
+            referencedRelation: "tracks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comment_views_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       comments: {
         Row: {
+          band_id: string | null
           content: string
           created_at: string | null
           id: string
@@ -74,6 +227,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          band_id?: string | null
           content: string
           created_at?: string | null
           id?: string
@@ -83,6 +237,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          band_id?: string | null
           content?: string
           created_at?: string | null
           id?: string
@@ -93,6 +248,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "comments_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "comments_track_id_fkey"
             columns: ["track_id"]
             isOneToOne: false
@@ -101,6 +263,134 @@ export type Database = {
           },
           {
             foreignKeyName: "comments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feedback: {
+        Row: {
+          archived: boolean | null
+          archived_at: string | null
+          category: string
+          created_at: string | null
+          description: string
+          id: string
+          image_url: string | null
+          status: string
+          title: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          archived?: boolean | null
+          archived_at?: string | null
+          category: string
+          created_at?: string | null
+          description: string
+          id?: string
+          image_url?: string | null
+          status?: string
+          title: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          archived?: boolean | null
+          archived_at?: string | null
+          category?: string
+          created_at?: string | null
+          description?: string
+          id?: string
+          image_url?: string | null
+          status?: string
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedback_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feedback_comments: {
+        Row: {
+          content: string
+          created_at: string | null
+          feedback_id: string
+          id: string
+          is_admin_response: boolean | null
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          feedback_id: string
+          id?: string
+          is_admin_response?: boolean | null
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          feedback_id?: string
+          id?: string
+          is_admin_response?: boolean | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedback_comments_feedback_id_fkey"
+            columns: ["feedback_id"]
+            isOneToOne: false
+            referencedRelation: "feedback"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feedback_comments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feedback_votes: {
+        Row: {
+          created_at: string | null
+          feedback_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          feedback_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          feedback_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedback_votes_feedback_id_fkey"
+            columns: ["feedback_id"]
+            isOneToOne: false
+            referencedRelation: "feedback"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feedback_votes_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -139,6 +429,42 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "file_uploads_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      playlist_followers: {
+        Row: {
+          followed_at: string | null
+          id: string
+          playlist_id: string
+          user_id: string
+        }
+        Insert: {
+          followed_at?: string | null
+          id?: string
+          playlist_id: string
+          user_id: string
+        }
+        Update: {
+          followed_at?: string | null
+          id?: string
+          playlist_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "playlist_followers_playlist_id_fkey"
+            columns: ["playlist_id"]
+            isOneToOne: false
+            referencedRelation: "playlists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "playlist_followers_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -197,6 +523,7 @@ export type Database = {
       }
       playlists: {
         Row: {
+          band_id: string | null
           created_at: string | null
           created_by: string
           description: string | null
@@ -207,6 +534,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          band_id?: string | null
           created_at?: string | null
           created_by: string
           description?: string | null
@@ -217,6 +545,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          band_id?: string | null
           created_at?: string | null
           created_by?: string
           description?: string | null
@@ -227,6 +556,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "playlists_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "playlists_created_by_fkey"
             columns: ["created_by"]
@@ -240,7 +576,9 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string | null
+          email: string | null
           id: string
+          is_admin: boolean
           name: string | null
           phone_number: string | null
           updated_at: string | null
@@ -248,7 +586,9 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           created_at?: string | null
+          email?: string | null
           id: string
+          is_admin?: boolean
           name?: string | null
           phone_number?: string | null
           updated_at?: string | null
@@ -256,7 +596,9 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           created_at?: string | null
+          email?: string | null
           id?: string
+          is_admin?: boolean
           name?: string | null
           phone_number?: string | null
           updated_at?: string | null
@@ -265,6 +607,7 @@ export type Database = {
       }
       ratings: {
         Row: {
+          band_id: string | null
           created_at: string | null
           id: string
           rating_type: string
@@ -272,6 +615,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          band_id?: string | null
           created_at?: string | null
           id?: string
           rating_type: string
@@ -279,6 +623,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          band_id?: string | null
           created_at?: string | null
           id?: string
           rating_type?: string
@@ -286,6 +631,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "ratings_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "ratings_track_id_fkey"
             columns: ["track_id"]
@@ -332,8 +684,51 @@ export type Database = {
         }
         Relationships: []
       }
+      track_ratings: {
+        Row: {
+          created_at: string | null
+          id: string
+          rating: string
+          track_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          rating: string
+          track_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          rating?: string
+          track_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "track_ratings_track_id_fkey"
+            columns: ["track_id"]
+            isOneToOne: false
+            referencedRelation: "tracks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "track_ratings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tracks: {
         Row: {
+          band_id: string | null
           created_at: string | null
           created_by: string
           duration_seconds: number | null
@@ -344,6 +739,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          band_id?: string | null
           created_at?: string | null
           created_by: string
           duration_seconds?: number | null
@@ -354,6 +750,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          band_id?: string | null
           created_at?: string | null
           created_by?: string
           duration_seconds?: number | null
@@ -364,6 +761,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "tracks_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "tracks_created_by_fkey"
             columns: ["created_by"]
@@ -417,9 +821,19 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      clerk_user_id: { Args: never; Returns: string }
+      current_user_id: { Args: never; Returns: string }
       get_version_rating_counts: {
         Args: { version_uuid: string }
         Returns: Json
+      }
+      is_band_admin: {
+        Args: { check_band_id: string; check_user_id: string }
+        Returns: boolean
+      }
+      is_band_member: {
+        Args: { check_band_id: string; check_user_id: string }
+        Returns: boolean
       }
     }
     Enums: {
@@ -549,9 +963,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {},
   },

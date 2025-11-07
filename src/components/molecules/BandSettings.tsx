@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { X, UserPlus, Mail, Trash2, Shield, User } from 'lucide-react';
+import { X, UserPlus, Mail, Trash2, Shield, User, MoreVertical } from 'lucide-react';
 import { designTokens } from '../../design/designTokens';
 import { db } from '../../../lib/supabase';
 import { CreateInvite } from './CreateInvite';
+import { DropdownMenu } from '../ui/DropdownMenu';
 
 interface BandSettingsProps {
   bandId: string;
@@ -24,6 +25,7 @@ export const BandSettings: React.FC<BandSettingsProps> = ({
   const [showCreateInvite, setShowCreateInvite] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [openMemberMenu, setOpenMemberMenu] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -70,6 +72,38 @@ export const BandSettings: React.FC<BandSettingsProps> = ({
   const handleInviteCreated = () => {
     setShowCreateInvite(false);
     loadData(); // Refresh to show new invite in pending list
+  };
+
+  const handleRemoveMember = async (memberId: string, memberName: string) => {
+    if (!confirm(`Are you sure you want to remove ${memberName} from this band?`)) return;
+
+    try {
+      const { error } = await db.bands.removeMember(bandId, memberId);
+      if (error) throw error;
+
+      // Remove from local state
+      setMembers(prev => prev.filter(m => m.id !== memberId));
+      setOpenMemberMenu(null);
+    } catch (err) {
+      console.error('Error removing member:', err);
+      alert('Failed to remove member');
+    }
+  };
+
+  const handleChangeRole = async (memberId: string, newRole: 'admin' | 'member') => {
+    try {
+      const { error } = await db.bands.updateMemberRole(bandId, memberId, newRole);
+      if (error) throw error;
+
+      // Update local state
+      setMembers(prev => prev.map(m =>
+        m.id === memberId ? { ...m, role: newRole } : m
+      ));
+      setOpenMemberMenu(null);
+    } catch (err) {
+      console.error('Error changing role:', err);
+      alert('Failed to change member role');
+    }
   };
 
   return (
@@ -203,87 +237,172 @@ export const BandSettings: React.FC<BandSettingsProps> = ({
                     Members
                   </h4>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: designTokens.spacing.sm }}>
-                    {members.map((member) => (
-                      <div
-                        key={member.id}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          padding: designTokens.spacing.md,
-                          backgroundColor: designTokens.colors.surface.secondary,
-                          borderRadius: designTokens.borderRadius.md,
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: designTokens.spacing.sm }}>
-                          <User size={20} color={designTokens.colors.text.secondary} />
-                          <span
-                            style={{
-                              fontSize: designTokens.typography.fontSizes.body,
-                              color: designTokens.colors.text.primary,
-                            }}
-                          >
-                            {member.profiles?.name || 'Unknown'}
-                          </span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: designTokens.spacing.xs }}>
-                          {(member.role === 'admin' || member.role === 'owner') && (
-                            <div
+                    {members.map((member) => {
+                      const canManageMember = isAdmin && member.role !== 'owner' && member.user_id !== currentUserId;
+
+                      return (
+                        <div
+                          key={member.id}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: designTokens.spacing.md,
+                            backgroundColor: designTokens.colors.surface.secondary,
+                            borderRadius: designTokens.borderRadius.md,
+                            position: 'relative',
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: designTokens.spacing.sm }}>
+                            <User size={20} color={designTokens.colors.text.secondary} />
+                            <span
                               style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '4px',
-                                padding: '4px 8px',
-                                backgroundColor: designTokens.colors.primary.blueLight,
-                                borderRadius: designTokens.borderRadius.sm,
+                                fontSize: designTokens.typography.fontSizes.body,
+                                color: designTokens.colors.text.primary,
                               }}
                             >
-                              <Shield size={14} color={designTokens.colors.primary.blue} />
-                              <span
+                              {member.profiles?.name || 'Unknown'}
+                              {member.user_id === currentUserId && (
+                                <span style={{ color: designTokens.colors.text.secondary, marginLeft: '4px' }}>
+                                  (you)
+                                </span>
+                              )}
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: designTokens.spacing.xs }}>
+                            {(member.role === 'admin' || member.role === 'owner') && (
+                              <div
                                 style={{
-                                  fontSize: designTokens.typography.fontSizes.caption,
-                                  color: designTokens.colors.primary.blue,
-                                  fontWeight: designTokens.typography.fontWeights.medium,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  padding: '4px 8px',
+                                  backgroundColor: designTokens.colors.primary.blueLight,
+                                  borderRadius: designTokens.borderRadius.sm,
                                 }}
                               >
-                                {member.role}
-                              </span>
-                            </div>
-                          )}
+                                <Shield size={14} color={designTokens.colors.primary.blue} />
+                                <span
+                                  style={{
+                                    fontSize: designTokens.typography.fontSizes.caption,
+                                    color: designTokens.colors.primary.blue,
+                                    fontWeight: designTokens.typography.fontWeights.medium,
+                                  }}
+                                >
+                                  {member.role}
+                                </span>
+                              </div>
+                            )}
+                            {canManageMember && (
+                              <DropdownMenu
+                                isOpen={openMemberMenu === member.id}
+                                onClose={() => setOpenMemberMenu(null)}
+                                trigger={
+                                  <button
+                                    onClick={() => setOpenMemberMenu(openMemberMenu === member.id ? null : member.id)}
+                                    style={{
+                                      background: 'none',
+                                      border: 'none',
+                                      cursor: 'pointer',
+                                      padding: '4px',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      color: designTokens.colors.text.secondary,
+                                    }}
+                                  >
+                                    <MoreVertical size={18} />
+                                  </button>
+                                }
+                                align="right"
+                              >
+                                <div style={{ minWidth: '180px' }}>
+                                  {member.role === 'member' && (
+                                    <button
+                                      onClick={() => handleChangeRole(member.id, 'admin')}
+                                      style={{
+                                        width: '100%',
+                                        padding: designTokens.spacing.sm,
+                                        textAlign: 'left',
+                                        background: 'none',
+                                        border: 'none',
+                                        cursor: 'pointer',
+                                        fontSize: designTokens.typography.fontSizes.body,
+                                        color: designTokens.colors.text.primary,
+                                      }}
+                                    >
+                                      Make Admin
+                                    </button>
+                                  )}
+                                  {member.role === 'admin' && (
+                                    <button
+                                      onClick={() => handleChangeRole(member.id, 'member')}
+                                      style={{
+                                        width: '100%',
+                                        padding: designTokens.spacing.sm,
+                                        textAlign: 'left',
+                                        background: 'none',
+                                        border: 'none',
+                                        cursor: 'pointer',
+                                        fontSize: designTokens.typography.fontSizes.body,
+                                        color: designTokens.colors.text.primary,
+                                      }}
+                                    >
+                                      Remove Admin
+                                    </button>
+                                  )}
+                                  <button
+                                    onClick={() => handleRemoveMember(member.id, member.profiles?.name || 'Unknown')}
+                                    style={{
+                                      width: '100%',
+                                      padding: designTokens.spacing.sm,
+                                      textAlign: 'left',
+                                      background: 'none',
+                                      border: 'none',
+                                      cursor: 'pointer',
+                                      fontSize: designTokens.typography.fontSizes.body,
+                                      color: designTokens.colors.feedback.error.text,
+                                    }}
+                                  >
+                                    Remove from Band
+                                  </button>
+                                </div>
+                              </DropdownMenu>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
 
-                {/* Invite Section (Admins Only) */}
+                {/* Invite Section (All Members Can Invite) */}
+                <div style={{ marginBottom: designTokens.spacing.md }}>
+                  <button
+                    onClick={() => setShowCreateInvite(true)}
+                    style={{
+                      width: '100%',
+                      padding: designTokens.spacing.md,
+                      backgroundColor: designTokens.colors.primary.blue,
+                      color: designTokens.colors.text.inverse,
+                      border: 'none',
+                      borderRadius: designTokens.borderRadius.md,
+                      fontSize: designTokens.typography.fontSizes.button,
+                      fontWeight: designTokens.typography.fontWeights.medium,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: designTokens.spacing.sm,
+                    }}
+                  >
+                    <UserPlus size={20} />
+                    Invite New Member
+                  </button>
+                </div>
+
+                {/* Pending Invites (Admins Only Can View/Manage) */}
                 {isAdmin && (
                   <>
-                    <div style={{ marginBottom: designTokens.spacing.md }}>
-                      <button
-                        onClick={() => setShowCreateInvite(true)}
-                        style={{
-                          width: '100%',
-                          padding: designTokens.spacing.md,
-                          backgroundColor: designTokens.colors.primary.blue,
-                          color: designTokens.colors.text.inverse,
-                          border: 'none',
-                          borderRadius: designTokens.borderRadius.md,
-                          fontSize: designTokens.typography.fontSizes.button,
-                          fontWeight: designTokens.typography.fontWeights.medium,
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: designTokens.spacing.sm,
-                        }}
-                      >
-                        <UserPlus size={20} />
-                        Invite New Member
-                      </button>
-                    </div>
-
-                    {/* Pending Invites */}
                     {pendingInvites.length > 0 && (
                       <div>
                         <h4

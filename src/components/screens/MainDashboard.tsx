@@ -2209,6 +2209,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
         isOpen={showBandModal}
         onClose={() => setShowBandModal(false)}
         userId={currentUser?.id || ''}
+        onOpenBandSettings={() => setShowBandSettings(true)}
       />
 
       {/* Band Settings Modal */}
