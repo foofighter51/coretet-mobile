@@ -151,6 +151,23 @@ export const db = {
       return { data, error };
     },
 
+    async upsert(profile: {
+      id: string;
+      email?: string;
+      name?: string;
+      phone_number?: string;
+      avatar_url?: string;
+      updated_at?: string;
+    }) {
+      const { data, error } = await supabase
+        .from('profiles')
+        .upsert(profile, { onConflict: 'id' })
+        .select()
+        .single();
+
+      return { data, error };
+    },
+
     async getById(id: string) {
       const { data, error } = await supabase
         .from('profiles')
