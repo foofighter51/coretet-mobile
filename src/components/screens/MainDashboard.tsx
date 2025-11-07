@@ -258,7 +258,6 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   }, [followedPlaylists, currentBand]);
 
   const [activeTab, setActiveTab] = useState<TabId>('playlists');
-  const [playlistFilter, setPlaylistFilter] = useState<'mine' | 'following'>('mine');
   const [tracks, setTracks] = useState<any[]>([]);
 
   // Filter tracks by current band (show all if no band or if track has no band_id - legacy data)
@@ -307,8 +306,6 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   const [editingPlaylistTitle, setEditingPlaylistTitle] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [showCopyToPersonalConfirm, setShowCopyToPersonalConfirm] = useState(false);
-  const [copyingPlaylist, setCopyingPlaylist] = useState(false);
 
   // Edit tracks mode
   const [isEditingTracks, setIsEditingTracks] = useState(false);
@@ -506,48 +503,6 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to delete playlist';
       setError(errorMsg + '. Please try again.');
       setShowDeleteConfirm(false);
-    }
-  };
-
-  const handleCopyToPersonal = async () => {
-    if (!currentPlaylist || !currentUser) return;
-
-
-    setCopyingPlaylist(true);
-
-    try {
-      const { data: newPlaylist, error: copyError } = await db.playlists.copyToPersonal(
-        currentPlaylist.id,
-        currentUser.id
-      );
-
-      if (copyError) {
-        console.error('❌ Copy error:', copyError);
-        throw copyError;
-      }
-
-
-      // Reload playlists to show the new personal playlist
-      await refreshPlaylists();
-
-      // Close confirmation dialog
-      setShowCopyToPersonalConfirm(false);
-
-      // Switch to Personal tab to show the copied playlist
-      setActiveTab('playlists');
-
-      // Go back to list view
-      handleBackToList();
-
-      // Show success message
-      setError(null);
-    } catch (err) {
-      console.error('❌ Copy failed:', err);
-      const errorMsg = err instanceof Error ? err.message : 'Failed to copy playlist';
-      setError(errorMsg + '. Please try again.');
-    } finally {
-      setCopyingPlaylist(false);
-      setShowCopyToPersonalConfirm(false);
     }
   };
 
@@ -1056,9 +1011,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
     // Determine which playlists to display based on tab and filter
     // Band tab always shows created playlists (no following option)
     // Personal tab respects the mine/following filter
-    const displayedPlaylists = activeTab === 'playlists'
-      ? currentCreatedPlaylists
-      : (playlistFilter === 'mine' ? currentCreatedPlaylists : currentFollowedPlaylists);
+    const displayedPlaylists = currentCreatedPlaylists;
 
     switch (activeTab) {
       case 'playlists':
@@ -1299,60 +1252,6 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                           borderRadius: designTokens.borderRadius.sm,
                           fontSize: designTokens.typography.fontSizes.bodySmall,
                           cursor: 'pointer',
-                        }}
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Copy to Personal confirmation modal */}
-                {showCopyToPersonalConfirm && (
-                  <div style={{
-                    backgroundColor: designTokens.colors.surface.secondary,
-                    padding: designTokens.spacing.md,
-                    borderRadius: designTokens.borderRadius.md,
-                    marginBottom: designTokens.spacing.md,
-                    border: `1px solid ${designTokens.colors.primary.blue}`,
-                  }}>
-                    <h3 style={{ margin: `0 0 ${designTokens.spacing.sm} 0`, fontSize: designTokens.typography.fontSizes.body, fontWeight: designTokens.typography.fontWeights.semibold, color: designTokens.colors.primary.blue }}>Copy to Personal?</h3>
-                    <p style={{ margin: `0 0 ${designTokens.spacing.md} 0`, fontSize: designTokens.typography.fontSizes.bodySmall, color: designTokens.colors.neutral.charcoal }}>
-                      This will create a personal copy of "{currentPlaylist.title}" that you can share outside the band.
-                    </p>
-                    <p style={{ margin: `0 0 ${designTokens.spacing.lg} 0`, fontSize: designTokens.typography.fontSizes.caption, color: designTokens.colors.text.muted }}>
-                      Note: Ratings and comments will not be copied.
-                    </p>
-                    <div style={{ display: 'flex', gap: designTokens.spacing.sm }}>
-                      <button
-                        onClick={handleCopyToPersonal}
-                        disabled={copyingPlaylist}
-                        style={{
-                          padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
-                          backgroundColor: designTokens.colors.primary.blue,
-                          color: designTokens.colors.text.inverse,
-                          border: 'none',
-                          borderRadius: designTokens.borderRadius.sm,
-                          fontSize: designTokens.typography.fontSizes.bodySmall,
-                          cursor: copyingPlaylist ? 'not-allowed' : 'pointer',
-                          fontWeight: designTokens.typography.fontWeights.medium,
-                          opacity: copyingPlaylist ? 0.6 : 1,
-                        }}
-                      >
-                        {copyingPlaylist ? 'Copying...' : 'Copy Playlist'}
-                      </button>
-                      <button
-                        onClick={() => setShowCopyToPersonalConfirm(false)}
-                        disabled={copyingPlaylist}
-                        style={{
-                          padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
-                          backgroundColor: designTokens.colors.borders.default,
-                          color: designTokens.colors.text.muted,
-                          border: 'none',
-                          borderRadius: designTokens.borderRadius.sm,
-                          fontSize: designTokens.typography.fontSizes.bodySmall,
-                          cursor: copyingPlaylist ? 'not-allowed' : 'pointer',
-                          opacity: copyingPlaylist ? 0.6 : 1,
                         }}
                       >
                         Cancel
@@ -1618,22 +1517,12 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
             ) : displayedPlaylists.length === 0 ? (
               <EmptyState
                 icon={Music}
-                title={activeTab === 'playlists' ? 'No playlists yet' : (playlistFilter === 'mine' ? 'No playlists yet' : 'Not following any playlists')}
-                description={
-                  activeTab === 'playlists'
-                    ? 'Create your first playlist to start sharing music with your band'
-                    : (playlistFilter === 'mine'
-                      ? 'Create your first playlist to organize and share your tracks'
-                      : 'Follow playlists shared with you to see them here')
-                }
-                action={
-                  activeTab === 'playlists' || playlistFilter === 'mine'
-                    ? {
-                        label: 'Create Playlist',
-                        onClick: () => setShowCreatePlaylist(true),
-                      }
-                    : undefined
-                }
+                title="No playlists yet"
+                description="Create your first playlist to start sharing music with your band"
+                action={{
+                  label: 'Create Playlist',
+                  onClick: () => setShowCreatePlaylist(true),
+                }}
               />
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: designTokens.spacing.md }}>
@@ -1673,8 +1562,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                           </p>
                         )}
                       </div>
-                      {playlistFilter === 'mine' && (
-                        <button
+                      <button
                           onClick={async (e) => {
                             e.stopPropagation();
 
@@ -1721,7 +1609,6 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                         >
                           <Upload size={20} />
                         </button>
-                      )}
                     </div>
                   </div>
                 ))}
