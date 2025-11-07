@@ -2,7 +2,16 @@
   command = "npm run build"
   publish = "dist"
 
+# Serve Apple App Site Association file with correct headers
+[[headers]]
+  for = "/.well-known/apple-app-site-association"
+  [headers.values]
+    Content-Type = "application/json"
+    Access-Control-Allow-Origin = "*"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
+  # Don't redirect .well-known files
+  force = false

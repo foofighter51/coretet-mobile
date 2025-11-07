@@ -1,0 +1,13 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "5M3H72GPM6.com.coretet.app",
+        "paths": [
+          "/invite/*"
+        ]
+      }
+    ]
+  }
+}
