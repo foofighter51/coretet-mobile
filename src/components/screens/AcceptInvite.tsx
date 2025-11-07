@@ -92,6 +92,9 @@ export const AcceptInvite: React.FC = () => {
       setCurrentUser(data.user);
       setShowAuth(false);
 
+      // Wait briefly for auth session to fully propagate
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       // Auto-accept invite
       await handleAcceptInvite(data.user.id);
     } catch (err: any) {

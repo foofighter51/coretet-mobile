@@ -1057,6 +1057,19 @@ export const db = {
         return { data: null, error: new Error('You are already a member of this band') };
       }
 
+      // Verify current auth session matches the userId
+      const { data: { user: currentAuthUser } } = await supabase.auth.getUser();
+      if (!currentAuthUser || currentAuthUser.id !== userId) {
+        console.error('[INVITE] Auth mismatch:', {
+          currentAuthUser: currentAuthUser?.id,
+          expectedUserId: userId
+        });
+        return {
+          data: null,
+          error: new Error('Authentication session mismatch. Please try logging in again.')
+        };
+      }
+
       // Add user as band member
       const { data: member, error: memberError } = await supabase
         .from('band_members')
