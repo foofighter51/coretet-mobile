@@ -1059,6 +1059,14 @@ export const db = {
 
       // Verify current auth session matches the userId
       const { data: { user: currentAuthUser } } = await supabase.auth.getUser();
+      console.log('[INVITE] Auth check:', {
+        currentAuthUser: currentAuthUser?.id,
+        expectedUserId: userId,
+        match: currentAuthUser?.id === userId,
+        bandId: invite.band_id,
+        invitedEmail: invite.invited_email
+      });
+
       if (!currentAuthUser || currentAuthUser.id !== userId) {
         console.error('[INVITE] Auth mismatch:', {
           currentAuthUser: currentAuthUser?.id,
@@ -1071,6 +1079,12 @@ export const db = {
       }
 
       // Add user as band member
+      console.log('[INVITE] Attempting INSERT into band_members:', {
+        band_id: invite.band_id,
+        user_id: userId,
+        role: 'member'
+      });
+
       const { data: member, error: memberError } = await supabase
         .from('band_members')
         .insert({
@@ -1082,8 +1096,17 @@ export const db = {
         .single();
 
       if (memberError) {
+        console.error('[INVITE] INSERT failed:', {
+          error: memberError,
+          message: memberError.message,
+          details: memberError.details,
+          hint: memberError.hint,
+          code: memberError.code
+        });
         return { data: null, error: memberError };
       }
+
+      console.log('[INVITE] INSERT succeeded:', member);
 
       // Update invite status
       const { error: updateError } = await supabase
