@@ -176,7 +176,7 @@ export const AudioUploader: React.FC<AudioUploaderProps> = ({
 
     switch (progress.stage) {
       case 'processing':
-        return 'Processing audio (normalization & compression)...';
+        return 'Preparing audio file...';
       case 'uploading':
         return 'Uploading to cloud storage...';
       case 'saving':
@@ -492,7 +492,7 @@ export const AudioUploader: React.FC<AudioUploaderProps> = ({
                   fontSize: designTokens.typography.fontSizes.caption,
                   color: designTokens.colors.semantic.success
                 }}>
-                  Saved {result.compressionSavings}
+                  Uploaded
                 </span>
               </div>
               <div style={{
@@ -500,8 +500,7 @@ export const AudioUploader: React.FC<AudioUploaderProps> = ({
                 color: designTokens.colors.neutral.gray
               }}>
                 Duration: {AudioProcessor.formatDuration(result.metadata.duration)} •
-                Size: {AudioProcessor.formatFileSize(result.metadata.fileSize)} •
-                Volume normalized to 70%
+                Size: {AudioProcessor.formatFileSize(result.metadata.fileSize)}
               </div>
             </div>
           ))}

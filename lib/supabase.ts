@@ -1046,14 +1046,18 @@ export const db = {
       }
 
       // Check if user is already a member
-      const { data: existingMember } = await supabase
+      // Note: This query may return 406 due to RLS policies, but that's OK
+      // A 406 means we can't check, so we'll proceed with INSERT and let it fail if already member
+      const { data: existingMember, error: memberCheckError } = await supabase
         .from('band_members')
         .select('id')
         .eq('band_id', invite.band_id)
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
 
-      if (existingMember) {
+      // Only block if we successfully found an existing member
+      // Ignore 406 or other errors - INSERT will handle duplicate prevention
+      if (existingMember && !memberCheckError) {
         return { data: null, error: new Error('You are already a member of this band') };
       }
 

@@ -1,132 +1,193 @@
-# Database Migrations
+# Migrations Directory
 
-## Track File Reorganization Migration
-
-### Purpose
-Reorganize audio files from flat `audio/*` structure to user-based `{userId}/*` structure for better organization.
-
-### Files
-- `run-migration.js` - Automated Node.js script (recommended)
-- `migrate-track-files-to-user-folders.sql` - SQL-based migration (alternative)
-- `migrate-track-files-manual.md` - Manual migration guide (safest but slowest)
+**Purpose**: Diagnostic queries and historical SQL files
+**Status**: Archived (active migrations are in `/supabase/migrations/`)
 
 ---
 
-## How to Run (Recommended Method)
+## ⚠️ Important Note
 
-### 1. Get Your Service Role Key
-1. Go to [Supabase Dashboard](https://supabase.com/dashboard)
-2. Select your project
-3. Go to **Settings → API**
-4. Copy the **`service_role` key** (NOT the `anon` key!)
+**This directory is for reference only.**
 
-⚠️ **WARNING**: Service role key has admin access - keep it secret!
+Official migrations are located in:
+```
+/supabase/migrations/
+```
 
-### 2. Test Migration (Dry Run)
+This directory contains:
+- Historical migration files (001, 002)
+- Archived diagnostic queries
+- Debugging scripts from past issues
+
+---
+
+## Directory Structure
+
+```
+/migrations/
+├── README.md                      # This file
+├── 001-create-bands-system.sql    # Historical: Original bands system
+├── 002-create-personal-bands.sql  # Historical: Personal bands creation
+├── run-migration.js               # Track file reorganization script
+├── migrate-track-files-*.sql/md   # Track file migration docs
+└── archive/
+    └── 2025-11-debug/            # Archived diagnostic queries
+        ├── CHECK_*.sql           # Schema inspection queries
+        ├── FIX_*.sql             # Old fix attempts (already applied)
+        ├── DEBUG_*.sql           # Debugging queries
+        └── TEST_*.sql            # Test queries
+```
+
+---
+
+## Historical Files (Keep for Reference)
+
+### 001-create-bands-system.sql
+Original migration that created the bands system when transitioning from "ensembles" to "bands".
+
+**Status**: Already applied to production
+**Date**: ~2025-10-22
+
+### 002-create-personal-bands.sql
+Migration to create personal bands for each user (workspace concept).
+
+**Status**: Already applied to production
+**Date**: ~2025-10-22
+
+### Track File Reorganization
+Scripts to reorganize audio files from flat `audio/*` to user-based `{userId}/*` structure.
+
+**Files**:
+- `run-migration.js` - Automated Node.js script
+- `migrate-track-files-to-user-folders.sql` - SQL-based migration
+- `migrate-track-files-manual.md` - Manual migration guide
+
+**Status**: Available for use when needed
+**Use case**: Organize storage by user for better management
+
+---
+
+## Archived Files (2025-11-debug/)
+
+These files were used during November 2025 debugging sessions:
+
+### Diagnostic Queries (CHECK_*.sql)
+- Used to inspect current database state
+- Helped identify RLS policy issues
+- Helped identify empty string phone numbers
+- All issues now resolved
+
+### Fix Attempts (FIX_*.sql)
+- Various attempts to fix RLS policies
+- Various attempts to fix recursion issues
+- Various attempts to fix invite acceptance
+- All successfully resolved via official migrations
+
+### Debug Queries (DEBUG_*.sql)
+- User-specific debugging (Dan, Stephen, etc.)
+- Auth context debugging
+- RLS policy debugging
+- All issues now resolved
+
+### Test Queries (TEST_*.sql)
+- Policy logic testing
+- Function testing
+- Insert testing
+- All tests passed
+
+---
+
+## Official Migrations Location
+
+**All official migrations are in**: `/supabase/migrations/`
+
+**Latest migrations** (Nov 24, 2025):
+```
+20251118160000_add_phone_to_profiles.sql       # Phone indexing
+20251118160100_add_tier_system.sql             # Tier system
+20251118160200_add_band_storage.sql            # Band storage tracking
+20251118160300_storage_triggers.sql            # Automated storage updates
+20251118160400_sms_sharing_tables.sql          # SMS sharing infrastructure
+20251118160500_init_sms_credits.sql            # SMS credits initialization
+```
+
+**Status**: All applied successfully ✅
+
+See [/docs/nov_dev/MIGRATIONS_COMPLETE_STATUS.md](../docs/nov_dev/MIGRATIONS_COMPLETE_STATUS.md) for details.
+
+---
+
+## When to Use This Directory
+
+### ✅ DO Use for:
+- Reference: Look up historical migration logic
+- Debugging: Review past issues and solutions
+- Learning: Understand how past problems were solved
+- Context: Understand schema evolution
+- Storage migration: Run track file reorganization when needed
+
+### ❌ DON'T Use for:
+- Creating new migrations (use `/supabase/migrations/`)
+- Running schema migrations (use Supabase SQL Editor with `/supabase/migrations/` files)
+- Production schema changes (always use official migration process)
+
+---
+
+## Creating New Migrations
+
+**Always create migrations in** `/supabase/migrations/`:
+
 ```bash
-# Set environment variable
-export SUPABASE_SERVICE_KEY="your-service-role-key-here"
+# Create new migration
+touch supabase/migrations/$(date +%Y%m%d%H%M%S)_description.sql
 
-# Run dry run on 5 tracks to test
-node migrations/run-migration.js --dry-run --limit=5
+# Example
+touch supabase/migrations/20251125100000_add_new_feature.sql
 ```
 
-This will show you what would happen without making any changes.
+**Migration naming convention**:
+```
+YYYYMMDDHHmmss_description_in_snake_case.sql
 
-### 3. Test on a Few Real Tracks
-```bash
-# Process just 5 tracks to verify everything works
-node migrations/run-migration.js --limit=5
+Example:
+20251125100000_add_user_preferences.sql
 ```
 
-Check in the app that these 5 tracks still play correctly!
-
-### 4. Run Full Migration
-```bash
-# Process all tracks
-node migrations/run-migration.js
-```
+**Always include**:
+- BEGIN/COMMIT transaction blocks
+- Verification query at end
+- Comments explaining purpose
+- IF EXISTS / IF NOT EXISTS guards
 
 ---
 
-## What the Script Does
+## Documentation
 
-For each track with old structure (`audio/filename.m4a`):
-
-1. **Copy** file to new location (`{userId}/filename.m4a`)
-2. **Update** database `tracks.file_url` with new path
-3. **Delete** old file from `audio/` folder
-4. **Log** results (success/fail/skip)
+For complete migration documentation, see:
+- [/docs/nov_dev/MIGRATIONS_COMPLETE_STATUS.md](../docs/nov_dev/MIGRATIONS_COMPLETE_STATUS.md)
+- [/docs/nov_dev/CURRENT_CODEBASE_TASKS.md](../docs/nov_dev/CURRENT_CODEBASE_TASKS.md)
+- [/docs/nov_dev/README.md](../docs/nov_dev/README.md)
 
 ---
 
-## Safety Features
+## Archive Policy
 
-- ✅ Dry run mode (`--dry-run`) - test without changes
-- ✅ Limit mode (`--limit=N`) - process only N tracks
-- ✅ Skip already migrated tracks automatically
-- ✅ Rollback on failure - if database update fails, copied file is deleted
-- ✅ Non-critical delete failures don't fail migration
-- ✅ Detailed logging for debugging
+Files are archived when:
+- Issue is resolved via official migration
+- Diagnostic queries no longer needed
+- Debugging session complete
+- File clutters active development
 
----
+Archives preserved for:
+- Historical reference
+- Future debugging context
+- Team learning
+- Documentation purposes
 
-## Troubleshooting
-
-### "Failed to copy" errors
-- Check that files exist in `audio-files` bucket at the old path
-- Verify service role key has storage permissions
-
-### "Database update failed" errors
-- Check service role key has write access to `tracks` table
-- Verify track IDs are valid UUIDs
-
-### Tracks don't play after migration
-- Check that `file_url` was updated correctly:
-  ```sql
-  SELECT id, title, file_url FROM tracks WHERE id = 'problem-track-id';
-  ```
-- Verify file exists at new location in Supabase Storage UI
-- App may need to refresh signed URLs (should happen automatically on next load)
+**Archive location**: `/migrations/archive/YYYY-MM-description/`
 
 ---
 
-## Rollback Plan
-
-If something goes wrong and you need to rollback:
-
-```sql
--- 1. List migrated tracks (new structure)
-SELECT id, title, file_url, created_by
-FROM tracks
-WHERE file_url ~ '^[0-9a-f]{8}-';
-
--- 2. Manually move files back in Storage UI
--- From: {userId}/filename.m4a
--- To: audio/filename.m4a
-
--- 3. Update database to old paths
-UPDATE tracks
-SET file_url = 'audio/' || regexp_replace(file_url, '^[^/]+/', '')
-WHERE file_url ~ '^[0-9a-f]{8}-';
-```
-
----
-
-## After Migration
-
-1. Verify tracks play in app
-2. Check Supabase Storage - should see user folders
-3. Old `audio/` folder should be empty (or delete manually)
-4. Commit migration scripts to git for documentation
-
----
-
-## Alternative: Manual Migration (Safest)
-
-See `migrate-track-files-manual.md` for step-by-step manual process.
-
-Good for:
-- Very small number of tracks (< 20)
-- Want maximum control
-- Uncomfortable with automated scripts
+**Last updated**: 2025-11-24
+**Status**: Directory organized and archived
+**Next migration**: To be created in `/supabase/migrations/`

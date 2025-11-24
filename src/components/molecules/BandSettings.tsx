@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { X, UserPlus, Mail, Trash2, Shield, User, MoreVertical } from 'lucide-react';
+import { UserPlus, Mail, Trash2, Shield, User, MoreVertical } from 'lucide-react';
 import { designTokens } from '../../design/designTokens';
 import { db } from '../../../lib/supabase';
 import { CreateInvite } from './CreateInvite';
 import { DropdownMenu } from '../ui/DropdownMenu';
+import { DialogModal } from '../ui/DialogModal';
 
 interface BandSettingsProps {
   bandId: string;
@@ -108,81 +109,12 @@ export const BandSettings: React.FC<BandSettingsProps> = ({
 
   return (
     <>
-      {/* Main Modal */}
-      <div
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-          padding: designTokens.spacing.md,
-        }}
-        onClick={onClose}
+      <DialogModal
+        isOpen={true}
+        onClose={onClose}
+        title="Band Settings"
+        size="md"
       >
-        <div
-          style={{
-            backgroundColor: designTokens.colors.surface.primary,
-            borderRadius: designTokens.borderRadius.lg,
-            maxWidth: '500px',
-            width: '100%',
-            maxHeight: '80vh',
-            display: 'flex',
-            flexDirection: 'column',
-            boxShadow: designTokens.shadows.elevated,
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Header */}
-          <div
-            style={{
-              padding: designTokens.spacing.lg,
-              borderBottom: `1px solid ${designTokens.colors.borders.divider}`,
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-            }}
-          >
-            <h2
-              style={{
-                fontSize: designTokens.typography.fontSizes.h3,
-                fontWeight: designTokens.typography.fontWeights.semibold,
-                color: designTokens.colors.text.primary,
-                margin: 0,
-              }}
-            >
-              Band Settings
-            </h2>
-            <button
-              onClick={onClose}
-              style={{
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                padding: designTokens.spacing.xs,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: designTokens.colors.text.secondary,
-              }}
-            >
-              <X size={24} />
-            </button>
-          </div>
-
-          {/* Content */}
-          <div
-            style={{
-              padding: designTokens.spacing.lg,
-              overflowY: 'auto',
-              flex: 1,
-            }}
-          >
             {loading ? (
               <div style={{ textAlign: 'center', padding: designTokens.spacing.xl }}>
                 <p style={{ color: designTokens.colors.text.secondary }}>Loading...</p>
@@ -473,9 +405,7 @@ export const BandSettings: React.FC<BandSettingsProps> = ({
                 )}
               </>
             )}
-          </div>
-        </div>
-      </div>
+      </DialogModal>
 
       {/* Create Invite Modal */}
       {showCreateInvite && (
