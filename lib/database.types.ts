@@ -58,7 +58,7 @@ export type Database = {
           created_at?: string | null
           expires_at?: string | null
           id?: string
-          invite_token: string
+          invite_token?: string
           invited_by: string
           invited_email: string
           status?: string
@@ -144,8 +144,11 @@ export type Database = {
           created_by: string
           id: string
           is_personal: boolean | null
+          max_members: number | null
           name: string
           settings: Json | null
+          storage_limit: number | null
+          storage_used: number | null
           updated_at: string | null
         }
         Insert: {
@@ -153,8 +156,11 @@ export type Database = {
           created_by: string
           id?: string
           is_personal?: boolean | null
+          max_members?: number | null
           name: string
           settings?: Json | null
+          storage_limit?: number | null
+          storage_used?: number | null
           updated_at?: string | null
         }
         Update: {
@@ -162,8 +168,11 @@ export type Database = {
           created_by?: string
           id?: string
           is_personal?: boolean | null
+          max_members?: number | null
           name?: string
           settings?: Json | null
+          storage_limit?: number | null
+          storage_used?: number | null
           updated_at?: string | null
         }
         Relationships: [
@@ -436,23 +445,89 @@ export type Database = {
           },
         ]
       }
+      playlist_access_grants: {
+        Row: {
+          access_code: string
+          access_count: number | null
+          claimed_at: string | null
+          claimed_by: string | null
+          created_at: string | null
+          expires_at: string
+          first_accessed_at: string | null
+          id: string
+          is_revoked: boolean | null
+          is_used: boolean | null
+          last_accessed_at: string | null
+          phone_number_hash: string
+          shared_playlist_id: string
+        }
+        Insert: {
+          access_code: string
+          access_count?: number | null
+          claimed_at?: string | null
+          claimed_by?: string | null
+          created_at?: string | null
+          expires_at: string
+          first_accessed_at?: string | null
+          id?: string
+          is_revoked?: boolean | null
+          is_used?: boolean | null
+          last_accessed_at?: string | null
+          phone_number_hash: string
+          shared_playlist_id: string
+        }
+        Update: {
+          access_code?: string
+          access_count?: number | null
+          claimed_at?: string | null
+          claimed_by?: string | null
+          created_at?: string | null
+          expires_at?: string
+          first_accessed_at?: string | null
+          id?: string
+          is_revoked?: boolean | null
+          is_used?: boolean | null
+          last_accessed_at?: string | null
+          phone_number_hash?: string
+          shared_playlist_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "playlist_access_grants_claimed_by_fkey"
+            columns: ["claimed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "playlist_access_grants_shared_playlist_id_fkey"
+            columns: ["shared_playlist_id"]
+            isOneToOne: false
+            referencedRelation: "shared_playlists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       playlist_followers: {
         Row: {
           followed_at: string | null
           id: string
           playlist_id: string
+          source: string | null
           user_id: string
         }
         Insert: {
           followed_at?: string | null
           id?: string
           playlist_id: string
+          source?: string | null
           user_id: string
         }
         Update: {
           followed_at?: string | null
           id?: string
           playlist_id?: string
+          source?: string | null
           user_id?: string
         }
         Relationships: [
@@ -572,6 +647,41 @@ export type Database = {
           },
         ]
       }
+      producer_waitlist: {
+        Row: {
+          email: string
+          id: string
+          name: string | null
+          reason: string | null
+          requested_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          email: string
+          id?: string
+          name?: string | null
+          reason?: string | null
+          requested_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          email?: string
+          id?: string
+          name?: string | null
+          reason?: string | null
+          requested_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "producer_waitlist_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -579,8 +689,16 @@ export type Database = {
           email: string | null
           id: string
           is_admin: boolean
+          last_active_at: string | null
           name: string | null
           phone_number: string | null
+          storage_limit: number | null
+          storage_used: number | null
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          subscription_status: string | null
+          tier: string | null
+          trial_ends_at: string | null
           updated_at: string | null
         }
         Insert: {
@@ -589,8 +707,16 @@ export type Database = {
           email?: string | null
           id: string
           is_admin?: boolean
+          last_active_at?: string | null
           name?: string | null
           phone_number?: string | null
+          storage_limit?: number | null
+          storage_used?: number | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_status?: string | null
+          tier?: string | null
+          trial_ends_at?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -599,8 +725,16 @@ export type Database = {
           email?: string | null
           id?: string
           is_admin?: boolean
+          last_active_at?: string | null
           name?: string | null
           phone_number?: string | null
+          storage_limit?: number | null
+          storage_used?: number | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_status?: string | null
+          tier?: string | null
+          trial_ends_at?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -647,6 +781,101 @@ export type Database = {
           },
           {
             foreignKeyName: "ratings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shared_playlists: {
+        Row: {
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          is_active: boolean | null
+          playlist_id: string
+          share_token: string
+          shared_by: string
+          total_access_grants: number | null
+          total_plays: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          playlist_id: string
+          share_token?: string
+          shared_by: string
+          total_access_grants?: number | null
+          total_plays?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          playlist_id?: string
+          share_token?: string
+          shared_by?: string
+          total_access_grants?: number | null
+          total_plays?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shared_playlists_playlist_id_fkey"
+            columns: ["playlist_id"]
+            isOneToOne: false
+            referencedRelation: "playlists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shared_playlists_shared_by_fkey"
+            columns: ["shared_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sms_credits: {
+        Row: {
+          created_at: string | null
+          credits_remaining: number | null
+          credits_total: number
+          credits_used: number | null
+          id: string
+          period_end: string
+          period_start: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          credits_remaining?: number | null
+          credits_total: number
+          credits_used?: number | null
+          id?: string
+          period_end: string
+          period_start: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          credits_remaining?: number | null
+          credits_total?: number
+          credits_used?: number | null
+          id?: string
+          period_end?: string
+          period_start?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_credits_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -827,11 +1056,19 @@ export type Database = {
         Args: { version_uuid: string }
         Returns: Json
       }
+      has_valid_invite: {
+        Args: { p_band_id: string; p_user_id: string }
+        Returns: boolean
+      }
       is_band_admin: {
         Args: { check_band_id: string; check_user_id: string }
         Returns: boolean
       }
       is_band_member: {
+        Args: { check_band_id: string; check_user_id: string }
+        Returns: boolean
+      }
+      is_user_in_band: {
         Args: { check_band_id: string; check_user_id: string }
         Returns: boolean
       }
