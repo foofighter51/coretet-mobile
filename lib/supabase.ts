@@ -269,9 +269,9 @@ export const db = {
     },
   },
 
-  // Playlist operations
-  playlists: {
-    async create(playlist: {
+  // Set List operations (renamed from playlists)
+  setLists: {
+    async create(setList: {
       title: string;
       description?: string;
       created_by: string;
@@ -279,10 +279,10 @@ export const db = {
       band_id?: string;
     }) {
       const { data, error } = await supabase
-        .from('playlists')
+        .from('set_lists')
         .insert({
-          ...playlist,
-          is_public: playlist.is_public ?? true, // Default to public for MVP
+          ...setList,
+          is_public: setList.is_public ?? true, // Default to public for MVP
         })
         .select()
         .single();
@@ -292,8 +292,8 @@ export const db = {
 
     async getByUser(userId: string) {
       const { data, error } = await supabase
-        .from('playlists')
-        .select('*')
+        .from('set_lists')
+        .select('*, set_list_entries(count)')
         .eq('created_by', userId)
         .order('created_at', { ascending: false });
 
@@ -302,8 +302,8 @@ export const db = {
 
     async getByBand(bandId: string) {
       const { data, error } = await supabase
-        .from('playlists')
-        .select('*')
+        .from('set_lists')
+        .select('*, set_list_entries(count)')
         .eq('band_id', bandId)
         .order('created_at', { ascending: false });
 
@@ -312,10 +312,10 @@ export const db = {
 
     async getByShareCode(shareCode: string) {
       const { data, error } = await supabase
-        .from('playlists')
+        .from('set_lists')
         .select(`
           *,
-          playlist_items (
+          set_list_entries (
             *,
             tracks (
               *
@@ -329,44 +329,44 @@ export const db = {
       return { data, error };
     },
 
-    async delete(playlistId: string) {
+    async delete(setListId: string) {
       const { data, error} = await supabase
-        .from('playlists')
+        .from('set_lists')
         .delete()
-        .eq('id', playlistId);
+        .eq('id', setListId);
 
       return { data, error };
     },
 
-    async copyToPersonal(playlistId: string, userId: string) {
-      // 1. Fetch original playlist
-      const { data: originalPlaylist, error: playlistError } = await supabase
-        .from('playlists')
+    async copyToPersonal(setListId: string, userId: string) {
+      // 1. Fetch original set list
+      const { data: originalSetList, error: setListError } = await supabase
+        .from('set_lists')
         .select('*')
-        .eq('id', playlistId)
+        .eq('id', setListId)
         .single();
 
-      if (playlistError || !originalPlaylist) {
-        return { data: null, error: playlistError || new Error('Playlist not found') };
+      if (setListError || !originalSetList) {
+        return { data: null, error: setListError || new Error('Set list not found') };
       }
 
-      // 2. Fetch playlist tracks (with order)
-      const { data: playlistTracks, error: tracksError } = await supabase
-        .from('playlist_tracks')
-        .select('track_id, position')
-        .eq('playlist_id', playlistId)
+      // 2. Fetch set list entries (with order)
+      const { data: setListEntries, error: entriesError } = await supabase
+        .from('set_list_entries')
+        .select('track_id, version_id, position')
+        .eq('set_list_id', setListId)
         .order('position');
 
-      if (tracksError) {
-        return { data: null, error: tracksError };
+      if (entriesError) {
+        return { data: null, error: entriesError };
       }
 
-      // 3. Create new personal playlist (NO band_id)
-      const { data: newPlaylist, error: createError } = await supabase
-        .from('playlists')
+      // 3. Create new personal set list (NO band_id)
+      const { data: newSetList, error: createError } = await supabase
+        .from('set_lists')
         .insert({
-          title: originalPlaylist.title,
-          description: originalPlaylist.description,
+          title: originalSetList.title,
+          description: originalSetList.description,
           created_by: userId,
           is_public: false, // User can make public later
           band_id: null, // KEY: No band assignment - this makes it personal
@@ -374,42 +374,43 @@ export const db = {
         .select()
         .single();
 
-      if (createError || !newPlaylist) {
-        return { data: null, error: createError || new Error('Failed to create playlist') };
+      if (createError || !newSetList) {
+        return { data: null, error: createError || new Error('Failed to create set list') };
       }
 
-      // 4. Copy track references (same track IDs, new playlist)
-      if (playlistTracks && playlistTracks.length > 0) {
-        const trackInserts = playlistTracks.map(pt => ({
-          playlist_id: newPlaylist.id,
-          track_id: pt.track_id,
-          position: pt.position,
+      // 4. Copy entries with version references
+      if (setListEntries && setListEntries.length > 0) {
+        const entryInserts = setListEntries.map(entry => ({
+          set_list_id: newSetList.id,
+          track_id: entry.track_id,
+          version_id: entry.version_id, // Keep the version selection
+          position: entry.position,
         }));
 
         const { error: insertError } = await supabase
-          .from('playlist_tracks')
-          .insert(trackInserts);
+          .from('set_list_entries')
+          .insert(entryInserts);
 
         if (insertError) {
-          // Rollback: delete the playlist we just created
-          await supabase.from('playlists').delete().eq('id', newPlaylist.id);
+          // Rollback: delete the set list we just created
+          await supabase.from('set_lists').delete().eq('id', newSetList.id);
           return { data: null, error: insertError };
         }
       }
 
       // 5. DO NOT copy ratings or comments - they stay tied to band context
-      return { data: newPlaylist, error: null };
+      return { data: newSetList, error: null };
     },
 
-    async update(playlistId: string, updates: {
+    async update(setListId: string, updates: {
       title?: string;
       description?: string;
       is_public?: boolean;
     }) {
       const { data, error } = await supabase
-        .from('playlists')
+        .from('set_lists')
         .update(updates)
-        .eq('id', playlistId)
+        .eq('id', setListId)
         .select()
         .single();
 
@@ -417,62 +418,77 @@ export const db = {
     },
   },
 
-  // Playlist item operations
-  playlistItems: {
-    async add(item: {
-      playlist_id: string;
+  // Set list entry operations (renamed from playlistItems)
+  setListEntries: {
+    async add(entry: {
+      set_list_id: string;
       track_id: string;
+      version_id?: string; // Optional: defaults to hero version
       added_by: string;
       position: number;
     }) {
       const { data, error } = await supabase
-        .from('playlist_items')
-        .insert(item)
+        .from('set_list_entries')
+        .insert(entry)
         .select()
         .single();
 
       return { data, error };
     },
 
-    async getByPlaylist(playlistId: string) {
+    async getBySetList(setListId: string) {
       const { data, error } = await supabase
-        .from('playlist_items')
+        .from('set_list_entries')
         .select(`
           *,
           tracks (
             *
+          ),
+          track_versions (
+            *
           )
         `)
-        .eq('playlist_id', playlistId)
+        .eq('set_list_id', setListId)
         .order('position', { ascending: true });
 
       return { data, error };
     },
 
-    async remove(itemId: string) {
+    async remove(entryId: string) {
       const { data, error } = await supabase
-        .from('playlist_items')
+        .from('set_list_entries')
         .delete()
-        .eq('id', itemId);
+        .eq('id', entryId);
 
       return { data, error };
     },
 
-    async removeByTrack(playlistId: string, trackId: string) {
+    async removeByTrack(setListId: string, trackId: string) {
       const { error } = await supabase
-        .from('playlist_items')
+        .from('set_list_entries')
         .delete()
-        .eq('playlist_id', playlistId)
+        .eq('set_list_id', setListId)
         .eq('track_id', trackId);
 
       return { error };
     },
 
-    async updatePosition(itemId: string, newPosition: number) {
+    async updatePosition(entryId: string, newPosition: number) {
       const { data, error } = await supabase
-        .from('playlist_items')
+        .from('set_list_entries')
         .update({ position: newPosition })
-        .eq('id', itemId)
+        .eq('id', entryId)
+        .select()
+        .single();
+
+      return { data, error };
+    },
+
+    async updateVersion(entryId: string, versionId: string) {
+      const { data, error } = await supabase
+        .from('set_list_entries')
+        .update({ version_id: versionId })
+        .eq('id', entryId)
         .select()
         .single();
 
@@ -856,13 +872,13 @@ export const db = {
     },
   },
 
-  // Playlist follower operations
-  playlistFollowers: {
-    async follow(playlistId: string, userId: string) {
+  // Set list follower operations (renamed from playlistFollowers)
+  setListFollowers: {
+    async follow(setListId: string, userId: string) {
       const { data, error } = await supabase
-        .from('playlist_followers')
+        .from('set_list_followers')
         .insert({
-          playlist_id: playlistId,
+          set_list_id: setListId,
           user_id: userId,
         })
         .select()
@@ -871,38 +887,39 @@ export const db = {
       return { data, error };
     },
 
-    async unfollow(playlistId: string, userId: string) {
+    async unfollow(setListId: string, userId: string) {
       const { error } = await supabase
-        .from('playlist_followers')
+        .from('set_list_followers')
         .delete()
-        .eq('playlist_id', playlistId)
+        .eq('set_list_id', setListId)
         .eq('user_id', userId);
 
       return { error };
     },
 
-    async isFollowing(playlistId: string, userId: string) {
+    async isFollowing(setListId: string, userId: string) {
       const { data, error } = await supabase
-        .from('playlist_followers')
+        .from('set_list_followers')
         .select('id')
-        .eq('playlist_id', playlistId)
+        .eq('set_list_id', setListId)
         .eq('user_id', userId)
         .single();
 
       return { isFollowing: !!data && !error, error };
     },
 
-    async getFollowedPlaylists(userId: string) {
+    async getFollowedSetLists(userId: string) {
       const { data, error } = await supabase
-        .from('playlist_followers')
+        .from('set_list_followers')
         .select(`
           *,
-          playlists (
-            *
+          set_lists (
+            *,
+            set_list_entries(count)
           )
         `)
         .eq('user_id', userId)
-        .order('followed_at', { ascending: false });
+        .order('followed_at', { ascending: false});
 
       return { data, error };
     },

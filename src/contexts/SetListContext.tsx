@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { db, auth } from '../../lib/supabase';
 import { useBand } from './BandContext';
 
-interface Playlist {
+interface SetList {
   id: string;
   title: string;
   description?: string;
@@ -13,27 +13,27 @@ interface Playlist {
   updated_at: string;
 }
 
-interface PlaylistContextType {
-  playlists: Playlist[];
-  createdPlaylists: Playlist[];
-  followedPlaylists: Playlist[];
-  currentPlaylist: Playlist | null;
+interface SetListContextType {
+  setLists: SetList[];
+  createdSetLists: SetList[];
+  followedSetLists: SetList[];
+  currentSetList: SetList | null;
   isLoading: boolean;
   error: string | null;
-  createPlaylist: (title: string, description?: string, bandId?: string) => Promise<void>;
-  setCurrentPlaylist: (playlist: Playlist | null) => void;
-  refreshPlaylists: () => Promise<void>;
-  deletePlaylist: (playlistId: string) => Promise<void>;
-  addTrackToPlaylist: (playlistId: string, trackId: string) => Promise<void>;
+  createSetList: (title: string, description?: string, bandId?: string) => Promise<void>;
+  setCurrentSetList: (setList: SetList | null) => void;
+  refreshSetLists: () => Promise<void>;
+  deleteSetList: (setListId: string) => Promise<void>;
+  addTrackToSetList: (setListId: string, trackId: string) => Promise<void>;
 }
 
-const PlaylistContext = createContext<PlaylistContextType | undefined>(undefined);
+const SetListContext = createContext<SetListContextType | undefined>(undefined);
 
-export const PlaylistProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [playlists, setPlaylists] = useState<Playlist[]>([]);
-  const [createdPlaylists, setCreatedPlaylists] = useState<Playlist[]>([]);
-  const [followedPlaylists, setFollowedPlaylists] = useState<Playlist[]>([]);
-  const [currentPlaylist, setCurrentPlaylist] = useState<Playlist | null>(null);
+export const SetListProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [setLists, setSetLists] = useState<SetList[]>([]);
+  const [createdSetLists, setCreatedSetLists] = useState<SetList[]>([]);
+  const [followedSetLists, setFollowedSetLists] = useState<SetList[]>([]);
+  const [currentSetList, setCurrentSetList] = useState<SetList | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [supabaseUserId, setSupabaseUserId] = useState<string | null>(null);
@@ -59,9 +59,9 @@ export const PlaylistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, []);
 
   // Fetch user's playlists (both created and followed)
-  const refreshPlaylists = async () => {
+  const refreshSetLists = async () => {
     if (!supabaseUserId) {
-      setPlaylists([]);
+      setSetLists([]);
       return;
     }
 
@@ -70,63 +70,63 @@ export const PlaylistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     try {
       // Fetch playlists created by user
-      const { data: createdPlaylists, error: createdError } = await db.playlists.getByUser(supabaseUserId);
+      const { data: createdSetLists, error: createdError } = await db.setLists.getByUser(supabaseUserId);
 
       if (createdError) {
-        console.error('Failed to fetch created playlists:', createdError);
+        console.error('Failed to fetch created setLists:', createdError);
         setError(createdError.message || 'Failed to fetch playlists');
         return;
       }
 
       // Fetch playlists followed by user
-      const { data: followedData, error: followedError } = await db.playlistFollowers.getFollowedPlaylists(supabaseUserId);
+      const { data: followedData, error: followedError } = await db.setListFollowers.getFollowedSetLists(supabaseUserId);
 
       if (followedError) {
-        console.error('Failed to fetch followed playlists:', followedError);
+        console.error('Failed to fetch followed setLists:', followedError);
         // Don't fail completely, just use created playlists
       }
 
-      // Extract playlist objects from followed data
-      const followedPlaylistsData = followedData?.map(item => item.playlists).filter(Boolean) || [];
+      // Extract set list objects from followed data
+      const followedSetListsData = followedData?.map(item => item.set_lists).filter(Boolean) || [];
 
       // Fetch band playlists if user is in a band
-      let bandPlaylistsData: any[] = [];
+      let bandSetListsData: any[] = [];
       if (currentBand) {
-        const { data: bandPlaylists, error: bandError } = await db.playlists.getByBand(currentBand.id);
+        const { data: bandSetLists, error: bandError } = await db.setLists.getByBand(currentBand.id);
         if (bandError) {
-          console.error('Failed to fetch band playlists:', bandError);
+          console.error('Failed to fetch band setLists:', bandError);
         } else {
-          bandPlaylistsData = bandPlaylists || [];
+          bandSetListsData = bandSetLists || [];
         }
       }
 
       // Store created and followed separately
-      setCreatedPlaylists(createdPlaylists || []);
-      setFollowedPlaylists(followedPlaylistsData);
+      setCreatedSetLists(createdSetLists || []);
+      setFollowedSetLists(followedSetListsData);
 
       // Combine and deduplicate: created + followed + band playlists
-      const allPlaylists = [...(createdPlaylists || [])];
-      const seenIds = new Set(allPlaylists.map(p => p.id));
+      const allSetLists = [...(createdSetLists || [])];
+      const seenIds = new Set(allSetLists.map(p => p.id));
 
       // Add followed playlists
-      followedPlaylistsData.forEach(playlist => {
+      followedSetListsData.forEach(playlist => {
         if (!seenIds.has(playlist.id)) {
-          allPlaylists.push(playlist);
+          allSetLists.push(playlist);
           seenIds.add(playlist.id);
         }
       });
 
       // Add band playlists (if not already included)
-      bandPlaylistsData.forEach(playlist => {
+      bandSetListsData.forEach(playlist => {
         if (!seenIds.has(playlist.id)) {
-          allPlaylists.push(playlist);
+          allSetLists.push(playlist);
           seenIds.add(playlist.id);
         }
       });
 
-      setPlaylists(allPlaylists);
+      setSetLists(allSetLists);
     } catch (err) {
-      console.error('Error fetching playlists:', err);
+      console.error('Error fetching setLists:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setIsLoading(false);
@@ -134,7 +134,7 @@ export const PlaylistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   // Create a new playlist
-  const createPlaylist = async (title: string, description?: string, bandId?: string) => {
+  const createSetList = async (title: string, description?: string, bandId?: string) => {
     if (!supabaseUserId) {
       throw new Error('User not authenticated');
     }
@@ -143,7 +143,7 @@ export const PlaylistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setError(null);
 
     try {
-      const { data, error: createError } = await db.playlists.create({
+      const { data, error: createError } = await db.setLists.create({
         title,
         description,
         created_by: supabaseUserId,
@@ -157,11 +157,11 @@ export const PlaylistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
 
       // Refresh playlists to include the new one
-      await refreshPlaylists();
+      await refreshSetLists();
 
       // Set as current playlist
       if (data) {
-        setCurrentPlaylist(data as Playlist);
+        setCurrentSetList(data as SetList);
       }
     } catch (err) {
       console.error('Error creating playlist:', err);
@@ -173,7 +173,7 @@ export const PlaylistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   // Delete a playlist
-  const deletePlaylist = async (playlistId: string) => {
+  const deleteSetList = async (setListId: string) => {
     if (!supabaseUserId) {
       throw new Error('User not authenticated');
     }
@@ -182,7 +182,7 @@ export const PlaylistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setError(null);
 
     try {
-      const { error: deleteError } = await db.playlists.delete(playlistId);
+      const { error: deleteError } = await db.setLists.delete(setListId);
 
       if (deleteError) {
         console.error('Failed to delete playlist:', deleteError);
@@ -190,12 +190,12 @@ export const PlaylistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
 
       // Clear current playlist if it was deleted
-      if (currentPlaylist?.id === playlistId) {
-        setCurrentPlaylist(null);
+      if (currentSetList?.id === setListId) {
+        setCurrentSetList(null);
       }
 
       // Refresh playlists
-      await refreshPlaylists();
+      await refreshSetLists();
     } catch (err) {
       console.error('Error deleting playlist:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -206,7 +206,7 @@ export const PlaylistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   // Add track to playlist
-  const addTrackToPlaylist = async (playlistId: string, trackId: string) => {
+  const addTrackToSetList = async (setListId: string, trackId: string) => {
     if (!supabaseUserId) {
       throw new Error('User not authenticated');
     }
@@ -216,11 +216,11 @@ export const PlaylistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     try {
       // Get current playlist items to determine position
-      const { data: items } = await db.playlistItems.getByPlaylist(playlistId);
+      const { data: items } = await db.setListEntries.getBySetList(setListId);
       const nextPosition = (items?.length || 0) + 1;
 
-      const { error: addError } = await db.playlistItems.add({
-        playlist_id: playlistId,
+      const { error: addError } = await db.setListEntries.add({
+        set_list_id: setListId,
         track_id: trackId,
         added_by: supabaseUserId,
         position: nextPosition,
@@ -232,7 +232,7 @@ export const PlaylistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
 
       // Refresh playlists if needed
-      await refreshPlaylists();
+      await refreshSetLists();
     } catch (err) {
       console.error('Error adding track to playlist:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -245,38 +245,38 @@ export const PlaylistProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Fetch playlists when user changes
   useEffect(() => {
     if (supabaseUserId) {
-      refreshPlaylists();
+      refreshSetLists();
     }
   }, [supabaseUserId]);
 
   // Refresh playlists when band changes
   useEffect(() => {
     if (supabaseUserId) {
-      refreshPlaylists();
+      refreshSetLists();
     }
   }, [currentBand?.id, supabaseUserId]);
 
-  const value: PlaylistContextType = {
-    playlists,
-    createdPlaylists,
-    followedPlaylists,
-    currentPlaylist,
+  const value: SetListContextType = {
+    setLists,
+    createdSetLists,
+    followedSetLists,
+    currentSetList,
     isLoading,
     error,
-    createPlaylist,
-    setCurrentPlaylist,
-    refreshPlaylists,
-    deletePlaylist,
-    addTrackToPlaylist,
+    createSetList,
+    setCurrentSetList,
+    refreshSetLists,
+    deleteSetList,
+    addTrackToSetList,
   };
 
-  return <PlaylistContext.Provider value={value}>{children}</PlaylistContext.Provider>;
+  return <SetListContext.Provider value={value}>{children}</SetListContext.Provider>;
 };
 
-export const usePlaylist = () => {
-  const context = useContext(PlaylistContext);
+export const useSetList = () => {
+  const context = useContext(SetListContext);
   if (!context) {
-    throw new Error('usePlaylist must be used within a PlaylistProvider');
+    throw new Error('useSetList must be used within a SetListProvider');
   }
   return context;
 };

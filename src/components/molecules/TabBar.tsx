@@ -9,7 +9,7 @@ interface TabBarProps {
 }
 
 const tabs: TabItem[] = [
-  { id: 'playlists', label: 'Playlists', icon: List },
+  { id: 'playlists', label: 'Set Lists', icon: List },
   { id: 'profile', label: 'Profile', icon: User },
 ];
 

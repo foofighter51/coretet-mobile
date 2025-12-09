@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import './styles.css';
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
-import { PlaylistProvider } from './contexts/PlaylistContext';
+import { SetListProvider } from './contexts/SetListContext';
 import { BandProvider } from './contexts/BandContext';
 import { MainDashboard } from './components/screens/MainDashboard';
 import { OnboardingScreen } from './components/screens/OnboardingScreen';
@@ -90,14 +90,14 @@ function AppContent({ user }: { user: User }) {
 
   return (
     <BandProvider userId={user.id}>
-      <PlaylistProvider>
+      <SetListProvider>
         <MainDashboard currentUser={{
           id: user.id,
           email: user.email || '',
           phoneNumber: user.phone || '',
           name: profile?.name || ''
         }} />
-      </PlaylistProvider>
+      </SetListProvider>
     </BandProvider>
   );
 }

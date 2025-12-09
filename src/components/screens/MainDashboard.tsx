@@ -2,7 +2,7 @@ import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom';
 import { Search, Filter, Plus, Music, Upload, ArrowLeft, Play, Pause, X, Check, MessageSquare, MoreVertical, Edit2, Trash2, Headphones, ThumbsUp, Heart, HelpCircle, Settings, GripVertical, Users } from 'lucide-react';
 import { designTokens } from '../../design/designTokens';
-import { usePlaylist } from '../../contexts/PlaylistContext';
+import { useSetList } from '../../contexts/SetListContext';
 import { useBand } from '../../contexts/BandContext';
 import { TrackRowWithPlayer } from '../molecules/TrackRowWithPlayer';
 import { TabBar } from '../molecules/TabBar';
@@ -226,36 +226,36 @@ const baseStyle: React.CSSProperties = {
 
 export function MainDashboard({ currentUser }: MainDashboardProps) {
   const navigate = useNavigate();
-  const { playlists, createdPlaylists, followedPlaylists, currentPlaylist, createPlaylist, setCurrentPlaylist, refreshPlaylists, isLoading: playlistsLoading } = usePlaylist();
+  const { setLists, createdSetLists, followedSetLists, currentSetList, createSetList, setCurrentSetList, refreshSetLists, isLoading: setListsLoading } = useSetList();
   const { currentBand, userBands, userRole, switchBand } = useBand();
 
-  // Filter playlists for Band tab - only show playlists with matching band_id
+  // Filter set lists for Band tab - only show set lists with matching band_id
   const bandCreatedPlaylists = useMemo(() => {
     if (!currentBand) return [];
-    // Use 'playlists' instead of 'createdPlaylists' to include playlists from all band members
-    return playlists.filter((p: any) => p.band_id === currentBand.id);
-  }, [playlists, currentBand]);
+    // Use 'setLists' instead of 'createdSetLists' to include set lists from all band members
+    return setLists.filter((p: any) => p.band_id === currentBand.id);
+  }, [setLists, currentBand]);
 
-  // Filter playlists for Personal tab - only show playlists with NULL band_id
+  // Filter set lists for Personal tab - only show set lists with NULL band_id
   const personalCreatedPlaylists = useMemo(() => {
-    return createdPlaylists.filter((p: any) => !p.band_id);
-  }, [createdPlaylists]);
+    return createdSetLists.filter((p: any) => !p.band_id);
+  }, [createdSetLists]);
 
-  // Following playlists are user-level (not band-filtered)
+  // Following set lists are user-level (not band-filtered)
   const personalFollowedPlaylists = useMemo(() => {
-    return followedPlaylists;
-  }, [followedPlaylists]);
+    return followedSetLists;
+  }, [followedSetLists]);
 
   // Legacy filter (kept for backwards compatibility, can be removed later)
   const filteredCreatedPlaylists = useMemo(() => {
-    if (!currentBand) return createdPlaylists;
-    return createdPlaylists.filter((p: any) => !p.band_id || p.band_id === currentBand.id);
-  }, [createdPlaylists, currentBand]);
+    if (!currentBand) return createdSetLists;
+    return createdSetLists.filter((p: any) => !p.band_id || p.band_id === currentBand.id);
+  }, [createdSetLists, currentBand]);
 
   const filteredFollowedPlaylists = useMemo(() => {
-    if (!currentBand) return followedPlaylists;
-    return followedPlaylists.filter((p: any) => !p.band_id || p.band_id === currentBand.id);
-  }, [followedPlaylists, currentBand]);
+    if (!currentBand) return followedSetLists;
+    return followedSetLists.filter((p: any) => !p.band_id || p.band_id === currentBand.id);
+  }, [followedSetLists, currentBand]);
 
   const [activeTab, setActiveTab] = useState<TabId>('playlists');
   const [tracks, setTracks] = useState<any[]>([]);
@@ -299,7 +299,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
 
   // Error state
   const [error, setError] = useState<string | null>(null);
-  const [createPlaylistLoading, setCreatePlaylistLoading] = useState(false);
+  const [createSetListLoading, setCreatePlaylistLoading] = useState(false);
   const [loadingTracks, setLoadingTracks] = useState(false);
 
   // Playlist management state
@@ -323,7 +323,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   // Ref for iOS keyboard handling in edit playlist title
   const playlistTitleInputRef = useRef<HTMLInputElement>(null);
   // Ref for iOS keyboard handling in create playlist
-  const createPlaylistInputRef = useRef<HTMLInputElement>(null);
+  const createSetListInputRef = useRef<HTMLInputElement>(null);
 
   // Handle opening track detail modal with scroll position saving
   const handleOpenTrackDetail = async (track: any) => {
@@ -383,7 +383,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
     try {
       // Pass band_id only if in Band tab, otherwise null for Personal playlists
       const bandId = activeTab === 'playlists' ? currentBand?.id : null;
-      await createPlaylist(newPlaylistTitle.trim(), undefined, bandId);
+      await createSetList(newPlaylistTitle.trim(), undefined, bandId);
       setNewPlaylistTitle('');
       setShowCreatePlaylist(false);
     } catch (err) {
@@ -396,10 +396,10 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
     }
   };
 
-  const loadPlaylistTracks = async (playlistId: string) => {
+  const loadPlaylistTracks = async (setListId: string) => {
     setLoadingTracks(true);
     try {
-      const { data, error } = await db.playlistItems.getByPlaylist(playlistId);
+      const { data, error } = await db.setListEntries.getBySetList(setListId);
       if (error) {
         console.error('Failed to fetch playlist tracks:', error);
         throw error;
@@ -430,14 +430,14 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   };
 
   const handlePlaylistClick = async (playlist: any) => {
-    setCurrentPlaylist(playlist);
+    setCurrentSetList(playlist);
     setViewMode('detail');
     await loadPlaylistTracks(playlist.id);
   };
 
   const handleBackToList = () => {
     setViewMode('list');
-    setCurrentPlaylist(null);
+    setCurrentSetList(null);
     setPlaylistTracks([]);
     setShowPlaylistMenu(false);
     setEditingPlaylistTitle(null);
@@ -456,20 +456,20 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   };
 
   const handleEditPlaylistTitle = async () => {
-    if (!currentPlaylist || !newTitle.trim()) {
+    if (!currentSetList || !newTitle.trim()) {
       setError('Please enter a playlist title');
       return;
     }
 
     try {
-      const { data, error: updateError } = await db.playlists.update(currentPlaylist.id, {
+      const { data, error: updateError } = await db.setLists.update(currentSetList.id, {
         title: newTitle.trim(),
       });
 
       if (updateError) throw updateError;
 
       // Update current playlist
-      setCurrentPlaylist({ ...currentPlaylist, title: newTitle.trim() });
+      setCurrentSetList({ ...currentSetList, title: newTitle.trim() });
       setEditingPlaylistTitle(null);
       setShowPlaylistMenu(false);
       setError(null);
@@ -480,11 +480,11 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   };
 
   const handleDeletePlaylist = async () => {
-    if (!currentPlaylist) return;
+    if (!currentSetList) return;
 
 
     try {
-      const { error: deleteError } = await db.playlists.delete(currentPlaylist.id);
+      const { error: deleteError } = await db.setLists.delete(currentSetList.id);
 
       if (deleteError) {
         console.error('❌ Delete error:', deleteError);
@@ -493,7 +493,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
 
 
       // Reload playlists to update the list
-      await refreshPlaylists();
+      await refreshSetLists();
 
       // Go back to list view
       handleBackToList();
@@ -531,7 +531,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   };
 
   const handleSaveReorder = async () => {
-    if (!currentPlaylist) return;
+    if (!currentSetList) return;
 
     try {
       // Update positions for all tracks
@@ -543,12 +543,12 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
       // Batch update positions
       await Promise.all(
         updates.map(({ id, position }) =>
-          db.playlistItems.updatePosition(id, position)
+          db.setListEntries.updatePosition(id, position)
         )
       );
 
       // Refresh playlist
-      await loadPlaylistTracks(currentPlaylist.id);
+      await loadPlaylistTracks(currentSetList.id);
 
       // Exit reorder mode
       setIsReordering(false);
@@ -585,15 +585,15 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   };
 
   const handleAddExistingTracks = async (selectedTrackIds: string[]) => {
-    if (!currentPlaylist || !currentUser?.id) {
-      console.error('Missing currentPlaylist or currentUser:', { currentPlaylist, currentUser });
+    if (!currentSetList || !currentUser?.id) {
+      console.error('Missing currentSetList or currentUser:', { currentSetList, currentUser });
       return;
     }
 
     try {
 
       // Get current playlist items to determine starting position
-      const { data: items, error: fetchError } = await db.playlistItems.getByPlaylist(currentPlaylist.id);
+      const { data: items, error: fetchError } = await db.setListEntries.getBySetList(currentSetList.id);
       if (fetchError) {
         console.error('Error fetching playlist items:', fetchError);
         throw fetchError;
@@ -607,8 +607,8 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
 
       // Add each selected track to the playlist
       for (const trackId of selectedTrackIds) {
-        const { data, error } = await db.playlistItems.add({
-          playlist_id: currentPlaylist.id,
+        const { data, error } = await db.setListEntries.add({
+          set_list_id: currentSetList.id,
           track_id: trackId,
           added_by: currentUser.id,
           position: nextPosition++,
@@ -621,7 +621,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
       }
 
       // Refresh playlist tracks
-      await loadPlaylistTracks(currentPlaylist.id);
+      await loadPlaylistTracks(currentSetList.id);
       setShowTrackSelector(false);
     } catch (error) {
       console.error('Error adding tracks to playlist:', error);
@@ -663,7 +663,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
       navigator.mediaSession.metadata = new MediaMetadata({
         title: track.title || 'Unknown Track',
         artist: 'CoreTet',
-        album: currentPlaylist?.title || 'My Library',
+        album: currentSetList?.title || 'My Library',
         artwork: [
           // Using a default artwork - could be customized per playlist/track in the future
           { src: '/icon-512x512.png', sizes: '512x512', type: 'image/png' },
@@ -902,14 +902,14 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   };
 
   const handleDeleteSelectedTracks = async () => {
-    if (!currentPlaylist || selectedTrackIds.length === 0) return;
+    if (!currentSetList || selectedTrackIds.length === 0) return;
 
     const trackCount = selectedTrackIds.length;
 
     try {
       // Delete all selected tracks in parallel
       const deletePromises = selectedTrackIds.map(trackId =>
-        db.playlistItems.removeByTrack(currentPlaylist.id, trackId)
+        db.setListEntries.removeByTrack(currentSetList.id, trackId)
       );
 
       const results = await Promise.all(deletePromises);
@@ -936,7 +936,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
       // Reset edit mode and reload tracks
       setIsEditingTracks(false);
       setSelectedTrackIds([]);
-      await loadPlaylistTracks(currentPlaylist.id);
+      await loadPlaylistTracks(currentSetList.id);
     } catch (err) {
       console.error('Error removing tracks:', err);
       setError('Failed to remove tracks from playlist');
@@ -999,7 +999,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   }, [playlistTracks, ratingFilter, trackRatings, playlistSortBy, sortAscending]);
 
   // Check if current playlist is owned by the user (moved to component level)
-  const isPlaylistOwner = currentPlaylist ? filteredCreatedPlaylists.some(p => p.id === currentPlaylist.id) : false;
+  const isPlaylistOwner = currentSetList ? filteredCreatedPlaylists.some(p => p.id === currentSetList.id) : false;
 
   const renderContent = () => {
     // Select correct playlists based on active tab
@@ -1032,7 +1032,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                 title="Create New Playlist"
                 size="sm"
                 hasKeyboardInput={true}
-                keyboardInputRef={createPlaylistInputRef}
+                keyboardInputRef={createSetListInputRef}
                 footer={
                   <div style={{ display: 'flex', gap: designTokens.spacing.sm, justifyContent: 'flex-end' }}>
                     <button
@@ -1041,15 +1041,15 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                         setNewPlaylistTitle('');
                         setError(null);
                       }}
-                      disabled={createPlaylistLoading}
+                      disabled={createSetListLoading}
                       style={{
                         padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
                         backgroundColor: 'transparent',
                         border: `1px solid ${designTokens.colors.borders.default}`,
                         borderRadius: designTokens.borderRadius.sm,
                         fontSize: designTokens.typography.fontSizes.bodySmall,
-                        cursor: createPlaylistLoading ? 'not-allowed' : 'pointer',
-                        opacity: createPlaylistLoading ? 0.6 : 1,
+                        cursor: createSetListLoading ? 'not-allowed' : 'pointer',
+                        opacity: createSetListLoading ? 0.6 : 1,
                         color: designTokens.colors.text.secondary,
                       }}
                     >
@@ -1057,7 +1057,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                     </button>
                     <button
                       onClick={handleCreatePlaylist}
-                      disabled={createPlaylistLoading}
+                      disabled={createSetListLoading}
                       style={{
                         padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
                         backgroundColor: designTokens.colors.primary.blue,
@@ -1065,18 +1065,18 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                         border: 'none',
                         borderRadius: designTokens.borderRadius.sm,
                         fontSize: designTokens.typography.fontSizes.bodySmall,
-                        cursor: createPlaylistLoading ? 'not-allowed' : 'pointer',
-                        opacity: createPlaylistLoading ? 0.6 : 1,
+                        cursor: createSetListLoading ? 'not-allowed' : 'pointer',
+                        opacity: createSetListLoading ? 0.6 : 1,
                       }}
                     >
-                      {createPlaylistLoading ? 'Creating...' : 'Create'}
+                      {createSetListLoading ? 'Creating...' : 'Create'}
                     </button>
                   </div>
                 }
               >
                 <div>
                   <input
-                    ref={createPlaylistInputRef}
+                    ref={createSetListInputRef}
                     type="text"
                     placeholder="Playlist title..."
                     value={newPlaylistTitle}
@@ -1085,11 +1085,11 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                       setError(null);
                     }}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !createPlaylistLoading && newPlaylistTitle.trim()) {
+                      if (e.key === 'Enter' && !createSetListLoading && newPlaylistTitle.trim()) {
                         handleCreatePlaylist();
                       }
                     }}
-                    disabled={createPlaylistLoading}
+                    disabled={createSetListLoading}
                     autoComplete="off"
                     autoCorrect="off"
                     autoCapitalize="off"
@@ -1121,7 +1121,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
               </DialogModal>
             )}
 
-            {viewMode === 'detail' && currentPlaylist ? (
+            {viewMode === 'detail' && currentSetList ? (
               <div>
                 {/* Edit title modal */}
                 {editingPlaylistTitle && (
@@ -1224,7 +1224,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                   }}>
                     <h3 style={{ margin: `0 0 ${designTokens.spacing.sm} 0`, fontSize: designTokens.typography.fontSizes.body, fontWeight: designTokens.typography.fontWeights.semibold, color: designTokens.colors.system.error }}>Delete Playlist?</h3>
                     <p style={{ margin: `0 0 ${designTokens.spacing.lg} 0`, fontSize: designTokens.typography.fontSizes.bodySmall, color: designTokens.colors.feedback.error.text }}>
-                      This will permanently delete "{currentPlaylist.title}" and all its contents. This action cannot be undone.
+                      This will permanently delete "{currentSetList.title}" and all its contents. This action cannot be undone.
                     </p>
                     <div style={{ display: 'flex', gap: designTokens.spacing.sm }}>
                       <button
@@ -1285,9 +1285,9 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                         setShowPlaylistUploader(false);
 
                         // Add all uploaded tracks to current playlist
-                        if (results.length > 0 && currentPlaylist) {
+                        if (results.length > 0 && currentSetList) {
 
-                          const { data: items, error: fetchError } = await db.playlistItems.getByPlaylist(currentPlaylist.id);
+                          const { data: items, error: fetchError } = await db.setListEntries.getBySetList(currentSetList.id);
                           if (fetchError) {
                             console.error('Error fetching playlist items:', fetchError);
                             setError('Failed to add tracks to playlist. Please try again.');
@@ -1302,8 +1302,8 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
 
                           // Add each track to the playlist
                           for (const result of results) {
-                            const { data, error } = await db.playlistItems.add({
-                              playlist_id: currentPlaylist.id,
+                            const { data, error } = await db.setListEntries.add({
+                              set_list_id: currentSetList.id,
                               track_id: result.trackId,
                               added_by: currentUser?.id || '',
                               position: nextPosition++,
@@ -1317,7 +1317,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                           }
 
                           // Refresh playlist tracks
-                          await loadPlaylistTracks(currentPlaylist.id);
+                          await loadPlaylistTracks(currentSetList.id);
 
                           // Refresh tracks list
                           if (currentUser?.id) {
@@ -1512,7 +1512,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                   </div>
                 )}
               </div>
-            ) : playlistsLoading ? (
+            ) : setListsLoading ? (
               <InlineSpinner message="Loading playlists..." />
             ) : displayedPlaylists.length === 0 ? (
               <EmptyState
@@ -1532,8 +1532,8 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                     onClick={() => handlePlaylistClick(playlist)}
                     style={{
                       padding: designTokens.spacing.lg,
-                      backgroundColor: currentPlaylist?.id === playlist.id ? designTokens.colors.surface.hover : designTokens.colors.surface.primary,
-                      border: currentPlaylist?.id === playlist.id ? `2px solid ${designTokens.colors.primary.blue}` : `1px solid ${designTokens.colors.borders.default}`,
+                      backgroundColor: currentSetList?.id === playlist.id ? designTokens.colors.surface.hover : designTokens.colors.surface.primary,
+                      border: currentSetList?.id === playlist.id ? `2px solid ${designTokens.colors.primary.blue}` : `1px solid ${designTokens.colors.borders.default}`,
                       borderRadius: designTokens.borderRadius.md,
                       cursor: 'pointer',
                       transition: 'all 0.2s',
@@ -1553,6 +1553,13 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                         }}>
                           {playlist.title}
                         </h3>
+                        <p style={{
+                          fontSize: designTokens.typography.fontSizes.caption,
+                          color: designTokens.colors.neutral.gray,
+                          marginBottom: playlist.description ? designTokens.spacing.xxs : 0,
+                        }}>
+                          {playlist.set_list_entries?.[0]?.count ?? 0} {(playlist.set_list_entries?.[0]?.count ?? 0) === 1 ? 'track' : 'tracks'}
+                        </p>
                         {playlist.description && (
                           <p style={{
                             fontSize: designTokens.typography.fontSizes.bodySmall,
@@ -2024,17 +2031,17 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                 {/* Share Playlist - TODO: Review external sharing permissions for bands */}
                 <button
                   onClick={async () => {
-                    if (!currentPlaylist) return;
+                    if (!currentSetList) return;
 
-                    const shareUrl = `coretet://playlist/${currentPlaylist.share_code}`;
+                    const shareUrl = `coretet://playlist/${currentSetList.share_code}`;
 
                     // On native platforms, use native share sheet
                     if (Capacitor.isNativePlatform()) {
                       try {
-                        const shareText = `Check out "${currentPlaylist.title}" on CoreTet\n\n${shareUrl}`;
+                        const shareText = `Check out "${currentSetList.title}" on CoreTet\n\n${shareUrl}`;
 
                         await Share.share({
-                          title: currentPlaylist.title,
+                          title: currentSetList.title,
                           text: shareText,
                           dialogTitle: 'Share Playlist',
                         });
@@ -2069,8 +2076,8 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                 {/* Admin-only actions */}
                 <button
                   onClick={() => {
-                    setNewTitle(currentPlaylist?.title || '');
-                    setEditingPlaylistTitle(currentPlaylist?.id || null);
+                    setNewTitle(currentSetList?.title || '');
+                    setEditingPlaylistTitle(currentSetList?.id || null);
                   }}
                   style={{
                     width: '100%',

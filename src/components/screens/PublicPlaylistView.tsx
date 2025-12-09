@@ -30,20 +30,20 @@ export function PublicPlaylistView() {
 
       try {
         // Fetch playlist by share_code
-        const { data: playlistData, error: playlistError } = await db.playlists.getByShareCode(shareCode);
+        const { data: setListData, error: setListError } = await db.setLists.getByShareCode(shareCode);
 
 
-        if (playlistError || !playlistData) {
-          console.error('🎵 Playlist not found or error:', playlistError);
+        if (setListError || !setListData) {
+          console.error('🎵 Playlist not found or error:', setListError);
           setError('Playlist not found');
           setLoading(false);
           return;
         }
 
-        setPlaylist(playlistData);
+        setPlaylist(setListData);
 
         // Fetch playlist tracks
-        const { data: trackData, error: trackError } = await db.playlistItems.getByPlaylist(playlistData.id);
+        const { data: trackData, error: trackError } = await db.setListEntries.getBySetList(setListData.id);
 
         if (trackError) {
           console.error('Failed to fetch tracks:', trackError);
@@ -71,7 +71,7 @@ export function PublicPlaylistView() {
         const { user } = await auth.getCurrentUser();
         if (user && playlist) {
           setCurrentUserId(user.id);
-          const { isFollowing: following } = await db.playlistFollowers.isFollowing(playlist.id, user.id);
+          const { isFollowing: following } = await db.setListFollowers.isFollowing(setList.id, user.id);
           setIsFollowing(following);
         }
       } catch (error) {
@@ -90,10 +90,10 @@ export function PublicPlaylistView() {
     setFollowLoading(true);
     try {
       if (isFollowing) {
-        await db.playlistFollowers.unfollow(playlist.id, currentUserId);
+        await db.setListFollowers.unfollow(setList.id, currentUserId);
         setIsFollowing(false);
       } else {
-        await db.playlistFollowers.follow(playlist.id, currentUserId);
+        await db.setListFollowers.follow(setList.id, currentUserId);
         setIsFollowing(true);
       }
     } catch (error) {
@@ -232,20 +232,20 @@ export function PublicPlaylistView() {
               color: designTokens.colors.neutral.charcoal,
               marginBottom: '4px',
             }}>
-              {playlist.title}
+              {setList.title}
             </h1>
-            {playlist.description && (
+            {setList.description && (
               <p style={{
                 fontSize: '14px',
                 color: designTokens.colors.neutral.darkGray,
               }}>
-                {playlist.description}
+                {setList.description}
               </p>
             )}
           </div>
 
           {/* Follow button - only show if user is logged in and not owner */}
-          {currentUserId && currentUserId !== playlist.created_by && (
+          {currentUserId && currentUserId !== setList.created_by && (
             <button
               onClick={handleFollowToggle}
               disabled={followLoading}
