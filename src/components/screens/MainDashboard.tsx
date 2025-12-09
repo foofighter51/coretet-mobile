@@ -276,6 +276,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   const [showBandModal, setShowBandModal] = useState(false);
   const [showBandSettings, setShowBandSettings] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showPlaylistMenu, setShowPlaylistMenu] = useState(false);
 
   // Audio playback state - consolidated
   const audioRef = useRef<HTMLAudioElement | null>(null);
