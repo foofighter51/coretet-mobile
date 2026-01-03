@@ -303,6 +303,8 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   const [error, setError] = useState<string | null>(null);
   const [createSetListLoading, setCreatePlaylistLoading] = useState(false);
   const [loadingTracks, setLoadingTracks] = useState(false);
+  const [deletingPlaylist, setDeletingPlaylist] = useState(false);
+  const [deletingTracks, setDeletingTracks] = useState(false);
 
   // Playlist management state
   const [editingPlaylistTitle, setEditingPlaylistTitle] = useState<string | null>(null);
@@ -482,9 +484,9 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   };
 
   const handleDeletePlaylist = async () => {
-    if (!currentSetList) return;
+    if (!currentSetList || deletingPlaylist) return;
 
-
+    setDeletingPlaylist(true);
     try {
       const { error: deleteError } = await db.setLists.delete(currentSetList.id);
 
@@ -492,7 +494,6 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
         console.error('❌ Delete error:', deleteError);
         throw deleteError;
       }
-
 
       // Reload playlists to update the list
       await refreshSetLists();
@@ -505,6 +506,8 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to delete playlist';
       setError(errorMsg + '. Please try again.');
       setShowDeleteConfirm(false);
+    } finally {
+      setDeletingPlaylist(false);
     }
   };
 
@@ -905,9 +908,10 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   };
 
   const handleDeleteSelectedTracks = async () => {
-    if (!currentSetList || selectedTrackIds.length === 0) return;
+    if (!currentSetList || selectedTrackIds.length === 0 || deletingTracks) return;
 
     const trackCount = selectedTrackIds.length;
+    setDeletingTracks(true);
 
     try {
       // Delete all selected tracks in parallel
@@ -943,6 +947,8 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
     } catch (err) {
       console.error('Error removing tracks:', err);
       setError('Failed to remove tracks from playlist');
+    } finally {
+      setDeletingTracks(false);
     }
   };
 
@@ -1232,6 +1238,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                     <div style={{ display: 'flex', gap: designTokens.spacing.sm }}>
                       <button
                         onClick={handleDeletePlaylist}
+                        disabled={deletingPlaylist}
                         style={{
                           padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
                           backgroundColor: designTokens.colors.system.error,
@@ -1239,11 +1246,12 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                           border: 'none',
                           borderRadius: designTokens.borderRadius.sm,
                           fontSize: designTokens.typography.fontSizes.bodySmall,
-                          cursor: 'pointer',
+                          cursor: deletingPlaylist ? 'not-allowed' : 'pointer',
+                          opacity: deletingPlaylist ? 0.6 : 1,
                           fontWeight: designTokens.typography.fontWeights.medium,
                         }}
                       >
-                        Delete
+                        {deletingPlaylist ? 'Deleting...' : 'Delete'}
                       </button>
                       <button
                         onClick={() => setShowDeleteConfirm(false)}
@@ -1766,6 +1774,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                     {selectedTrackIds.length > 0 && (
                       <button
                         onClick={handleDeleteSelectedTracks}
+                        disabled={deletingTracks}
                         style={{
                           display: 'flex',
                           alignItems: 'center',
@@ -1777,11 +1786,12 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                           borderRadius: designTokens.borderRadius.xxl,
                           fontSize: designTokens.typography.fontSizes.caption,
                           fontWeight: designTokens.typography.fontWeights.medium,
-                          cursor: 'pointer',
+                          cursor: deletingTracks ? 'not-allowed' : 'pointer',
+                          opacity: deletingTracks ? 0.6 : 1,
                         }}
                       >
                         <Trash2 size={14} />
-                        Delete ({selectedTrackIds.length})
+                        {deletingTracks ? 'Deleting...' : `Delete (${selectedTrackIds.length})`}
                       </button>
                     )}
                   </>
