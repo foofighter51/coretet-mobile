@@ -14,15 +14,24 @@ const baseStyle = {
 
 export function CodeVerificationScreen() {
   const {
-    phoneNumber,
-    verificationCode,
-    setVerificationCode,
     authLoading,
     currentError,
     setCurrentError,
     sendVerificationCode,
     verifyCode
   } = useAuth();
+
+  // Local form state
+  const [email, setEmail] = React.useState('');
+  const [verificationCode, setVerificationCode] = React.useState('');
+
+  const handleVerifyCode = () => {
+    verifyCode(email, verificationCode);
+  };
+
+  const handleResendCode = () => {
+    sendVerificationCode(email);
+  };
 
   return (
     <div style={{
@@ -57,7 +66,7 @@ export function CodeVerificationScreen() {
           textAlign: 'center',
           margin: `0 0 ${designTokens.spacing.xxxl} 0`
         }}>
-          We sent a 6-digit code to {phoneNumber}
+          We sent a 6-digit code to {email}
         </p>
 
         <div style={{
@@ -122,7 +131,7 @@ export function CodeVerificationScreen() {
         }}>
           Didn't receive a code?{' '}
           <button
-            onClick={sendVerificationCode}
+            onClick={handleResendCode}
             style={{
               background: 'none',
               border: 'none',
@@ -147,7 +156,7 @@ export function CodeVerificationScreen() {
 
       {/* Button */}
       <button
-        onClick={verifyCode}
+        onClick={handleVerifyCode}
         disabled={verificationCode.length !== 6 || authLoading}
         style={{
           width: '100%',

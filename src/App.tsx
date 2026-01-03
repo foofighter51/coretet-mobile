@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { SetListProvider } from './contexts/SetListContext';
 import { BandProvider } from './contexts/BandContext';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { MainDashboard } from './components/screens/MainDashboard';
 import { OnboardingScreen } from './components/screens/OnboardingScreen';
 import { PublicPlaylistView } from './components/screens/PublicPlaylistView';
@@ -208,28 +209,33 @@ export default function App() {
   }
 
   return (
-    <ThemeProvider>
-      <BrowserRouter>
-        <DeepLinkHandler />
-        <Routes>
-        {/* Email confirmation success page */}
-        <Route path="/auth/confirmed" element={<EmailConfirmedScreen />} />
+    <ErrorBoundary>
+      <ThemeProvider>
+        <BrowserRouter>
+          <DeepLinkHandler />
+          <Routes>
+          {/* Email confirmation success page */}
+          <Route path="/auth/confirmed" element={<EmailConfirmedScreen />} />
 
-        {/* Invite acceptance - handles its own authentication */}
-        <Route path="/invite/:token" element={
-          user ? (
-            <BandProvider userId={user.id}>
-              <AcceptInvite />
-            </BandProvider>
-          ) : (
-            <AcceptInvite />
-          )
-        } />
+          {/* Invite acceptance - handles its own authentication */}
+          <Route path="/invite/:token" element={
+            <ErrorBoundary>
+              {user ? (
+                <BandProvider userId={user.id}>
+                  <AcceptInvite />
+                </BandProvider>
+              ) : (
+                <AcceptInvite />
+              )}
+            </ErrorBoundary>
+          } />
 
-        {/* Playlist view - REQUIRES AUTHENTICATION (private WIP songs - NOT PUBLIC) */}
-        <Route path="/playlist/:shareCode" element={
-          user ? <PublicPlaylistView /> : (Capacitor.isNativePlatform() ? <PhoneAuthScreen /> : <LandingPage />)
-        } />
+          {/* Playlist view - REQUIRES AUTHENTICATION (private WIP songs - NOT PUBLIC) */}
+          <Route path="/playlist/:shareCode" element={
+            <ErrorBoundary>
+              {user ? <PublicPlaylistView /> : (Capacitor.isNativePlatform() ? <PhoneAuthScreen /> : <LandingPage />)}
+            </ErrorBoundary>
+          } />
 
         {/* TEMPORARILY HIDDEN FOR TESTFLIGHT (TestFlight has its own feedback system) */}
         {/* TODO: Re-enable after TestFlight phase */}
@@ -245,22 +251,27 @@ export default function App() {
 
         {/* App routes - only accessible on native app or when authenticated */}
         <Route path="/app/*" element={
-          user ? <AppContent user={user} /> : <PhoneAuthScreen />
+          <ErrorBoundary>
+            {user ? <AppContent user={user} /> : <PhoneAuthScreen />}
+          </ErrorBoundary>
         } />
 
         {/* Landing page for web visitors, or app if authenticated */}
         <Route path="/" element={
-          Capacitor.isNativePlatform()
-            ? (user ? <AppContent user={user} /> : <PhoneAuthScreen />)
-            : (user ? <AppContent user={user} /> : <NewLandingPage />)
+          <ErrorBoundary>
+            {Capacitor.isNativePlatform()
+              ? (user ? <AppContent user={user} /> : <PhoneAuthScreen />)
+              : (user ? <AppContent user={user} /> : <NewLandingPage />)}
+          </ErrorBoundary>
         } />
 
         {/* Catch-all - show landing page on web, auth screen on native */}
         <Route path="*" element={
           Capacitor.isNativePlatform() ? <PhoneAuthScreen /> : <NewLandingPage />
         } />
-      </Routes>
-      </BrowserRouter>
-    </ThemeProvider>
+        </Routes>
+        </BrowserRouter>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }

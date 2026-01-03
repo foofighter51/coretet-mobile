@@ -9,12 +9,6 @@ interface AuthContextType {
   currentUser: AuthUser | null;
   currentScreen: ScreenId;
 
-  // Form state
-  email: string; // Changed from phoneNumber for testing
-  password: string;
-  verificationCode: string;
-  userName: string;
-
   // UI state
   authLoading: boolean;
   currentError: ErrorInfo | null;
@@ -24,21 +18,17 @@ interface AuthContextType {
   waitlistMessage?: string;
 
   // Actions
-  setEmail: (email: string) => void; // Changed from setPhoneNumber
-  setPassword: (password: string) => void;
-  setVerificationCode: (code: string) => void;
-  setUserName: (name: string) => void;
   setCurrentScreen: (screen: ScreenId) => void;
   setCurrentError: (error: ErrorInfo | null) => void;
 
-  // Auth operations
-  signUp: () => Promise<void>;
-  signIn: () => Promise<void>;
-  sendVerificationCode: () => Promise<void>;
-  verifyCode: () => Promise<void>;
-  completeOnboarding: () => Promise<void>;
-  sendPasswordReset: () => Promise<void>;
-  devSignUp: () => Promise<void>;
+  // Auth operations (now accept parameters instead of reading from context)
+  signUp: (email: string, password: string) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<void>;
+  sendVerificationCode: (email: string) => Promise<void>;
+  verifyCode: (email: string, code: string) => Promise<void>;
+  completeOnboarding: (userName: string) => Promise<void>;
+  sendPasswordReset: (email: string) => Promise<void>;
+  devSignUp: (email: string, password: string) => Promise<void>;
   login: (user: AuthUser) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -53,12 +43,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // User state
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [currentScreen, setCurrentScreen] = useState<ScreenId>('phone');
-
-  // Form state
-  const [email, setEmail] = useState(''); // Changed from phoneNumber
-  const [password, setPassword] = useState('');
-  const [verificationCode, setVerificationCode] = useState('');
-  const [userName, setUserName] = useState('');
 
   // UI state
   const [authLoading, setAuthLoading] = useState(false);
@@ -136,7 +120,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     };
   }, [authService, login]);
 
-  const signUp = useCallback(async () => {
+  const signUp = useCallback(async (email: string, password: string) => {
     if (!email.trim()) {
       setCurrentError(ErrorHandler.phoneVerification.emptyPhone());
       return;
@@ -175,9 +159,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } finally {
       setAuthLoading(false);
     }
-  }, [email, password, authService, login]);
+  }, [authService, login]);
 
-  const signIn = useCallback(async () => {
+  const signIn = useCallback(async (email: string, password: string) => {
     if (!email.trim()) {
       setCurrentError(ErrorHandler.phoneVerification.emptyPhone());
       return;
@@ -209,9 +193,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } finally {
       setAuthLoading(false);
     }
-  }, [email, password, authService, login]);
+  }, [authService, login]);
 
-  const sendVerificationCode = useCallback(async () => {
+  const sendVerificationCode = useCallback(async (email: string) => {
     if (!email.trim()) {
       setCurrentError(ErrorHandler.phoneVerification.emptyPhone()); // Reusing error for now
       return;
@@ -243,9 +227,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } finally {
       setAuthLoading(false);
     }
-  }, [email, authService]);
+  }, [authService]);
 
-  const verifyCode = useCallback(async () => {
+  const verifyCode = useCallback(async (email: string, verificationCode: string) => {
     if (!verificationCode.trim()) {
       setCurrentError(ErrorHandler.codeVerification.emptyCode());
       return;
@@ -278,9 +262,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } finally {
       setAuthLoading(false);
     }
-  }, [email, verificationCode, authService]);
+  }, [authService]);
 
-  const completeOnboarding = useCallback(async () => {
+  const completeOnboarding = useCallback(async (userName: string) => {
     if (!userName.trim()) {
       setCurrentError(ErrorHandler.onboarding.emptyName());
       return;
@@ -309,9 +293,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } finally {
       setAuthLoading(false);
     }
-  }, [userName, authService]);
+  }, [authService]);
 
-  const sendPasswordReset = useCallback(async () => {
+  const sendPasswordReset = useCallback(async (email: string) => {
     if (!email.trim()) {
       setCurrentError(ErrorHandler.phoneVerification.emptyPhone());
       return;
@@ -338,9 +322,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } finally {
       setAuthLoading(false);
     }
-  }, [email, authService]);
+  }, [authService]);
 
-  const devSignUp = useCallback(async () => {
+  const devSignUp = useCallback(async (email: string, password: string) => {
     if (!email.trim()) {
       setCurrentError(ErrorHandler.phoneVerification.emptyPhone());
       return;
@@ -377,7 +361,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } finally {
       setAuthLoading(false);
     }
-  }, [email, password, authService, login]);
+  }, [authService, login]);
 
   const logout = useCallback(async () => {
     setAuthLoading(true);
@@ -385,9 +369,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       await authService.signOut();
       setCurrentUser(null);
       setCurrentScreen('phone');
-      setEmail('');
-      setVerificationCode('');
-      setUserName('');
       setCurrentError(null);
     } catch (error) {
       console.error('Error during logout:', error);
@@ -401,12 +382,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     currentUser,
     currentScreen,
 
-    // Form state
-    email,
-    password,
-    verificationCode,
-    userName,
-
     // UI state
     authLoading,
     currentError,
@@ -416,10 +391,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     waitlistMessage,
 
     // Actions
-    setEmail,
-    setPassword,
-    setVerificationCode,
-    setUserName,
     setCurrentScreen,
     setCurrentError,
 

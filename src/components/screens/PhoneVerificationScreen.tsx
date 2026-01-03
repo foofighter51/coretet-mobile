@@ -14,13 +14,18 @@ const baseStyle = {
 
 export function PhoneVerificationScreen() {
   const {
-    email,
-    setEmail,
     authLoading,
     currentError,
     setCurrentError,
     sendVerificationCode
   } = useAuth();
+
+  // Local form state
+  const [email, setEmail] = React.useState('');
+
+  const handleSendCode = () => {
+    sendVerificationCode(email);
+  };
 
   return (
     <div style={{
@@ -93,7 +98,7 @@ export function PhoneVerificationScreen() {
 
       {/* Button */}
       <button
-        onClick={sendVerificationCode}
+        onClick={handleSendCode}
         disabled={!email || authLoading}
         style={{
           width: '100%',
