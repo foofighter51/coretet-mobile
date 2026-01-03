@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Play, Pause, Headphones, ThumbsUp, Heart, Folder, MessageCircle } from 'lucide-react';
+import { Play, Pause, ThumbsUp, Heart, Folder, MessageCircle } from 'lucide-react';
 import { designTokens } from '../../design/designTokens';
 
 interface SwipeableTrackRowProps {
@@ -10,16 +10,15 @@ interface SwipeableTrackRowProps {
     folder_path?: string;
   };
   isPlaying: boolean;
-  currentRating?: 'listened' | 'liked' | 'loved' | null;
+  currentRating?: 'liked' | 'loved' | null;
   aggregatedRatings?: {
-    listened: number;
     liked: number;
     loved: number;
   };
   hasComments?: boolean;
   hasUnreadComments?: boolean;
   onPlayPause: () => void;
-  onRate: (rating: 'listened' | 'liked' | 'loved') => void;
+  onRate: (rating: 'liked' | 'loved') => void;
   onLongPress?: () => void;
 }
 
@@ -42,7 +41,7 @@ export const SwipeableTrackRow: React.FC<SwipeableTrackRowProps> = ({
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const longPressTriggeredRef = useRef(false);
 
-  const maxSwipe = 180; // 3 buttons × 60px each
+  const maxSwipe = 120; // 2 buttons × 60px each
   const longPressDuration = 500; // 500ms for long press
 
   // Close swipe when clicking outside
@@ -143,7 +142,7 @@ export const SwipeableTrackRow: React.FC<SwipeableTrackRowProps> = ({
     }
   };
 
-  const handleRate = (rating: 'listened' | 'liked' | 'loved') => {
+  const handleRate = (rating: 'liked' | 'loved') => {
     onRate(rating);
     setSwipeOffset(0);
   };
@@ -174,29 +173,6 @@ export const SwipeableTrackRow: React.FC<SwipeableTrackRowProps> = ({
         alignItems: 'center',
         gap: '0px',
       }}>
-        <button
-          onClick={() => handleRate('listened')}
-          aria-label={`Mark ${track.title} as listened`}
-          aria-pressed={currentRating === 'listened'}
-          style={{
-            width: '60px',
-            height: '100%',
-            backgroundColor: designTokens.colors.ratings.listened.bg,
-            border: 'none',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            minHeight: designTokens.dimensions.touchTarget.minimum,
-          }}
-        >
-          <Headphones
-            size={20}
-            color={currentRating === 'listened' ? designTokens.colors.text.primary : designTokens.colors.text.inverse}
-            fill={currentRating === 'listened' ? designTokens.colors.text.primary : 'none'}
-            aria-hidden="true"
-          />
-        </button>
         <button
           onClick={() => handleRate('liked')}
           aria-label={`Mark ${track.title} as liked`}
@@ -383,26 +359,6 @@ export const SwipeableTrackRow: React.FC<SwipeableTrackRowProps> = ({
             {/* Show aggregated ratings */}
             {aggregatedRatings && (
               <>
-                {aggregatedRatings.listened > 0 && (
-                  <span style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '3px',
-                    borderRadius: '10px',
-                    backgroundColor: currentRating === 'listened'
-                      ? designTokens.colors.ratings.listened.bgUltraLight
-                      : designTokens.colors.surface.secondary,
-                  }}>
-                    <Headphones
-                      size={12}
-                      color={currentRating === 'listened'
-                        ? designTokens.colors.text.primary
-                        : designTokens.colors.text.muted
-                      }
-                    />
-                  </span>
-                )}
                 {aggregatedRatings.liked > 0 && (
                   <span style={{
                     display: 'inline-flex',

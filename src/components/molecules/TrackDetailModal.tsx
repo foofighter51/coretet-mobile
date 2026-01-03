@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Headphones, ThumbsUp, Heart } from 'lucide-react';
+import { X, ThumbsUp, Heart } from 'lucide-react';
 import { designTokens } from '../../design/designTokens';
 import { db } from '../../../lib/supabase';
 import { DialogModal } from '../ui/DialogModal';
 import { InlineSpinner } from '../atoms/InlineSpinner';
+import { KeywordSelector } from './KeywordSelector';
 
 interface TrackDetailModalProps {
   track: any;
@@ -11,6 +12,8 @@ interface TrackDetailModalProps {
   currentUser: any;
   audioRef: React.RefObject<HTMLAudioElement>;
   currentTrack: any;
+  currentBand?: any;
+  userRole?: 'owner' | 'admin' | 'member';
 }
 
 export const TrackDetailModal: React.FC<TrackDetailModalProps> = ({
@@ -19,6 +22,8 @@ export const TrackDetailModal: React.FC<TrackDetailModalProps> = ({
   currentUser,
   audioRef,
   currentTrack,
+  currentBand,
+  userRole,
 }) => {
   const [ratings, setRatings] = useState<any[]>([]);
   const [loadingRatings, setLoadingRatings] = useState(true);
@@ -156,8 +161,7 @@ export const TrackDetailModal: React.FC<TrackDetailModalProps> = ({
     }
   };
 
-  // Group ratings by type
-  const listenedBy = ratings.filter(r => r.rating === 'listened').map(r => r.userName);
+  // Group ratings by type (Like and Love only)
   const likedBy = ratings.filter(r => r.rating === 'liked').map(r => r.userName);
   const lovedBy = ratings.filter(r => r.rating === 'loved').map(r => r.userName);
 
@@ -204,36 +208,6 @@ export const TrackDetailModal: React.FC<TrackDetailModalProps> = ({
               flexDirection: 'column',
               gap: designTokens.spacing.md,
             }}>
-              {/* Listened */}
-              {listenedBy.length > 0 && (
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: designTokens.spacing.sm,
-                  padding: designTokens.spacing.sm,
-                  backgroundColor: designTokens.colors.ratings.listened.bgLight,
-                  borderRadius: designTokens.borderRadius.md,
-                }}>
-                  <Headphones size={18} color={designTokens.colors.text.primary} style={{ flexShrink: 0 }} />
-                  <p style={{
-                    fontSize: designTokens.typography.fontSizes.bodySmall,
-                    fontWeight: designTokens.typography.fontWeights.medium,
-                    color: designTokens.colors.text.primary,
-                    margin: 0,
-                    marginRight: designTokens.spacing.xs,
-                  }}>
-                    Listened
-                  </p>
-                  <p style={{
-                    fontSize: designTokens.typography.fontSizes.bodySmall,
-                    color: designTokens.colors.text.secondary,
-                    margin: 0,
-                  }}>
-                    {listenedBy.join(', ')}
-                  </p>
-                </div>
-              )}
-
               {/* Liked */}
               {likedBy.length > 0 && (
                 <div style={{
@@ -296,6 +270,15 @@ export const TrackDetailModal: React.FC<TrackDetailModalProps> = ({
             </div>
           )}
         </div>
+
+        {/* Keywords Section */}
+        {currentBand && currentUser && (
+          <KeywordSelector
+            trackId={track.id}
+            bandId={currentBand.id}
+            userId={currentUser.id}
+          />
+        )}
 
         {/* Comments Section */}
         <div style={{

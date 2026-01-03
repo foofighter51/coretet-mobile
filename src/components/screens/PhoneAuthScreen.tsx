@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { designTokens } from '../../design/designTokens';
 import { supabase } from '../../../lib/supabase';
 import { Capacitor } from '@capacitor/core';
+import { EmailConfirmationScreen } from './EmailConfirmationScreen';
 
 export function PhoneAuthScreen() {
   const [email, setEmail] = useState('');
@@ -11,6 +12,8 @@ export function PhoneAuthScreen() {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isSignUp, setIsSignUp] = useState(false);
+  const [showEmailConfirmation, setShowEmailConfirmation] = useState(false);
+  const [signupEmail, setSignupEmail] = useState('');
 
   // Clear success message when user returns after email confirmation
   useEffect(() => {
@@ -52,21 +55,21 @@ export function PhoneAuthScreen() {
       if (isSignUp) {
         // Sign up
         // For iOS app, use deep link to open app directly after email confirmation
-        // Supabase will detect the session automatically via detectSessionInUrl
+        // For web/localhost, redirect to our custom confirmation page
         const isNativeApp = Capacitor.isNativePlatform();
         const isLocalDev = window.location.hostname === 'localhost';
 
-        // Use deep link for native app (opens app home screen)
-        // The session will be detected automatically
-        const redirectUrl = (isNativeApp || isLocalDev)
+        // Native: Direct deep link to open app
+        // Web/Local: Redirect to our branded confirmation page
+        const redirectUrl = isNativeApp
           ? 'coretet://'
-          : window.location.origin;
+          : `${window.location.origin}/auth/confirmed`;
 
         const { error: authError } = await supabase.auth.signUp({
           email: email.trim(),
           password: password,
           options: {
-            emailRedirectTo: `${redirectUrl}/`,
+            emailRedirectTo: redirectUrl,
           }
         });
 
@@ -81,11 +84,12 @@ export function PhoneAuthScreen() {
             setError(authError.message);
           }
         } else {
-          setSuccessMessage('Account created! Please check your email to confirm your account. If you don\'t see it, check your spam/junk folder.');
-          setEmail('');
+          // Show email confirmation screen
+          setSignupEmail(email.trim());
+          setShowEmailConfirmation(true);
+          // Clear form
           setPassword('');
           setConfirmPassword('');
-          setIsSignUp(false);
         }
       } else {
         // Sign in
@@ -115,6 +119,26 @@ export function PhoneAuthScreen() {
       setLoading(false);
     }
   };
+
+  // Show email confirmation screen after signup
+  if (showEmailConfirmation) {
+    return (
+      <EmailConfirmationScreen
+        email={signupEmail}
+        onResendSuccess={() => {
+          // Could show a toast notification here
+        }}
+        onBackToSignIn={() => {
+          setShowEmailConfirmation(false);
+          setIsSignUp(false);
+          setEmail('');
+          setPassword('');
+          setConfirmPassword('');
+          setError(null);
+        }}
+      />
+    );
+  }
 
   return (
     <div style={{

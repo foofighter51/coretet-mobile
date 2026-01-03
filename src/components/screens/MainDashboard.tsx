@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Filter, Plus, Music, Upload, ArrowLeft, Play, Pause, X, Check, MessageSquare, MoreVertical, Edit2, Trash2, Headphones, ThumbsUp, Heart, HelpCircle, Settings, GripVertical, Users } from 'lucide-react';
-import { designTokens } from '../../design/designTokens';
+import { Search, Filter, Plus, Music, Upload, ArrowLeft, Play, Pause, X, Check, MessageSquare, MoreVertical, Edit2, Trash2, Headphones, ThumbsUp, Heart, HelpCircle, Settings, GripVertical, Users, Share2 } from 'lucide-react';
+import { useDesignTokens } from '../../design/useDesignTokens';
 import { useSetList } from '../../contexts/SetListContext';
 import { useBand } from '../../contexts/BandContext';
 import { TrackRowWithPlayer } from '../molecules/TrackRowWithPlayer';
@@ -226,6 +226,7 @@ const baseStyle: React.CSSProperties = {
 
 export function MainDashboard({ currentUser }: MainDashboardProps) {
   const navigate = useNavigate();
+  const designTokens = useDesignTokens();
   const { setLists, createdSetLists, followedSetLists, currentSetList, createSetList, setCurrentSetList, refreshSetLists, isLoading: setListsLoading } = useSetList();
   const { currentBand, userBands, userRole, switchBand } = useBand();
 
@@ -687,6 +688,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
       });
     }
   };
+
 
   const handlePlayPause = async (track?: any) => {
     try {
@@ -1532,7 +1534,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                     key={playlist.id}
                     onClick={() => handlePlaylistClick(playlist)}
                     style={{
-                      padding: designTokens.spacing.lg,
+                      padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
                       backgroundColor: currentSetList?.id === playlist.id ? designTokens.colors.surface.hover : designTokens.colors.surface.primary,
                       border: currentSetList?.id === playlist.id ? `2px solid ${designTokens.colors.primary.blue}` : `1px solid ${designTokens.colors.borders.default}`,
                       borderRadius: designTokens.borderRadius.md,
@@ -1543,21 +1545,23 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                     <div style={{
                       display: 'flex',
                       justifyContent: 'space-between',
-                      alignItems: 'center',
+                      alignItems: 'flex-start',
+                      gap: designTokens.spacing.sm,
                     }}>
-                      <div>
+                      <div style={{ flex: 1 }}>
                         <h3 style={{
                           fontSize: designTokens.typography.fontSizes.body,
                           fontWeight: designTokens.typography.fontWeights.semibold,
                           color: designTokens.colors.neutral.charcoal,
-                          marginBottom: designTokens.spacing.xs,
+                          margin: 0,
+                          marginBottom: '2px',
                         }}>
                           {playlist.title}
                         </h3>
                         <p style={{
                           fontSize: designTokens.typography.fontSizes.caption,
                           color: designTokens.colors.neutral.gray,
-                          marginBottom: playlist.description ? designTokens.spacing.xxs : 0,
+                          margin: 0,
                         }}>
                           {playlist.set_list_entries?.[0]?.count ?? 0} {(playlist.set_list_entries?.[0]?.count ?? 0) === 1 ? 'track' : 'tracks'}
                         </p>
@@ -1565,6 +1569,8 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                           <p style={{
                             fontSize: designTokens.typography.fontSizes.bodySmall,
                             color: designTokens.colors.neutral.darkGray,
+                            marginTop: '6px',
+                            marginBottom: 0,
                           }}>
                             {playlist.description}
                           </p>
@@ -1625,223 +1631,26 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
           </div>
         );
 
-      case 'profile':
+      case 'shared':
         return (
           <div style={{
             padding: '16px',
             paddingBottom: '100px',
           }}>
-            {/* User Info */}
-            <section style={{ marginBottom: '32px' }}>
-              <h2 style={{
-                fontSize: '24px',
-                fontWeight: '600',
-                marginBottom: '16px',
-                color: designTokens.colors.neutral.charcoal,
-              }}>
-                Profile
-              </h2>
+            <h2 style={{
+              fontSize: '24px',
+              fontWeight: '600',
+              marginBottom: '16px',
+              color: designTokens.colors.neutral.charcoal,
+            }}>
+              Shared With Me
+            </h2>
 
-              <div style={{
-                backgroundColor: designTokens.colors.surface.primary,
-                border: `1px solid ${designTokens.colors.borders.default}`,
-                borderRadius: '8px',
-                padding: '16px',
-              }}>
-                <div style={{ marginBottom: '12px' }}>
-                  <label style={{
-                    fontSize: '12px',
-                    color: designTokens.colors.neutral.darkGray,
-                    display: 'block',
-                    marginBottom: '4px',
-                  }}>
-                    Name
-                  </label>
-                  <p style={{
-                    fontSize: '16px',
-                    fontWeight: '500',
-                    color: designTokens.colors.neutral.charcoal,
-                  }}>
-                    {currentUser?.name || 'User'}
-                  </p>
-                </div>
-
-                {currentUser?.email && (
-                  <div style={{ marginBottom: '12px' }}>
-                    <label style={{
-                      fontSize: '12px',
-                      color: designTokens.colors.neutral.darkGray,
-                      display: 'block',
-                      marginBottom: '4px',
-                    }}>
-                      Email
-                    </label>
-                    <p style={{
-                      fontSize: '16px',
-                      fontWeight: '500',
-                      color: designTokens.colors.neutral.charcoal,
-                    }}>
-                      {currentUser.email}
-                    </p>
-                  </div>
-                )}
-
-                {(currentUser?.phone || currentUser?.phoneNumber) && (
-                  <div>
-                    <label style={{
-                      fontSize: '12px',
-                      color: designTokens.colors.neutral.darkGray,
-                      display: 'block',
-                      marginBottom: '4px',
-                    }}>
-                      Phone
-                    </label>
-                    <p style={{
-                      fontSize: '16px',
-                      fontWeight: '500',
-                      color: designTokens.colors.neutral.charcoal,
-                    }}>
-                      {currentUser.phoneNumber || currentUser.phone}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </section>
-
-            {/* My Bands */}
-            <section style={{ marginBottom: '32px' }}>
-              <h3 style={{
-                fontSize: '18px',
-                fontWeight: '600',
-                marginBottom: '12px',
-                color: designTokens.colors.neutral.charcoal,
-              }}>
-                My Bands
-              </h3>
-
-              {userBands.map(band => (
-                <button
-                  key={band.id}
-                  onClick={() => {
-                    switchBand(band.id);
-                    setActiveTab('playlists');
-                  }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    width: '100%',
-                    padding: '16px',
-                    marginBottom: '8px',
-                    border: currentBand?.id === band.id
-                      ? `2px solid ${designTokens.colors.primary.blue}`
-                      : `1px solid ${designTokens.colors.neutral.lightGray}`,
-                    borderRadius: '8px',
-                    backgroundColor: currentBand?.id === band.id
-                      ? designTokens.colors.surface.secondary
-                      : designTokens.colors.neutral.white,
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                  }}
-                >
-                  <div>
-                    <div style={{
-                      fontSize: '16px',
-                      fontWeight: '600',
-                      color: designTokens.colors.neutral.charcoal,
-                      marginBottom: '4px',
-                    }}>
-                      {band.name}
-                    </div>
-                    <div style={{
-                      fontSize: '12px',
-                      color: designTokens.colors.neutral.darkGray,
-                    }}>
-                      {band.is_personal ? 'Personal Workspace' : 'Band'}
-                    </div>
-                  </div>
-                  {currentBand?.id === band.id && (
-                    <Check size={20} color={designTokens.colors.primary.blue} />
-                  )}
-                </button>
-              ))}
-
-              <button
-                onClick={() => setShowBandModal(true)}
-                style={{
-                  width: '100%',
-                  padding: '16px',
-                  marginTop: '8px',
-                  border: `1px dashed ${designTokens.colors.neutral.gray}`,
-                  borderRadius: '8px',
-                  backgroundColor: 'transparent',
-                  cursor: 'pointer',
-                  fontSize: '16px',
-                  color: designTokens.colors.primary.blue,
-                  fontWeight: '500',
-                }}
-              >
-                + Create New Band
-              </button>
-            </section>
-
-            {/* Help Section */}
-            <section style={{ marginBottom: '32px' }}>
-              <button
-                onClick={() => setShowTutorial(true)}
-                style={{
-                  width: '100%',
-                  padding: '16px',
-                  marginBottom: '12px',
-                  border: `1px solid ${designTokens.colors.borders.default}`,
-                  borderRadius: '8px',
-                  backgroundColor: designTokens.colors.surface.secondary,
-                  cursor: 'pointer',
-                  fontSize: '16px',
-                  color: designTokens.colors.primary.blue,
-                  fontWeight: '500',
-                }}
-              >
-                How to Use CoreTet
-              </button>
-
-              <button
-                onClick={() => setShowIntro(true)}
-                style={{
-                  width: '100%',
-                  padding: '16px',
-                  border: `1px solid ${designTokens.colors.borders.default}`,
-                  borderRadius: '8px',
-                  backgroundColor: designTokens.colors.surface.secondary,
-                  cursor: 'pointer',
-                  fontSize: '16px',
-                  color: designTokens.colors.primary.blue,
-                  fontWeight: '500',
-                }}
-              >
-                Replay Intro Screens
-              </button>
-            </section>
-
-            {/* Sign Out */}
-            <button
-              onClick={async () => {
-                await auth.signOut();
-              }}
-              style={{
-                width: '100%',
-                padding: '16px',
-                border: `1px solid ${designTokens.colors.borders.default}`,
-                borderRadius: '8px',
-                backgroundColor: designTokens.colors.surface.secondary,
-                cursor: 'pointer',
-                fontSize: '16px',
-                color: designTokens.colors.neutral.darkGray,
-                fontWeight: '500',
-              }}
-            >
-              Sign Out
-            </button>
+            <EmptyState
+              icon={Share2}
+              title="No shared set lists yet"
+              description="When other bands share set lists with you, they'll appear here."
+            />
           </div>
         );
 
@@ -1857,7 +1666,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
         flexShrink: 0,
         backgroundColor: designTokens.colors.surface.primary,
         borderBottom: `1px solid ${designTokens.colors.borders.default}`,
-        paddingTop: 'max(env(safe-area-inset-top), 12px)',
+        paddingTop: 'calc(env(safe-area-inset-top) + 8px)',
       }}>
         {/* Top header with logo, action button, and user button */}
         <div style={{
@@ -1888,10 +1697,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
               Back
             </button>
           ) : (
-            <button
-              onClick={() => {
-                setShowBandModal(true);
-              }}
+            <div
               style={{
                 width: designTokens.spacing.xxl,
                 height: designTokens.spacing.xxl,
@@ -1904,13 +1710,11 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                 fontSize: designTokens.typography.fontSizes.h3,
                 fontWeight: designTokens.typography.fontWeights.bold,
                 flexShrink: 0,
-                border: 'none',
-                cursor: 'pointer',
                 padding: 0,
               }}
             >
               C
-            </button>
+            </div>
           )}
 
           {/* Center: Action Button */}
@@ -2141,6 +1945,26 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                 </button>
               </DropdownMenu>
             )}
+
+            {/* Settings button (always visible) */}
+            <button
+              onClick={() => setShowSettings(true)}
+              style={{
+                width: designTokens.spacing.xxl,
+                height: designTokens.spacing.xxl,
+                borderRadius: designTokens.borderRadius.full,
+                backgroundColor: 'transparent',
+                border: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                color: designTokens.colors.neutral.charcoal,
+              }}
+              aria-label="Settings"
+            >
+              <Settings size={20} />
+            </button>
           </div>
         </div>
       </div>
@@ -2204,6 +2028,8 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
           currentUser={currentUser}
           audioRef={audioRef}
           currentTrack={currentTrack}
+          currentBand={currentBand}
+          userRole={userRole}
         />
       )}
 
@@ -2237,10 +2063,6 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
           isOpen={showSettings}
           onClose={() => setShowSettings(false)}
           currentUser={currentUser}
-          onShowTutorial={() => {
-            setShowSettings(false);
-            setShowTutorial(true);
-          }}
           onShowIntro={() => {
             setShowSettings(false);
             setShowIntro(true);
@@ -2257,6 +2079,8 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
         isOpen={showIntro}
         onClose={() => setShowIntro(false)}
       />
+
+
     </div>
   );
 }

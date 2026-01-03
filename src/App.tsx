@@ -1,17 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import './styles.css';
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
+import { ThemeProvider } from './contexts/ThemeContext';
 import { SetListProvider } from './contexts/SetListContext';
 import { BandProvider } from './contexts/BandContext';
 import { MainDashboard } from './components/screens/MainDashboard';
 import { OnboardingScreen } from './components/screens/OnboardingScreen';
 import { PublicPlaylistView } from './components/screens/PublicPlaylistView';
 import { PhoneAuthScreen } from './components/screens/PhoneAuthScreen';
+import { EmailConfirmedScreen } from './components/screens/EmailConfirmedScreen';
 // TEMPORARILY HIDDEN FOR TESTFLIGHT (TestFlight has its own feedback system)
 // TODO: Re-enable after TestFlight phase
 // import { FeedbackBoard } from './components/screens/FeedbackBoard';
 // import { FeedbackDashboard } from './components/screens/FeedbackDashboard';
 import { LandingPage } from './components/screens/LandingPage';
+import { NewLandingPage } from './components/screens/NewLandingPage';
 import { AcceptInvite } from './components/screens/AcceptInvite';
 import { Spinner } from './components/atoms/Spinner';
 import DeepLinkService from './utils/deepLinkHandler';
@@ -205,9 +208,13 @@ export default function App() {
   }
 
   return (
-    <BrowserRouter>
-      <DeepLinkHandler />
-      <Routes>
+    <ThemeProvider>
+      <BrowserRouter>
+        <DeepLinkHandler />
+        <Routes>
+        {/* Email confirmation success page */}
+        <Route path="/auth/confirmed" element={<EmailConfirmedScreen />} />
+
         {/* Invite acceptance - handles its own authentication */}
         <Route path="/invite/:token" element={
           user ? (
@@ -245,14 +252,15 @@ export default function App() {
         <Route path="/" element={
           Capacitor.isNativePlatform()
             ? (user ? <AppContent user={user} /> : <PhoneAuthScreen />)
-            : (user ? <AppContent user={user} /> : <LandingPage />)
+            : (user ? <AppContent user={user} /> : <NewLandingPage />)
         } />
 
         {/* Catch-all - show landing page on web, auth screen on native */}
         <Route path="*" element={
-          Capacitor.isNativePlatform() ? <PhoneAuthScreen /> : <LandingPage />
+          Capacitor.isNativePlatform() ? <PhoneAuthScreen /> : <NewLandingPage />
         } />
       </Routes>
-    </BrowserRouter>
+      </BrowserRouter>
+    </ThemeProvider>
   );
 }

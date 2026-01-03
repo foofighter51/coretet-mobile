@@ -269,6 +269,162 @@ export const db = {
     },
   },
 
+  // Track Version operations
+  trackVersions: {
+    async getByTrack(trackId: string) {
+      const { data, error} = await supabase
+        .from('track_versions')
+        .select('*')
+        .eq('track_id', trackId)
+        .order('version_number', { ascending: false });
+
+      return { data, error };
+    },
+
+    async getHeroVersion(trackId: string) {
+      const { data, error } = await supabase
+        .from('track_versions')
+        .select('*')
+        .eq('track_id', trackId)
+        .eq('is_hero', true)
+        .single();
+
+      return { data, error };
+    },
+
+    async setHeroVersion(trackId: string, versionId: string) {
+      // First, unset all hero flags for this track
+      await supabase
+        .from('track_versions')
+        .update({ is_hero: false })
+        .eq('track_id', trackId);
+
+      // Then set the new hero
+      const { data, error } = await supabase
+        .from('track_versions')
+        .update({ is_hero: true })
+        .eq('id', versionId)
+        .select()
+        .single();
+
+      // Update track's hero_version_id
+      if (!error) {
+        await supabase
+          .from('tracks')
+          .update({ hero_version_id: versionId })
+          .eq('id', trackId);
+      }
+
+      return { data, error };
+    },
+
+    async create(version: {
+      track_id: string;
+      file_url: string;
+      uploaded_by: string;
+      version_number: number;
+      duration_seconds?: number;
+      file_size?: number;
+      notes?: string;
+      is_hero?: boolean;
+    }) {
+      const { data, error } = await supabase
+        .from('track_versions')
+        .insert(version)
+        .select()
+        .single();
+
+      return { data, error };
+    },
+
+    async delete(versionId: string) {
+      const { data, error } = await supabase
+        .from('track_versions')
+        .delete()
+        .eq('id', versionId);
+
+      return { data, error };
+    },
+  },
+
+  // Version Groups operations (for grouping existing tracks as versions)
+  versionGroups: {
+    async create(params: {
+      name: string;
+      band_id: string | null;
+      track_ids: string[];
+      hero_track_id: string;
+      created_by: string;
+    }) {
+      const { data, error } = await supabase.rpc('create_version_group', {
+        p_name: params.name,
+        p_band_id: params.band_id,
+        p_track_ids: params.track_ids,
+        p_hero_track_id: params.hero_track_id,
+        p_created_by: params.created_by,
+      });
+
+      return { data, error };
+    },
+
+    async getByBand(bandId: string) {
+      const { data, error } = await supabase
+        .from('version_groups')
+        .select('*')
+        .eq('band_id', bandId)
+        .order('created_at', { ascending: false });
+
+      return { data, error };
+    },
+
+    async getTracksInGroup(groupId: string) {
+      const { data, error } = await supabase
+        .from('tracks')
+        .select('*')
+        .eq('version_group_id', groupId)
+        .order('created_at', { ascending: false });
+
+      return { data, error };
+    },
+
+    async setHero(groupId: string, heroTrackId: string) {
+      const { data, error } = await supabase.rpc('set_hero_track', {
+        p_group_id: groupId,
+        p_hero_track_id: heroTrackId,
+      });
+
+      return { data, error };
+    },
+
+    async ungroup(groupId: string) {
+      const { data, error } = await supabase.rpc('ungroup_tracks', {
+        p_group_id: groupId,
+      });
+
+      return { data, error };
+    },
+
+    async getGroupForTrack(trackId: string) {
+      const { data: track, error: trackError } = await supabase
+        .from('tracks')
+        .select('version_group_id')
+        .eq('id', trackId)
+        .single();
+
+      if (trackError || !track?.version_group_id) {
+        return { data: null, error: trackError };
+      }
+
+      const { data, error } = await supabase
+        .from('version_groups')
+        .select('*')
+        .eq('id', track.version_group_id)
+        .single();
+
+      return { data, error };
+    },
+  },
+
   // Set List operations (renamed from playlists)
   setLists: {
     async create(setList: {
@@ -1481,6 +1637,113 @@ export const storage = {
     const { data, error } = await supabase.storage
       .from('audio-files')
       .remove([path]);
+
+    return { data, error };
+  },
+};
+
+// ============================================================
+// KEYWORDS HELPERS
+// ============================================================
+
+export const keywordHelpers = {
+  // Get all keywords for a band
+  async getKeywordsForBand(bandId: string) {
+    const { data, error } = await supabase
+      .from('keywords')
+      .select('*')
+      .eq('band_id', bandId)
+      .order('name', { ascending: true });
+
+    return { data, error };
+  },
+
+  // Create a new keyword
+  async createKeyword(bandId: string, name: string, createdBy: string, color?: string) {
+    const { data, error } = await supabase
+      .from('keywords')
+      .insert({
+        band_id: bandId,
+        name: name.trim(),
+        color: color || null,
+        created_by: createdBy,
+      })
+      .select()
+      .single();
+
+    return { data, error };
+  },
+
+  // Delete a keyword
+  async deleteKeyword(keywordId: string) {
+    const { error } = await supabase
+      .from('keywords')
+      .delete()
+      .eq('id', keywordId);
+
+    return { error };
+  },
+
+  // Get keywords for a track
+  async getKeywordsForTrack(trackId: string) {
+    const { data, error } = await supabase
+      .from('track_keywords')
+      .select(`
+        id,
+        keyword_id,
+        keywords (
+          id,
+          name,
+          color
+        )
+      `)
+      .eq('track_id', trackId);
+
+    return { data, error };
+  },
+
+  // Add keyword to track
+  async addKeywordToTrack(trackId: string, keywordId: string, addedBy: string) {
+    const { data, error } = await supabase
+      .from('track_keywords')
+      .insert({
+        track_id: trackId,
+        keyword_id: keywordId,
+        added_by: addedBy,
+      })
+      .select()
+      .single();
+
+    return { data, error };
+  },
+
+  // Remove keyword from track
+  async removeKeywordFromTrack(trackId: string, keywordId: string) {
+    const { error } = await supabase
+      .from('track_keywords')
+      .delete()
+      .eq('track_id', trackId)
+      .eq('keyword_id', keywordId);
+
+    return { error };
+  },
+
+  // Get all tracks with a specific keyword
+  async getTracksWithKeyword(keywordId: string) {
+    const { data, error } = await supabase
+      .from('track_keywords')
+      .select(`
+        track_id,
+        tracks (
+          id,
+          title,
+          file_url,
+          duration_seconds,
+          uploaded_by,
+          created_at
+        )
+      `)
+      .eq('keyword_id', keywordId);
 
     return { data, error };
   },

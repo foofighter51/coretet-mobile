@@ -226,6 +226,13 @@ export type Database = {
             foreignKeyName: "comment_views_track_id_fkey"
             columns: ["track_id"]
             isOneToOne: false
+            referencedRelation: "track_version_groups"
+            referencedColumns: ["track_id"]
+          },
+          {
+            foreignKeyName: "comment_views_track_id_fkey"
+            columns: ["track_id"]
+            isOneToOne: false
             referencedRelation: "tracks"
             referencedColumns: ["id"]
           },
@@ -289,6 +296,13 @@ export type Database = {
             columns: ["track_id"]
             isOneToOne: false
             referencedRelation: "track_listen_stats"
+            referencedColumns: ["track_id"]
+          },
+          {
+            foreignKeyName: "comments_track_id_fkey"
+            columns: ["track_id"]
+            isOneToOne: false
+            referencedRelation: "track_version_groups"
             referencedColumns: ["track_id"]
           },
           {
@@ -661,6 +675,13 @@ export type Database = {
             foreignKeyName: "ratings_track_id_fkey"
             columns: ["track_id"]
             isOneToOne: false
+            referencedRelation: "track_version_groups"
+            referencedColumns: ["track_id"]
+          },
+          {
+            foreignKeyName: "ratings_track_id_fkey"
+            columns: ["track_id"]
+            isOneToOne: false
             referencedRelation: "tracks"
             referencedColumns: ["id"]
           },
@@ -798,6 +819,13 @@ export type Database = {
             columns: ["track_id"]
             isOneToOne: false
             referencedRelation: "track_listen_stats"
+            referencedColumns: ["track_id"]
+          },
+          {
+            foreignKeyName: "playlist_items_track_id_fkey"
+            columns: ["track_id"]
+            isOneToOne: false
+            referencedRelation: "track_version_groups"
             referencedColumns: ["track_id"]
           },
           {
@@ -1121,6 +1149,13 @@ export type Database = {
             foreignKeyName: "track_keywords_track_id_fkey"
             columns: ["track_id"]
             isOneToOne: false
+            referencedRelation: "track_version_groups"
+            referencedColumns: ["track_id"]
+          },
+          {
+            foreignKeyName: "track_keywords_track_id_fkey"
+            columns: ["track_id"]
+            isOneToOne: false
             referencedRelation: "tracks"
             referencedColumns: ["id"]
           },
@@ -1167,6 +1202,13 @@ export type Database = {
             columns: ["track_id"]
             isOneToOne: false
             referencedRelation: "track_listen_stats"
+            referencedColumns: ["track_id"]
+          },
+          {
+            foreignKeyName: "track_listens_track_id_fkey"
+            columns: ["track_id"]
+            isOneToOne: false
+            referencedRelation: "track_version_groups"
             referencedColumns: ["track_id"]
           },
           {
@@ -1250,6 +1292,13 @@ export type Database = {
             foreignKeyName: "track_ratings_track_id_fkey"
             columns: ["track_id"]
             isOneToOne: false
+            referencedRelation: "track_version_groups"
+            referencedColumns: ["track_id"]
+          },
+          {
+            foreignKeyName: "track_ratings_track_id_fkey"
+            columns: ["track_id"]
+            isOneToOne: false
             referencedRelation: "tracks"
             referencedColumns: ["id"]
           },
@@ -1324,6 +1373,13 @@ export type Database = {
             foreignKeyName: "track_versions_track_id_fkey"
             columns: ["track_id"]
             isOneToOne: false
+            referencedRelation: "track_version_groups"
+            referencedColumns: ["track_id"]
+          },
+          {
+            foreignKeyName: "track_versions_track_id_fkey"
+            columns: ["track_id"]
+            isOneToOne: false
             referencedRelation: "tracks"
             referencedColumns: ["id"]
           },
@@ -1348,6 +1404,7 @@ export type Database = {
           id: string
           title: string
           updated_at: string | null
+          version_group_id: string | null
         }
         Insert: {
           band_id?: string | null
@@ -1360,6 +1417,7 @@ export type Database = {
           id?: string
           title: string
           updated_at?: string | null
+          version_group_id?: string | null
         }
         Update: {
           band_id?: string | null
@@ -1372,6 +1430,7 @@ export type Database = {
           id?: string
           title?: string
           updated_at?: string | null
+          version_group_id?: string | null
         }
         Relationships: [
           {
@@ -1407,6 +1466,20 @@ export type Database = {
             columns: ["hero_version_id"]
             isOneToOne: false
             referencedRelation: "track_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tracks_version_group_id_fkey"
+            columns: ["version_group_id"]
+            isOneToOne: false
+            referencedRelation: "track_version_groups"
+            referencedColumns: ["group_id"]
+          },
+          {
+            foreignKeyName: "tracks_version_group_id_fkey"
+            columns: ["version_group_id"]
+            isOneToOne: false
+            referencedRelation: "version_groups"
             referencedColumns: ["id"]
           },
         ]
@@ -1449,6 +1522,51 @@ export type Database = {
           waitlist_position?: number | null
         }
         Relationships: []
+      }
+      version_groups: {
+        Row: {
+          band_id: string | null
+          created_at: string | null
+          created_by: string
+          hero_track_id: string | null
+          id: string
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          band_id?: string | null
+          created_at?: string | null
+          created_by: string
+          hero_track_id?: string | null
+          id?: string
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          band_id?: string | null
+          created_at?: string | null
+          created_by?: string
+          hero_track_id?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "version_groups_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "version_groups_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -1519,6 +1637,31 @@ export type Database = {
         }
         Relationships: []
       }
+      track_version_groups: {
+        Row: {
+          band_id: string | null
+          duration_seconds: number | null
+          file_url: string | null
+          group_created_at: string | null
+          group_id: string | null
+          group_name: string | null
+          hero_track_id: string | null
+          is_hero: boolean | null
+          track_created_at: string | null
+          track_id: string | null
+          track_title: string | null
+          version_count: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "version_groups_band_id_fkey"
+            columns: ["band_id"]
+            isOneToOne: false
+            referencedRelation: "bands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       add_keyword_to_track: {
@@ -1526,6 +1669,16 @@ export type Database = {
         Returns: string
       }
       clerk_user_id: { Args: never; Returns: string }
+      create_version_group: {
+        Args: {
+          p_band_id: string
+          p_created_by: string
+          p_hero_track_id: string
+          p_name: string
+          p_track_ids: string[]
+        }
+        Returns: string
+      }
       current_user_id: { Args: never; Returns: string }
       get_or_create_keyword: {
         Args: {
@@ -1565,6 +1718,11 @@ export type Database = {
         }
         Returns: string
       }
+      set_hero_track: {
+        Args: { p_group_id: string; p_hero_track_id: string }
+        Returns: undefined
+      }
+      ungroup_tracks: { Args: { p_group_id: string }; Returns: undefined }
     }
     Enums: {
       [_ in never]: never

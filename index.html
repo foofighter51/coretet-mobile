@@ -20,27 +20,12 @@
       /* Mobile-first responsive design */
     }
     #root {
-      /* Mobile app layout - no centering, full viewport */
+      /* Full viewport layout */
       min-height: 100vh;
       width: 100%;
       max-width: 100vw;
       overflow-x: hidden;
-      /* Mobile viewport: 375px base width, scale to device */
-      margin: 0 auto;
-    }
-    /* Ensure mobile app viewport on larger screens (except admin pages) */
-    @media (min-width: 768px) {
-      #root {
-        max-width: 375px;
-        box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.12);
-        border-radius: 0;
-      }
-      /* Allow full width for admin dashboard */
-      body:has([data-admin-page]) #root,
-      #root:has([data-admin-page]) {
-        max-width: 100vw;
-        box-shadow: none;
-      }
+      margin: 0;
     }
   </style>
 </head>

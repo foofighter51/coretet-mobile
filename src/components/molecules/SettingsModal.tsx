@@ -1,18 +1,19 @@
 import React from 'react';
-import { HelpCircle } from 'lucide-react';
-import { designTokens } from '../../design/designTokens';
+import { HelpCircle, Moon, Sun } from 'lucide-react';
+import { useDesignTokens } from '../../design/useDesignTokens';
+import { useTheme } from '../../contexts/ThemeContext';
 import { BottomSheetModal } from '../ui/BottomSheetModal';
 
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentUser: {
+    id?: string;
     name?: string;
     email?: string;
     phone?: string;
     phoneNumber?: string;
   };
-  onShowTutorial: () => void;
   onShowIntro: () => void;
   onSignOut: () => void;
 }
@@ -21,10 +22,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   isOpen,
   onClose,
   currentUser,
-  onShowTutorial,
   onShowIntro,
   onSignOut,
 }) => {
+  const designTokens = useDesignTokens();
+  const { isDarkMode, toggleTheme } = useTheme();
+
   return (
     <BottomSheetModal
       isOpen={isOpen}
@@ -108,16 +111,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </div>
         )}
 
-        {/* Tutorial Button */}
+        {/* Dark Mode Toggle */}
         <button
-          onClick={onShowTutorial}
+          onClick={toggleTheme}
           style={{
             marginTop: designTokens.spacing.md,
             width: '100%',
             padding: designTokens.spacing.md,
             backgroundColor: designTokens.colors.surface.secondary,
             color: designTokens.colors.primary.blue,
-            border: `1px solid ${designTokens.colors.primary.blue}`,
+            border: `1px solid ${designTokens.colors.borders.default}`,
             borderRadius: designTokens.borderRadius.sm,
             fontSize: designTokens.typography.fontSizes.bodySmall,
             fontWeight: designTokens.typography.fontWeights.medium,
@@ -128,8 +131,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             gap: designTokens.spacing.sm,
           }}
         >
-          <HelpCircle size={18} />
-          How to Use CoreTet
+          {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
+          {isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
         </button>
 
         {/* Replay Intro Button */}
@@ -141,7 +144,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             padding: designTokens.spacing.md,
             backgroundColor: designTokens.colors.surface.secondary,
             color: designTokens.colors.primary.blue,
-            border: `1px solid ${designTokens.colors.primary.blue}`,
+            border: `1px solid ${designTokens.colors.borders.default}`,
             borderRadius: designTokens.borderRadius.sm,
             fontSize: designTokens.typography.fontSizes.bodySmall,
             fontWeight: designTokens.typography.fontWeights.medium,
@@ -154,6 +157,55 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         >
           <HelpCircle size={18} />
           Replay Intro Screens
+        </button>
+
+        {/* DEV: Test Full Onboarding Button */}
+        <button
+          onClick={async () => {
+            if (!confirm('This will reset your profile name and onboarding state to test the signup flow. You can restore your name afterwards. Continue?')) {
+              return;
+            }
+
+            try {
+              // Import db dynamically
+              const { db } = await import('../../../lib/supabase');
+
+              if (!currentUser.id) {
+                alert('User ID not found');
+                return;
+              }
+
+              // Reset profile name to 'User' (triggers onboarding)
+              await db.profiles.update(currentUser.id, { name: 'User' });
+
+              // Clear onboarding flag
+              localStorage.removeItem('onboarding_v1_completed');
+
+              // Reload to trigger full onboarding
+              window.location.reload();
+            } catch (error) {
+              console.error('Failed to reset onboarding:', error);
+              alert('Failed to reset onboarding state');
+            }
+          }}
+          style={{
+            marginTop: designTokens.spacing.md,
+            width: '100%',
+            padding: designTokens.spacing.md,
+            backgroundColor: designTokens.colors.surface.secondary,
+            color: designTokens.colors.neutral.darkGray,
+            border: `1px solid ${designTokens.colors.borders.default}`,
+            borderRadius: designTokens.borderRadius.sm,
+            fontSize: designTokens.typography.fontSizes.bodySmall,
+            fontWeight: designTokens.typography.fontWeights.medium,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: designTokens.spacing.sm,
+          }}
+        >
+          🧪 Test Full Onboarding (DEV)
         </button>
 
         {/* Sign Out Button */}

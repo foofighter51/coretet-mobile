@@ -198,21 +198,21 @@ export function OnboardingScreen() {
   const introScreens = [
     {
       step: 'intro1' as const,
-      icon: '👥',
-      title: 'Your private creative space',
-      description: 'Create private bands to share music with your collaborators. No public feeds, no strangers.',
+      icon: '🎵',
+      title: 'Share music with your band',
+      description: 'Upload tracks, organize into set lists, and collaborate with your bandmates—all in one private space.',
     },
     {
       step: 'intro2' as const,
       icon: '💬',
-      title: 'Timestamped feedback',
-      description: 'Leave comments at exact moments in tracks. Perfect for producers, bands, and creators working together.',
+      title: 'Get feedback at exact moments',
+      description: 'Leave timestamped comments on tracks. Click any comment to jump right to that moment.',
     },
     {
       step: 'intro3' as const,
       icon: '🔒',
-      title: 'Your music stays private',
-      description: 'Invite-only bands. Your tracks are never public. Full control over who hears your work.',
+      title: 'Invite-only and private',
+      description: 'Your tracks are never public. Only invited band members can access your music.',
     },
   ];
 
