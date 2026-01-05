@@ -208,25 +208,25 @@ interface MainDashboardProps {
   currentUser: CurrentUser;
 }
 
-const baseStyle: React.CSSProperties = {
-  fontFamily: designTokens.typography.fontFamily,
-  width: '100%',
-  maxWidth: '425px',
-  minHeight: '100vh',
-  height: '100vh', // Use static viewport height - prevents keyboard resize
-  margin: '0 auto',
-  position: 'relative',
-  display: 'flex',
-  flexDirection: 'column',
-  overflow: 'hidden',
-  boxSizing: 'border-box',
-  userSelect: 'none',
-  WebkitUserSelect: 'none',
-};
-
 export function MainDashboard({ currentUser }: MainDashboardProps) {
   const navigate = useNavigate();
   const designTokens = useDesignTokens();
+
+  const baseStyle: React.CSSProperties = {
+    fontFamily: designTokens.typography.fontFamily,
+    width: '100%',
+    maxWidth: '425px',
+    minHeight: '100vh',
+    height: '100vh', // Use static viewport height - prevents keyboard resize
+    margin: '0 auto',
+    position: 'relative',
+    display: 'flex',
+    flexDirection: 'column',
+    overflow: 'hidden',
+    boxSizing: 'border-box',
+    userSelect: 'none',
+    WebkitUserSelect: 'none',
+  };
   const { setLists, createdSetLists, followedSetLists, currentSetList, createSetList, setCurrentSetList, refreshSetLists, isLoading: setListsLoading } = useSetList();
   const { currentBand, userBands, userRole, switchBand } = useBand();
 

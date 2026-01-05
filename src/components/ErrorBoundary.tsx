@@ -1,5 +1,5 @@
 import React, { Component, ReactNode } from 'react';
-import { designTokens } from '../design/designTokens';
+import { designTokens } from '../design/designTokens'; // Use static tokens for error boundary (no hooks in class components)
 
 interface Props {
   children: ReactNode;

@@ -3,14 +3,6 @@ import { designTokens } from '../../design/designTokens';
 import { useAuth } from '../../contexts/AuthContext';
 import { ErrorDisplay } from '../molecules/ErrorDisplay';
 
-const baseStyle = {
-  fontFamily: designTokens.typography.fontFamily,
-  width: '100%',
-  maxWidth: '425px',
-  minHeight: '100vh',
-  margin: '0 auto',
-  position: 'relative' as const
-};
 
 export function CodeVerificationScreen() {
   const {
@@ -31,6 +23,15 @@ export function CodeVerificationScreen() {
 
   const handleResendCode = () => {
     sendVerificationCode(email);
+  };
+
+  const baseStyle = {
+    fontFamily: designTokens.typography.fontFamily,
+    width: '100%',
+    maxWidth: '425px',
+    minHeight: '100vh',
+    margin: '0 auto',
+    position: 'relative' as const
   };
 
   return (

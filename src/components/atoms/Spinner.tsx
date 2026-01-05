@@ -1,5 +1,5 @@
 import React from 'react';
-import { designTokens } from '../../design/designTokens';
+import { useDesignTokens } from '../../design/useDesignTokens';
 
 interface SpinnerProps {
   size?: number;
@@ -7,7 +7,9 @@ interface SpinnerProps {
   label?: string;
 }
 
-export function Spinner({ size = 40, color = designTokens.colors.primary.blue, label }: SpinnerProps) {
+export function Spinner({ size = 40, color, label }: SpinnerProps) {
+  const designTokens = useDesignTokens();
+  const spinnerColor = color || designTokens.colors.primary.blue;
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
       <div
@@ -17,7 +19,7 @@ export function Spinner({ size = 40, color = designTokens.colors.primary.blue, l
           width: `${size}px`,
           height: `${size}px`,
           border: `3px solid ${designTokens.colors.neutral.lightGray}`,
-          borderTop: `3px solid ${color}`,
+          borderTop: `3px solid ${spinnerColor}`,
           borderRadius: '50%',
           animation: 'spin 0.8s linear infinite',
         }}

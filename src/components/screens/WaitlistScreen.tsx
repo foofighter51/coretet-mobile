@@ -2,15 +2,6 @@ import React from 'react';
 import { designTokens } from '../../design/designTokens';
 import { useAuth } from '../../contexts/AuthContext';
 
-const baseStyle = {
-  fontFamily: designTokens.typography.fontFamily,
-  width: '100%',
-  maxWidth: '425px',
-  minHeight: '100vh',
-  margin: '0 auto',
-  position: 'relative' as const
-};
-
 interface WaitlistScreenProps {
   waitlistPosition?: number;
   message: string;
@@ -18,6 +9,15 @@ interface WaitlistScreenProps {
 
 export function WaitlistScreen({ waitlistPosition, message }: WaitlistScreenProps) {
   const { setCurrentScreen } = useAuth();
+
+  const baseStyle = {
+    fontFamily: designTokens.typography.fontFamily,
+    width: '100%',
+    maxWidth: '425px',
+    minHeight: '100vh',
+    margin: '0 auto',
+    position: 'relative' as const
+  };
 
   return (
     <div style={{
