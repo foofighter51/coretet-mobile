@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { Upload, Music, AlertCircle, CheckCircle, X, Cloud } from 'lucide-react';
-import { designTokens } from '../../design/designTokens';
+import { useDesignTokens } from '../../design/useDesignTokens';
 import AudioUploadService, { UploadProgress, UploadOptions, UploadResult } from '../../utils/audioUploadService';
 import MockAudioUploadService, { MockUploadProgress, MockUploadResult } from '../../utils/mockAudioUpload';
 import AudioProcessor from '../../utils/audioProcessor';
@@ -30,6 +30,7 @@ export const AudioUploader: React.FC<AudioUploaderProps> = ({
   context = 'personal',
   bandName
 }) => {
+  const designTokens = useDesignTokens();
   const [isDragOver, setIsDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState<UploadProgress | null>(null);

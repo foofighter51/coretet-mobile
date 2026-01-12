@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Play, Pause, Loader } from 'lucide-react';
-import { designTokens } from '../../design/designTokens';
+import { useDesignTokens } from '../../design/useDesignTokens';
 
 interface PlaybackBarProps {
   track: {
@@ -24,6 +24,7 @@ export const PlaybackBar: React.FC<PlaybackBarProps> = ({
   error = null,
   onPlayPause
 }) => {
+  const designTokens = useDesignTokens();
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -161,8 +162,8 @@ export const PlaybackBar: React.FC<PlaybackBarProps> = ({
   return (
     <div style={{
       flexShrink: 0,
-      backgroundColor: '#ffffff',
-      borderTop: `1px solid ${designTokens.colors.neutral.lightGray}`,
+      backgroundColor: designTokens.colors.surface.primary,
+      borderTop: `1px solid ${designTokens.colors.borders.default}`,
       padding: '12px 16px',
       boxShadow: '0 -2px 8px rgba(0, 0, 0, 0.1)',
     }}>
@@ -192,7 +193,7 @@ export const PlaybackBar: React.FC<PlaybackBarProps> = ({
         <div style={{
           width: '100%',
           height: '4px',
-          backgroundColor: '#e2e8f0',
+          backgroundColor: designTokens.colors.borders.default,
           borderRadius: '2px',
           position: 'relative',
         }}>
@@ -213,7 +214,7 @@ export const PlaybackBar: React.FC<PlaybackBarProps> = ({
             transform: 'translate(-50%, -50%)',
             width: '12px',
             height: '12px',
-            backgroundColor: '#ffffff',
+            backgroundColor: designTokens.colors.surface.primary,
             border: `2px solid ${designTokens.colors.primary.blue}`,
             borderRadius: '50%',
             boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)',

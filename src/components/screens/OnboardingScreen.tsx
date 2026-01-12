@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { db, auth } from '../../../lib/supabase';
-import { designTokens } from '../../design/designTokens';
+import { useDesignTokens } from '../../design/useDesignTokens';
 
 type OnboardingStep = 'name' | 'intro1' | 'intro2' | 'intro3';
 
 export function OnboardingScreen() {
+  const designTokens = useDesignTokens();
   const [step, setStep] = useState<OnboardingStep>('name');
   const [userName, setUserName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -105,7 +106,7 @@ export function OnboardingScreen() {
         justifyContent: 'center',
         alignItems: 'center',
         padding: '24px',
-        backgroundColor: '#ffffff',
+        backgroundColor: designTokens.colors.surface.tertiary,
         fontFamily: designTokens.typography.fontFamily,
       }}>
         <div style={{
@@ -230,7 +231,7 @@ export function OnboardingScreen() {
         justifyContent: 'center',
         alignItems: 'center',
         padding: '24px',
-        backgroundColor: '#ffffff',
+        backgroundColor: designTokens.colors.surface.tertiary,
         fontFamily: designTokens.typography.fontFamily,
       }}>
         <div style={{

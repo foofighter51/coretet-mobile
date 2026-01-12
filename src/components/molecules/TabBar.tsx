@@ -1,6 +1,6 @@
 import React, { memo } from 'react';
 import { List, Share2 } from 'lucide-react';
-import { designTokens } from '../../design/designTokens';
+import { useDesignTokens } from '../../design/useDesignTokens';
 import { TabId, TabItem } from '../../types';
 
 interface TabBarProps {
@@ -14,6 +14,8 @@ const tabs: TabItem[] = [
 ];
 
 export const TabBar = memo(function TabBar({ activeTab, onTabChange }: TabBarProps) {
+  const designTokens = useDesignTokens();
+
   return (
     <nav
       style={{
@@ -22,8 +24,8 @@ export const TabBar = memo(function TabBar({ activeTab, onTabChange }: TabBarPro
         left: 0,
         right: 0,
         zIndex: 100,
-        backgroundColor: designTokens.colors.neutral.white,
-        borderTop: `1px solid ${designTokens.colors.neutral.lightGray}`,
+        backgroundColor: designTokens.colors.surface.primary,
+        borderTop: `1px solid ${designTokens.colors.borders.default}`,
         padding: `${designTokens.spacing.xs} 0`,
         paddingBottom: '20px',
         minHeight: '60px',

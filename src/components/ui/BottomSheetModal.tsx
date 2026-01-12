@@ -1,7 +1,7 @@
 import React, { ReactNode } from 'react';
 import { X } from 'lucide-react';
 import { BaseModal, BaseModalProps } from './BaseModal';
-import { designTokens } from '../../design/designTokens';
+import { useDesignTokens } from '../../design/useDesignTokens';
 
 export interface BottomSheetModalProps extends Omit<BaseModalProps, 'children' | 'position' | 'animation'> {
   title: string;
@@ -15,6 +15,8 @@ export function BottomSheetModal({
   showCloseButton = true,
   ...baseProps
 }: BottomSheetModalProps) {
+  const designTokens = useDesignTokens();
+
   return (
     <BaseModal
       {...baseProps}

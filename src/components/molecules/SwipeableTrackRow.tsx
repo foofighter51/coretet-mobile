@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Play, Pause, ThumbsUp, Heart, Folder, MessageCircle } from 'lucide-react';
-import { designTokens } from '../../design/designTokens';
+import { useDesignTokens } from '../../design/useDesignTokens';
 
 interface SwipeableTrackRowProps {
   track: {
@@ -33,6 +33,7 @@ export const SwipeableTrackRow: React.FC<SwipeableTrackRowProps> = ({
   onRate,
   onLongPress,
 }) => {
+  const designTokens = useDesignTokens();
   const [swipeOffset, setSwipeOffset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const startXRef = useRef<number>(0);
@@ -251,8 +252,8 @@ export const SwipeableTrackRow: React.FC<SwipeableTrackRowProps> = ({
         <button
           onClick={onPlayPause}
           style={{
-            backgroundColor: isPlaying ? designTokens.colors.primary.blue : '#f7fafc',
-            color: isPlaying ? '#ffffff' : designTokens.colors.neutral.charcoal,
+            backgroundColor: isPlaying ? designTokens.colors.primary.blue : designTokens.colors.surface.hover,
+            color: isPlaying ? designTokens.colors.text.inverse : designTokens.colors.text.primary,
             border: 'none',
             borderRadius: '50%',
             width: '32px',
@@ -287,10 +288,10 @@ export const SwipeableTrackRow: React.FC<SwipeableTrackRowProps> = ({
                 gap: '4px',
                 padding: '2px 6px',
                 borderRadius: '8px',
-                backgroundColor: '#f0f0f0',
+                backgroundColor: designTokens.colors.surface.hover,
                 flexShrink: 0,
               }}>
-                <Folder size={10} color={designTokens.colors.neutral.darkGray} />
+                <Folder size={10} color={designTokens.colors.text.secondary} />
                 <span style={{
                   fontSize: '10px',
                   color: designTokens.colors.neutral.darkGray,

@@ -2,6 +2,7 @@ import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom';
 import { Search, Filter, Plus, Music, Upload, ArrowLeft, Play, Pause, X, Check, MessageSquare, MoreVertical, Edit2, Trash2, Headphones, ThumbsUp, Heart, HelpCircle, Settings, GripVertical, Users, Share2 } from 'lucide-react';
 import { useDesignTokens } from '../../design/useDesignTokens';
+import { useTheme } from '../../contexts/ThemeContext';
 import { useSetList } from '../../contexts/SetListContext';
 import { useBand } from '../../contexts/BandContext';
 import { TrackRowWithPlayer } from '../molecules/TrackRowWithPlayer';
@@ -36,6 +37,7 @@ function TrackSelectorModal({ tracks, existingTrackIds, onAddTracks, onCancel }:
   onAddTracks: (trackIds: string[]) => void;
   onCancel: () => void;
 }) {
+  const designTokens = useDesignTokens();
   const [selectedTracks, setSelectedTracks] = useState<string[]>([]);
 
   // Filter out tracks already in playlist
@@ -211,6 +213,7 @@ interface MainDashboardProps {
 export function MainDashboard({ currentUser }: MainDashboardProps) {
   const navigate = useNavigate();
   const designTokens = useDesignTokens();
+  const { isDarkMode } = useTheme();
 
   const baseStyle: React.CSSProperties = {
     fontFamily: designTokens.typography.fontFamily,
@@ -226,6 +229,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
     boxSizing: 'border-box',
     userSelect: 'none',
     WebkitUserSelect: 'none',
+    backgroundColor: designTokens.colors.surface.tertiary, // Use theme background
   };
   const { setLists, createdSetLists, followedSetLists, currentSetList, createSetList, setCurrentSetList, refreshSetLists, isLoading: setListsLoading } = useSetList();
   const { currentBand, userBands, userRole, switchBand } = useBand();
@@ -271,6 +275,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   const [showCreatePlaylist, setShowCreatePlaylist] = useState(false);
   const [newPlaylistTitle, setNewPlaylistTitle] = useState('');
   const [viewMode, setViewMode] = useState<'list' | 'detail'>('list');
+  const [showAllTracks, setShowAllTracks] = useState(false);
   const [showUploader, setShowUploader] = useState(false);
   const [showPlaylistUploader, setShowPlaylistUploader] = useState(false);
   const [showTrackSelector, setShowTrackSelector] = useState(false);
@@ -446,6 +451,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
     setShowPlaylistMenu(false);
     setEditingPlaylistTitle(null);
     setShowDeleteConfirm(false);
+    setShowAllTracks(false);
     // Reset edit tracks mode
     setIsEditingTracks(false);
     setSelectedTrackIds([]);
@@ -474,6 +480,10 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
 
       // Update current playlist
       setCurrentSetList({ ...currentSetList, title: newTitle.trim() });
+
+      // Refresh the playlist list to show updated title
+      await refreshSetLists();
+
       setEditingPlaylistTitle(null);
       setShowPlaylistMenu(false);
       setError(null);
@@ -966,7 +976,17 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   }, [bandScopedTracks, currentTrack, isPlaying, ratingFilter, trackRatings]);
 
   const filteredPlaylistTracks = useMemo(() => {
-    const filtered = playlistTracks.filter(item => {
+    // If showing all tracks, convert bandScopedTracks to playlist format
+    const tracksToFilter = showAllTracks
+      ? bandScopedTracks.map((track, index) => ({
+          id: track.id,
+          tracks: track,
+          position: index,
+          set_list_id: null,
+        }))
+      : playlistTracks;
+
+    const filtered = tracksToFilter.filter(item => {
       if (!item.tracks) return false;
       if (ratingFilter === 'all') return true;
       if (ratingFilter === 'unrated') return !trackRatings[item.tracks.id];
@@ -1005,7 +1025,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
     });
 
     return sorted;
-  }, [playlistTracks, ratingFilter, trackRatings, playlistSortBy, sortAscending]);
+  }, [playlistTracks, showAllTracks, bandScopedTracks, ratingFilter, trackRatings, playlistSortBy, sortAscending]);
 
   // Check if current playlist is owned by the user (moved to component level)
   const isPlaylistOwner = currentSetList ? filteredCreatedPlaylists.some(p => p.id === currentSetList.id) : false;
@@ -1130,7 +1150,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
               </DialogModal>
             )}
 
-            {viewMode === 'detail' && currentSetList ? (
+            {viewMode === 'detail' && (currentSetList || showAllTracks) ? (
               <div>
                 {/* Edit title modal */}
                 {editingPlaylistTitle && (
@@ -1367,12 +1387,14 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                   </div>
                 )}
 
-                {playlistTracks.length === 0 ? (
+                {(showAllTracks ? bandScopedTracks.length === 0 : playlistTracks.length === 0) ? (
                   <EmptyState
                     icon={Upload}
                     title="No tracks yet"
                     description={
-                      isPlaylistOwner
+                      showAllTracks
+                        ? "Upload tracks to see them here"
+                        : isPlaylistOwner
                         ? "Tap the Upload button above to add your first track"
                         : "The playlist owner hasn't added any tracks yet"
                     }
@@ -1382,7 +1404,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                 ) : (
                   <div>
                     {/* Reorder Mode Actions */}
-                    {isReordering && (
+                    {isReordering && !showAllTracks && (
                       <div style={{
                         display: 'flex',
                         gap: designTokens.spacing.sm,
@@ -1584,53 +1606,6 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                           </p>
                         )}
                       </div>
-                      <button
-                          onClick={async (e) => {
-                            e.stopPropagation();
-
-                            // Use custom app scheme for direct app opening
-                            const shareUrl = `coretet://playlist/${playlist.share_code}`;
-
-                            // On native platforms, use native share sheet
-                            if (Capacitor.isNativePlatform()) {
-                              try {
-                                const shareText = `Check out "${playlist.title}" on CoreTet\n\n${shareUrl}`;
-
-                                await Share.share({
-                                  title: playlist.title,
-                                  text: shareText,
-                                  dialogTitle: 'Share Playlist',
-                                });
-
-                              } catch (error) {
-                                console.error('Share failed:', error);
-                              }
-                            } else {
-                              // On web, copy web-friendly URL to clipboard
-                              navigator.clipboard.writeText(shareUrl);
-                              // Show temporary success message
-                              const btn = e.currentTarget;
-                              const originalHTML = btn.innerHTML;
-                              btn.innerHTML = '✓ Copied!';
-                              btn.style.color = '#48bb78';
-                              setTimeout(() => {
-                                btn.innerHTML = originalHTML;
-                                btn.style.color = designTokens.colors.primary.blue;
-                              }, 2000);
-                            }
-                          }}
-                          style={{
-                            padding: designTokens.spacing.sm,
-                            backgroundColor: 'transparent',
-                            border: 'none',
-                            cursor: 'pointer',
-                            color: designTokens.colors.primary.blue,
-                            fontSize: designTokens.typography.fontSizes.bodySmall,
-                            fontWeight: designTokens.typography.fontWeights.medium,
-                          }}
-                        >
-                          <Upload size={20} />
-                        </button>
                     </div>
                   </div>
                 ))}
@@ -1709,19 +1684,22 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
               style={{
                 width: designTokens.spacing.xxl,
                 height: designTokens.spacing.xxl,
-                borderRadius: designTokens.borderRadius.full,
-                backgroundColor: designTokens.colors.primary.blue,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: designTokens.colors.text.inverse,
-                fontSize: designTokens.typography.fontSizes.h3,
-                fontWeight: designTokens.typography.fontWeights.bold,
                 flexShrink: 0,
                 padding: 0,
               }}
             >
-              C
+              <img
+                src={isDarkMode ? "/logo.png" : "/logo-light.png"}
+                alt="CoreTet"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'contain',
+                }}
+              />
             </div>
           )}
 
@@ -1729,29 +1707,63 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
           <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: designTokens.spacing.xs }}>
             {/* Action Buttons */}
             {activeTab === 'playlists' && viewMode === 'list' && (
-              <button
-                onClick={() => setShowCreatePlaylist(true)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: designTokens.spacing.xs,
-                  padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
-                  backgroundColor: designTokens.colors.primary.blue,
-                  color: designTokens.colors.text.inverse,
-                  border: 'none',
-                  borderRadius: designTokens.borderRadius.xxl,
-                  fontSize: designTokens.typography.fontSizes.bodySmall,
-                  fontWeight: designTokens.typography.fontWeights.medium,
-                  cursor: 'pointer',
-                }}
-              >
-                <Plus size={16} />
-                New
-              </button>
+              <div style={{ display: 'flex', gap: designTokens.spacing.sm, alignItems: 'center' }}>
+                <button
+                  onClick={() => setShowCreatePlaylist(true)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: designTokens.spacing.xs,
+                    padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
+                    backgroundColor: designTokens.colors.primary.blue,
+                    color: designTokens.colors.text.inverse,
+                    border: 'none',
+                    borderRadius: designTokens.borderRadius.xxl,
+                    fontSize: designTokens.typography.fontSizes.bodySmall,
+                    fontWeight: designTokens.typography.fontWeights.medium,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <Plus size={16} />
+                  New
+                </button>
+                <button
+                  onClick={() => {
+                    setShowAllTracks(true);
+                    setViewMode('detail');
+                    setCurrentSetList(null);
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: designTokens.spacing.xs,
+                    padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
+                    backgroundColor: 'transparent',
+                    color: designTokens.colors.text.primary,
+                    border: `1px solid ${designTokens.colors.borders.default}`,
+                    borderRadius: designTokens.borderRadius.xxl,
+                    fontSize: designTokens.typography.fontSizes.bodySmall,
+                    fontWeight: designTokens.typography.fontWeights.medium,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <Music size={16} />
+                  View All
+                </button>
+              </div>
             )}
-            {(activeTab === 'playlists' || activeTab === 'playlists') && viewMode === 'detail' && (userRole === 'admin' || userRole === 'owner') && (
+            {(activeTab === 'playlists' || activeTab === 'playlists') && viewMode === 'detail' && (
               <div style={{ display: 'flex', gap: designTokens.spacing.xs, alignItems: 'center' }}>
-                {isEditingTracks ? (
+                {showAllTracks ? (
+                  <h2 style={{
+                    fontSize: designTokens.typography.fontSizes.h3,
+                    fontWeight: designTokens.typography.fontWeights.semibold,
+                    color: designTokens.colors.text.primary,
+                    margin: 0,
+                  }}>
+                    All Tracks
+                  </h2>
+                ) : (userRole === 'admin' || userRole === 'owner') && isEditingTracks ? (
                   <>
                     <button
                       onClick={handleToggleEditMode}
@@ -1795,11 +1807,12 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                       </button>
                     )}
                   </>
-                ) : (
+                ) : (userRole === 'admin' || userRole === 'owner') && (
                   <>
                     <UploadButton
-                      onFromLibrary={() => setShowTrackSelector(true)}
                       onUploadNew={() => setShowPlaylistUploader(true)}
+                      onFromLibrary={() => setShowTrackSelector(true)}
+                      label="Add"
                     />
                     <SortButton
                       currentSort={playlistSortBy}
@@ -1821,7 +1834,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
           {/* Right: Header action buttons */}
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
             {/* Playlist menu button (detail view, band admin only) */}
-            {(activeTab === 'playlists' || activeTab === 'playlists') && viewMode === 'detail' && (userRole === 'admin' || userRole === 'owner') && !isEditingTracks && (
+            {(activeTab === 'playlists' || activeTab === 'playlists') && viewMode === 'detail' && (userRole === 'admin' || userRole === 'owner') && !isEditingTracks && !showAllTracks && (
               <DropdownMenu
                 trigger={
                   <button

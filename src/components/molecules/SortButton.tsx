@@ -1,6 +1,6 @@
 import React from 'react';
 import { ArrowUpDown, GripVertical } from 'lucide-react';
-import { designTokens } from '../../design/designTokens';
+import { useDesignTokens } from '../../design/useDesignTokens';
 import { DropdownMenu } from '../ui/DropdownMenu';
 
 interface SortButtonProps {
@@ -20,6 +20,7 @@ export function SortButton({
   showReorder = false,
   disabled = false,
 }: SortButtonProps) {
+  const designTokens = useDesignTokens();
   const getSortLabel = () => {
     if (currentSort === 'position') return 'Default';
     const label = currentSort.charAt(0).toUpperCase() + currentSort.slice(1);

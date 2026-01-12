@@ -1,6 +1,6 @@
 import React, { ReactNode, useState, useRef, useEffect } from 'react';
 import { Z_INDEX } from '../../constants/zIndex';
-import { designTokens } from '../../design/designTokens';
+import { useDesignTokens } from '../../design/useDesignTokens';
 
 export interface DropdownMenuProps {
   trigger: ReactNode;
@@ -15,6 +15,7 @@ export function DropdownMenu({
   align = 'left',
   closeOnSelect = true,
 }: DropdownMenuProps) {
+  const designTokens = useDesignTokens();
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 

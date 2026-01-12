@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { designTokens } from '../../design/designTokens';
+import { useDesignTokens } from '../../design/useDesignTokens';
+import { useTheme } from '../../contexts/ThemeContext';
 import { supabase } from '../../../lib/supabase';
 import { Capacitor } from '@capacitor/core';
 import { EmailConfirmationScreen } from './EmailConfirmationScreen';
 
 export function PhoneAuthScreen() {
+  const designTokens = useDesignTokens();
+  const { isDarkMode } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -148,7 +151,7 @@ export function PhoneAuthScreen() {
       justifyContent: 'center',
       alignItems: 'center',
       padding: '24px',
-      backgroundColor: '#ffffff',
+      backgroundColor: designTokens.colors.surface.tertiary,
       fontFamily: designTokens.typography.fontFamily,
       boxSizing: 'border-box',
     }}>
@@ -161,22 +164,37 @@ export function PhoneAuthScreen() {
         <div style={{
           textAlign: 'center',
           marginBottom: '48px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '24px',
         }}>
-          <h1 style={{
-            fontSize: '32px',
-            fontWeight: '600',
-            color: designTokens.colors.neutral.charcoal,
-            margin: '0 0 8px 0',
-          }}>
-            CoreTet
-          </h1>
-          <p style={{
-            fontSize: '16px',
-            color: designTokens.colors.neutral.darkGray,
-            margin: 0,
-          }}>
-            Music Collaboration Platform
-          </p>
+          <img
+            src={isDarkMode ? "/logo.png" : "/logo-light.png"}
+            alt="CoreTet Logo"
+            style={{
+              width: '120px',
+              height: '120px',
+              objectFit: 'contain',
+            }}
+          />
+          <div>
+            <h1 style={{
+              fontSize: '32px',
+              fontWeight: '600',
+              color: designTokens.colors.text.primary,
+              margin: '0 0 8px 0',
+            }}>
+              CoreTet
+            </h1>
+            <p style={{
+              fontSize: '16px',
+              color: designTokens.colors.text.secondary,
+              margin: 0,
+            }}>
+              Music Collaboration Platform
+            </p>
+          </div>
         </div>
 
         <h2 style={{

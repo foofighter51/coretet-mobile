@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { CheckCircle, Smartphone, AlertCircle } from 'lucide-react';
-import { designTokens } from '../../design/designTokens';
+import { useDesignTokens } from '../../design/useDesignTokens';
+import { useTheme } from '../../contexts/ThemeContext';
 import { Capacitor } from '@capacitor/core';
 
 export function EmailConfirmedScreen() {
+  const designTokens = useDesignTokens();
+  const { isDarkMode } = useTheme();
   const [countdown, setCountdown] = useState(5);
   const [attemptedDeepLink, setAttemptedDeepLink] = useState(false);
   const isNative = Capacitor.isNativePlatform();
@@ -42,7 +45,7 @@ export function EmailConfirmedScreen() {
         justifyContent: 'center',
         alignItems: 'center',
         padding: '24px',
-        backgroundColor: '#ffffff',
+        backgroundColor: designTokens.colors.surface.tertiary,
         fontFamily: designTokens.typography.fontFamily,
       }}>
         <div style={{
@@ -94,7 +97,7 @@ export function EmailConfirmedScreen() {
       justifyContent: 'center',
       alignItems: 'center',
       padding: '24px',
-      backgroundColor: '#ffffff',
+      backgroundColor: designTokens.colors.surface.tertiary,
       fontFamily: designTokens.typography.fontFamily,
     }}>
       <div style={{

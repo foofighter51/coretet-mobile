@@ -1,6 +1,6 @@
 import React from 'react';
 import { Filter } from 'lucide-react';
-import { designTokens } from '../../design/designTokens';
+import { useDesignTokens } from '../../design/useDesignTokens';
 import { DropdownMenu } from '../ui/DropdownMenu';
 
 interface FilterButtonProps {
@@ -14,6 +14,7 @@ export function FilterButton({
   onFilterChange,
   disabled = false,
 }: FilterButtonProps) {
+  const designTokens = useDesignTokens();
   const isActive = activeFilter !== 'all';
   const filterLabel = activeFilter.charAt(0).toUpperCase() + activeFilter.slice(1);
 

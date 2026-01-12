@@ -1,25 +1,29 @@
 import React from 'react';
-import { Upload } from 'lucide-react';
-import { designTokens } from '../../design/designTokens';
+import { Upload, FolderOpen } from 'lucide-react';
+import { useDesignTokens } from '../../design/useDesignTokens';
 import { DropdownMenu } from '../ui/DropdownMenu';
 
 interface UploadButtonProps {
-  onFromLibrary: () => void;
   onUploadNew: () => void;
+  onFromLibrary: () => void;
   disabled?: boolean;
+  label?: string;
 }
 
 export function UploadButton({
-  onFromLibrary,
   onUploadNew,
+  onFromLibrary,
   disabled = false,
+  label = 'Upload',
 }: UploadButtonProps) {
+  const designTokens = useDesignTokens();
+
   return (
     <DropdownMenu
       trigger={
         <button
           disabled={disabled}
-          aria-label="Upload tracks"
+          aria-label={label}
           style={{
             display: 'flex',
             flexDirection: 'column',
@@ -45,66 +49,49 @@ export function UploadButton({
             fontWeight: designTokens.typography.fontWeights.regular,
             whiteSpace: 'nowrap',
           }}>
-            Upload
+            {label}
           </span>
         </button>
       }
-      align="left"
     >
-      <div style={{ padding: `${designTokens.spacing.xs} 0` }}>
-        <button
-          onClick={onFromLibrary}
-          style={{
-            width: '100%',
-            display: 'flex',
-            alignItems: 'center',
-            gap: designTokens.spacing.sm,
-            padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
-            backgroundColor: 'transparent',
-            border: 'none',
-            textAlign: 'left',
-            cursor: 'pointer',
-            fontSize: designTokens.typography.fontSizes.bodySmall,
-            color: designTokens.colors.text.primary,
-            fontWeight: designTokens.typography.fontWeights.regular,
-            transition: 'background-color 0.2s',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = designTokens.colors.surface.secondary;
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent';
-          }}
-        >
-          <span>From Library</span>
-        </button>
-        <button
-          onClick={onUploadNew}
-          style={{
-            width: '100%',
-            display: 'flex',
-            alignItems: 'center',
-            gap: designTokens.spacing.sm,
-            padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
-            backgroundColor: 'transparent',
-            border: 'none',
-            textAlign: 'left',
-            cursor: 'pointer',
-            fontSize: designTokens.typography.fontSizes.bodySmall,
-            color: designTokens.colors.text.primary,
-            fontWeight: designTokens.typography.fontWeights.regular,
-            transition: 'background-color 0.2s',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = designTokens.colors.surface.secondary;
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent';
-          }}
-        >
-          <span>Upload New</span>
-        </button>
-      </div>
+      <button
+        onClick={onFromLibrary}
+        style={{
+          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          gap: designTokens.spacing.sm,
+          padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
+          backgroundColor: 'transparent',
+          border: 'none',
+          cursor: 'pointer',
+          fontSize: designTokens.typography.fontSizes.body,
+          color: designTokens.colors.text.primary,
+          textAlign: 'left',
+        }}
+      >
+        <FolderOpen size={16} />
+        Add from Library
+      </button>
+      <button
+        onClick={onUploadNew}
+        style={{
+          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          gap: designTokens.spacing.sm,
+          padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
+          backgroundColor: 'transparent',
+          border: 'none',
+          cursor: 'pointer',
+          fontSize: designTokens.typography.fontSizes.body,
+          color: designTokens.colors.text.primary,
+          textAlign: 'left',
+        }}
+      >
+        <Upload size={16} />
+        Upload New
+      </button>
     </DropdownMenu>
   );
 }

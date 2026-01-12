@@ -1,6 +1,7 @@
 import React, { ReactNode, useEffect, useRef, RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import { Z_INDEX } from '../../constants/zIndex';
+import { useDesignTokens } from '../../design/useDesignTokens';
 
 // Size presets for modals
 const SIZE_PRESETS = {
@@ -55,6 +56,7 @@ export function BaseModal({
   hasKeyboardInput = false,
   keyboardInputRef,
 }: BaseModalProps) {
+  const designTokens = useDesignTokens();
   const modalRef = useRef<HTMLDivElement>(null);
 
   // ESC key handler
@@ -126,7 +128,7 @@ export function BaseModal({
   };
 
   const modalStyles: React.CSSProperties = {
-    backgroundColor: 'white',
+    backgroundColor: designTokens.colors.surface.secondary,
     borderRadius: position === 'bottom' ? '16px 16px 0 0' : '12px',
     width: '100%',
     maxWidth: fullScreenMobile ? '100%' : sizeStyles.maxWidth,

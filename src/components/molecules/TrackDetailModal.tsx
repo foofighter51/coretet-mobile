@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, ThumbsUp, Heart } from 'lucide-react';
-import { designTokens } from '../../design/designTokens';
+import { useDesignTokens } from '../../design/useDesignTokens';
 import { db } from '../../../lib/supabase';
 import { DialogModal } from '../ui/DialogModal';
 import { InlineSpinner } from '../atoms/InlineSpinner';
@@ -25,6 +25,7 @@ export const TrackDetailModal: React.FC<TrackDetailModalProps> = ({
   currentBand,
   userRole,
 }) => {
+  const designTokens = useDesignTokens();
   const [ratings, setRatings] = useState<any[]>([]);
   const [loadingRatings, setLoadingRatings] = useState(true);
   const [comments, setComments] = useState<any[]>([]);
