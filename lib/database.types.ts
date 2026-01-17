@@ -219,13 +219,6 @@ export type Database = {
             foreignKeyName: "comment_views_track_id_fkey"
             columns: ["track_id"]
             isOneToOne: false
-            referencedRelation: "track_listen_stats"
-            referencedColumns: ["track_id"]
-          },
-          {
-            foreignKeyName: "comment_views_track_id_fkey"
-            columns: ["track_id"]
-            isOneToOne: false
             referencedRelation: "track_version_groups"
             referencedColumns: ["track_id"]
           },
@@ -289,13 +282,6 @@ export type Database = {
             columns: ["track_id"]
             isOneToOne: false
             referencedRelation: "set_list_details"
-            referencedColumns: ["track_id"]
-          },
-          {
-            foreignKeyName: "comments_track_id_fkey"
-            columns: ["track_id"]
-            isOneToOne: false
-            referencedRelation: "track_listen_stats"
             referencedColumns: ["track_id"]
           },
           {
@@ -668,13 +654,6 @@ export type Database = {
             foreignKeyName: "ratings_track_id_fkey"
             columns: ["track_id"]
             isOneToOne: false
-            referencedRelation: "track_listen_stats"
-            referencedColumns: ["track_id"]
-          },
-          {
-            foreignKeyName: "ratings_track_id_fkey"
-            columns: ["track_id"]
-            isOneToOne: false
             referencedRelation: "track_version_groups"
             referencedColumns: ["track_id"]
           },
@@ -818,13 +797,6 @@ export type Database = {
             foreignKeyName: "playlist_items_track_id_fkey"
             columns: ["track_id"]
             isOneToOne: false
-            referencedRelation: "track_listen_stats"
-            referencedColumns: ["track_id"]
-          },
-          {
-            foreignKeyName: "playlist_items_track_id_fkey"
-            columns: ["track_id"]
-            isOneToOne: false
             referencedRelation: "track_version_groups"
             referencedColumns: ["track_id"]
           },
@@ -834,20 +806,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tracks"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "set_list_entries_version_id_fkey"
-            columns: ["version_id"]
-            isOneToOne: false
-            referencedRelation: "set_list_details"
-            referencedColumns: ["version_id"]
-          },
-          {
-            foreignKeyName: "set_list_entries_version_id_fkey"
-            columns: ["version_id"]
-            isOneToOne: false
-            referencedRelation: "track_listen_stats"
-            referencedColumns: ["version_id"]
           },
           {
             foreignKeyName: "set_list_entries_version_id_fkey"
@@ -1142,13 +1100,6 @@ export type Database = {
             foreignKeyName: "track_keywords_track_id_fkey"
             columns: ["track_id"]
             isOneToOne: false
-            referencedRelation: "track_listen_stats"
-            referencedColumns: ["track_id"]
-          },
-          {
-            foreignKeyName: "track_keywords_track_id_fkey"
-            columns: ["track_id"]
-            isOneToOne: false
             referencedRelation: "track_version_groups"
             referencedColumns: ["track_id"]
           },
@@ -1201,13 +1152,6 @@ export type Database = {
             foreignKeyName: "track_listens_track_id_fkey"
             columns: ["track_id"]
             isOneToOne: false
-            referencedRelation: "track_listen_stats"
-            referencedColumns: ["track_id"]
-          },
-          {
-            foreignKeyName: "track_listens_track_id_fkey"
-            columns: ["track_id"]
-            isOneToOne: false
             referencedRelation: "track_version_groups"
             referencedColumns: ["track_id"]
           },
@@ -1224,20 +1168,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "track_listens_version_id_fkey"
-            columns: ["version_id"]
-            isOneToOne: false
-            referencedRelation: "set_list_details"
-            referencedColumns: ["version_id"]
-          },
-          {
-            foreignKeyName: "track_listens_version_id_fkey"
-            columns: ["version_id"]
-            isOneToOne: false
-            referencedRelation: "track_listen_stats"
-            referencedColumns: ["version_id"]
           },
           {
             foreignKeyName: "track_listens_version_id_fkey"
@@ -1279,13 +1209,6 @@ export type Database = {
             columns: ["track_id"]
             isOneToOne: false
             referencedRelation: "set_list_details"
-            referencedColumns: ["track_id"]
-          },
-          {
-            foreignKeyName: "track_ratings_track_id_fkey"
-            columns: ["track_id"]
-            isOneToOne: false
-            referencedRelation: "track_listen_stats"
             referencedColumns: ["track_id"]
           },
           {
@@ -1366,13 +1289,6 @@ export type Database = {
             foreignKeyName: "track_versions_track_id_fkey"
             columns: ["track_id"]
             isOneToOne: false
-            referencedRelation: "track_listen_stats"
-            referencedColumns: ["track_id"]
-          },
-          {
-            foreignKeyName: "track_versions_track_id_fkey"
-            columns: ["track_id"]
-            isOneToOne: false
             referencedRelation: "track_version_groups"
             referencedColumns: ["track_id"]
           },
@@ -1446,20 +1362,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tracks_hero_version_id_fkey"
-            columns: ["hero_version_id"]
-            isOneToOne: false
-            referencedRelation: "set_list_details"
-            referencedColumns: ["version_id"]
-          },
-          {
-            foreignKeyName: "tracks_hero_version_id_fkey"
-            columns: ["hero_version_id"]
-            isOneToOne: false
-            referencedRelation: "track_listen_stats"
-            referencedColumns: ["version_id"]
           },
           {
             foreignKeyName: "tracks_hero_version_id_fkey"
@@ -1573,12 +1475,9 @@ export type Database = {
       keyword_stats: {
         Row: {
           band_id: string | null
-          color: string | null
-          created_at: string | null
           keyword_id: string | null
           keyword_name: string | null
-          track_count: number | null
-          track_ids: string[] | null
+          usage_count: number | null
         }
         Relationships: [
           {
@@ -1593,20 +1492,13 @@ export type Database = {
       set_list_details: {
         Row: {
           band_id: string | null
-          created_by: string | null
-          description: string | null
-          duration_seconds: number | null
-          entry_id: string | null
-          file_url: string | null
-          is_hero: boolean | null
-          is_public: boolean | null
           position: number | null
           set_list_id: string | null
           set_list_title: string | null
+          track_count: number | null
           track_id: string | null
           track_title: string | null
           version_id: string | null
-          version_number: number | null
         }
         Relationships: [
           {
@@ -1617,25 +1509,52 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "playlists_created_by_fkey"
-            columns: ["created_by"]
+            foreignKeyName: "set_list_entries_version_id_fkey"
+            columns: ["version_id"]
             isOneToOne: false
-            referencedRelation: "profiles"
+            referencedRelation: "track_versions"
             referencedColumns: ["id"]
           },
         ]
       }
       track_listen_stats: {
         Row: {
+          last_listened_at: string | null
+          listen_count: number | null
           listener_count: number | null
-          listener_ids: string[] | null
-          most_recent_listen: string | null
           track_id: string | null
-          track_title: string | null
           version_id: string | null
-          version_number: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "track_listens_track_id_fkey"
+            columns: ["track_id"]
+            isOneToOne: false
+            referencedRelation: "set_list_details"
+            referencedColumns: ["track_id"]
+          },
+          {
+            foreignKeyName: "track_listens_track_id_fkey"
+            columns: ["track_id"]
+            isOneToOne: false
+            referencedRelation: "track_version_groups"
+            referencedColumns: ["track_id"]
+          },
+          {
+            foreignKeyName: "track_listens_track_id_fkey"
+            columns: ["track_id"]
+            isOneToOne: false
+            referencedRelation: "tracks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "track_listens_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "track_versions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       track_version_groups: {
         Row: {

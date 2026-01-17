@@ -17,6 +17,8 @@ import { EmailConfirmedScreen } from './components/screens/EmailConfirmedScreen'
 import { LandingPage } from './components/screens/LandingPage';
 import { NewLandingPage } from './components/screens/NewLandingPage';
 import { AcceptInvite } from './components/screens/AcceptInvite';
+import { AdminInviteCodesScreen } from './components/screens/AdminInviteCodesScreen';
+import { AdminRouteGuard } from './components/guards/AdminRouteGuard';
 import { Spinner } from './components/atoms/Spinner';
 import DeepLinkService from './utils/deepLinkHandler';
 import { Capacitor } from '@capacitor/core';
@@ -248,6 +250,19 @@ export default function App() {
         {/* <Route path="/admin/feedback" element={
           user ? <FeedbackDashboard /> : (Capacitor.isNativePlatform() ? <PhoneAuthScreen /> : <LandingPage />)
         } /> */}
+
+        {/* Admin routes - requires authentication and admin role */}
+        <Route path="/admin/codes" element={
+          <ErrorBoundary>
+            {user ? (
+              <AdminRouteGuard userId={user.id}>
+                <AdminInviteCodesScreen />
+              </AdminRouteGuard>
+            ) : (
+              <PhoneAuthScreen />
+            )}
+          </ErrorBoundary>
+        } />
 
         {/* App routes - only accessible on native app or when authenticated */}
         <Route path="/app/*" element={

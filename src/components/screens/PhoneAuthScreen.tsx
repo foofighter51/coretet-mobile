@@ -4,6 +4,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { supabase } from '../../../lib/supabase';
 import { Capacitor } from '@capacitor/core';
 import { EmailConfirmationScreen } from './EmailConfirmationScreen';
+import { inviteCodeService } from '../../utils/inviteCodeService';
 
 export function PhoneAuthScreen() {
   const designTokens = useDesignTokens();
@@ -17,6 +18,9 @@ export function PhoneAuthScreen() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [showEmailConfirmation, setShowEmailConfirmation] = useState(false);
   const [signupEmail, setSignupEmail] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
+  const [codeValidated, setCodeValidated] = useState(false);
+  const [validatingCode, setValidatingCode] = useState(false);
 
   // Clear success message when user returns after email confirmation
   useEffect(() => {
@@ -56,23 +60,32 @@ export function PhoneAuthScreen() {
 
     try {
       if (isSignUp) {
-        // Sign up
-        // For iOS app, use deep link to open app directly after email confirmation
-        // For web/localhost, redirect to our custom confirmation page
-        const isNativeApp = Capacitor.isNativePlatform();
-        const isLocalDev = window.location.hostname === 'localhost';
+        // Validate invite code first if provided
+        let hasValidCode = false;
+        if (inviteCode.trim()) {
+          const validation = await inviteCodeService.verifyCode(inviteCode);
+          if (!validation.valid) {
+            setError(validation.error || 'Invalid invite code');
+            return;
+          }
+          hasValidCode = true;
+          setCodeValidated(true);
+        }
 
-        // Native: Direct deep link to open app
-        // Web/Local: Redirect to our branded confirmation page
+        // Sign up
+        const isNativeApp = Capacitor.isNativePlatform();
         const redirectUrl = isNativeApp
           ? 'coretet://'
           : `${window.location.origin}/auth/confirmed`;
 
-        const { error: authError } = await supabase.auth.signUp({
+        const { data, error: authError } = await supabase.auth.signUp({
           email: email.trim(),
           password: password,
           options: {
             emailRedirectTo: redirectUrl,
+            data: {
+              invite_code: inviteCode.trim().toUpperCase() || null,
+            }
           }
         });
 
@@ -86,10 +99,48 @@ export function PhoneAuthScreen() {
           } else {
             setError(authError.message);
           }
-        } else {
-          // Show email confirmation screen
-          setSignupEmail(email.trim());
-          setShowEmailConfirmation(true);
+        } else if (data.user) {
+          // If using valid invite code, mark it as used and create profile immediately
+          if (hasValidCode && inviteCode.trim()) {
+            await inviteCodeService.useCode(inviteCode.trim(), data.user.id);
+
+            // Create profile immediately (don't wait for email confirmation)
+            await supabase.from('profiles').insert({
+              id: data.user.id,
+              email: data.user.email,
+            });
+
+            // Call edge function to auto-confirm user
+            try {
+              await fetch(`${supabase.supabaseUrl}/functions/v1/confirm-beta-user`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${supabase.supabaseKey}`,
+                },
+                body: JSON.stringify({
+                  userId: data.user.id,
+                  inviteCode: inviteCode.trim().toUpperCase(),
+                }),
+              });
+
+              // User is auto-confirmed, will be redirected to onboarding
+              setSuccessMessage('Account created! You can now sign in.');
+              setIsSignUp(false);
+              setInviteCode('');
+              setCodeValidated(false);
+            } catch (confirmError) {
+              console.error('Auto-confirm error:', confirmError);
+              // Fall back to email confirmation flow
+              setSignupEmail(email.trim());
+              setShowEmailConfirmation(true);
+            }
+          } else {
+            // No invite code - show email confirmation screen
+            setSignupEmail(email.trim());
+            setShowEmailConfirmation(true);
+          }
+
           // Clear form
           setPassword('');
           setConfirmPassword('');
@@ -259,25 +310,70 @@ export function PhoneAuthScreen() {
         />
 
         {isSignUp && (
-          <input
-            type="password"
-            placeholder="Confirm password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            disabled={loading}
-            autoComplete="new-password"
-            onKeyDown={(e) => e.key === 'Enter' && handleAuth()}
-            style={{
-              width: '100%',
-              padding: '14px',
-              fontSize: '16px',
-              border: `1px solid ${designTokens.colors.neutral.lightGray}`,
-              borderRadius: '8px',
+          <>
+            <input
+              type="password"
+              placeholder="Confirm password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              disabled={loading}
+              autoComplete="new-password"
+              onKeyDown={(e) => e.key === 'Enter' && handleAuth()}
+              style={{
+                width: '100%',
+                padding: '14px',
+                fontSize: '16px',
+                border: `1px solid ${designTokens.colors.neutral.lightGray}`,
+                borderRadius: '8px',
+                marginBottom: '12px',
+                fontFamily: designTokens.typography.fontFamily,
+                WebkitAppearance: 'none',
+              }}
+            />
+
+            <div style={{
               marginBottom: '16px',
-              fontFamily: designTokens.typography.fontFamily,
-              WebkitAppearance: 'none',
-            }}
-          />
+            }}>
+              <label style={{
+                display: 'block',
+                fontSize: '14px',
+                color: designTokens.colors.text.secondary,
+                marginBottom: '8px',
+              }}>
+                Beta Invite Code (optional)
+              </label>
+              <input
+                type="text"
+                placeholder="Enter 8-character code"
+                value={inviteCode}
+                onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                disabled={loading}
+                maxLength={12}
+                autoComplete="off"
+                autoCapitalize="characters"
+                onKeyDown={(e) => e.key === 'Enter' && handleAuth()}
+                style={{
+                  width: '100%',
+                  padding: '14px',
+                  fontSize: '16px',
+                  border: `1px solid ${codeValidated ? '#90ee90' : designTokens.colors.neutral.lightGray}`,
+                  borderRadius: '8px',
+                  fontFamily: designTokens.typography.fontFamily,
+                  WebkitAppearance: 'none',
+                  textTransform: 'uppercase',
+                  letterSpacing: '2px',
+                  backgroundColor: codeValidated ? '#e6f7e6' : undefined,
+                }}
+              />
+              <p style={{
+                fontSize: '12px',
+                color: designTokens.colors.text.tertiary,
+                margin: '4px 0 0 0',
+              }}>
+                {codeValidated ? '✓ Valid code - email confirmation will be skipped' : 'Have a beta code? Skip email verification'}
+              </p>
+            </div>
+          </>
         )}
 
         {successMessage && (
