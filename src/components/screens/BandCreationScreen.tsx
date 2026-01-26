@@ -4,6 +4,7 @@ import { designTokens } from '../../design/designTokens';
 import { useBand } from '../../contexts/BandContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { ErrorDisplay } from '../molecules/ErrorDisplay';
+import { useIsMobile } from '../../hooks/useResponsive';
 
 interface BandCreationScreenProps {
   onBack: () => void;
@@ -13,6 +14,7 @@ interface BandCreationScreenProps {
 export function BandCreationScreen({ onBack, onSuccess }: BandCreationScreenProps) {
   const { createBand, loading, error, setError } = useBand();
   const { currentUser } = useAuth();
+  const isMobile = useIsMobile();
 
   const [bandName, setBandName] = useState('');
   const [description, setDescription] = useState('');
@@ -21,7 +23,7 @@ export function BandCreationScreen({ onBack, onSuccess }: BandCreationScreenProp
   const baseStyle = {
     fontFamily: designTokens.typography.fontFamily,
     width: '100%',
-    // maxWidth: '425px', // REMOVED - desktop support
+    maxWidth: isMobile ? '425px' : undefined,
     minHeight: '100vh',
     margin: '0 auto',
     position: 'relative' as const

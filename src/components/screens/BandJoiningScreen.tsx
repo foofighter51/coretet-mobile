@@ -3,6 +3,7 @@ import { ArrowLeft } from 'lucide-react';
 import { designTokens } from '../../design/designTokens';
 import { useBand } from '../../contexts/BandContext';
 import { ErrorDisplay } from '../molecules/ErrorDisplay';
+import { useIsMobile } from '../../hooks/useResponsive';
 
 interface BandJoiningScreenProps {
   onBack: () => void;
@@ -11,13 +12,14 @@ interface BandJoiningScreenProps {
 
 export function BandJoiningScreen({ onBack, onSuccess }: BandJoiningScreenProps) {
   const { joinBand, loading, error, setError } = useBand();
+  const isMobile = useIsMobile();
 
   const [inviteCode, setInviteCode] = useState('');
 
   const baseStyle = {
     fontFamily: designTokens.typography.fontFamily,
     width: '100%',
-    // maxWidth: '425px', // REMOVED - desktop support
+    maxWidth: isMobile ? '425px' : undefined,
     minHeight: '100vh',
     margin: '0 auto',
     position: 'relative' as const

@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
 import { designTokens } from '../../design/designTokens';
 import { useAuth } from '../../contexts/AuthContext';
+import { useIsMobile } from '../../hooks/useResponsive';
 
 export function BandActionScreen() {
   const { setCurrentScreen } = useAuth();
   const [selectedAction, setSelectedAction] = useState<'join' | 'form' | null>(null);
+  const isMobile = useIsMobile();
 
   return (
     <div style={{
       fontFamily: designTokens.typography.fontFamily,
       width: '100%',
-      // maxWidth: '425px', // REMOVED - desktop support
+      maxWidth: isMobile ? '425px' : undefined,
       minHeight: '100vh',
       margin: '0 auto',
       backgroundColor: designTokens.colors.neutral.white,

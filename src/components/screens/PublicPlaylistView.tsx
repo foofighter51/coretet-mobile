@@ -4,10 +4,12 @@ import { ArrowLeft, Play, Pause, Music, Heart } from 'lucide-react';
 import { designTokens } from '../../design/designTokens';
 import { db, auth } from '../../../lib/supabase';
 import { PlaybackBar } from '../molecules/PlaybackBar';
+import { useIsMobile } from '../../hooks/useResponsive';
 
 export function PublicPlaylistView() {
   const { shareCode } = useParams<{ shareCode: string }>();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [playlist, setPlaylist] = useState<any>(null);
   const [tracks, setTracks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -134,7 +136,7 @@ export function PublicPlaylistView() {
       <div style={{
         fontFamily: designTokens.typography.fontFamily,
         width: '100%',
-        // maxWidth: '425px', // REMOVED - desktop support
+        maxWidth: isMobile ? '425px' : undefined,
         height: '100vh',
         margin: '0 auto',
         display: 'flex',
@@ -151,7 +153,7 @@ export function PublicPlaylistView() {
       <div style={{
         fontFamily: designTokens.typography.fontFamily,
         width: '100%',
-        // maxWidth: '425px', // REMOVED - desktop support
+        maxWidth: isMobile ? '425px' : undefined,
         height: '100vh',
         margin: '0 auto',
         display: 'flex',
@@ -191,7 +193,7 @@ export function PublicPlaylistView() {
     <div style={{
       fontFamily: designTokens.typography.fontFamily,
       width: '100%',
-      // maxWidth: '425px', // REMOVED - desktop support
+      maxWidth: isMobile ? '425px' : undefined,
       height: '100vh',
       margin: '0 auto',
       display: 'flex',

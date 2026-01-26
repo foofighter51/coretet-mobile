@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, MessageSquare, ThumbsUp, Plus, Bug, Lightbulb, HelpCircle, MessageCircle, Image as ImageIcon, X } from 'lucide-react';
 import { designTokens } from '../../design/designTokens';
 import { db, auth, storage } from '../../../lib/supabase';
+import { useIsMobile } from '../../hooks/useResponsive';
 
 export function FeedbackBoard() {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [feedbackList, setFeedbackList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -199,7 +201,7 @@ export function FeedbackBoard() {
       <div style={{
         fontFamily: designTokens.typography.fontFamily,
         width: '100%',
-        // maxWidth: '425px', // REMOVED - desktop support
+        maxWidth: isMobile ? '425px' : undefined,
         height: '100vh',
         margin: '0 auto',
         display: 'flex',
@@ -215,7 +217,7 @@ export function FeedbackBoard() {
     <div style={{
       fontFamily: designTokens.typography.fontFamily,
       width: '100%',
-      // maxWidth: '425px', // REMOVED - desktop support
+      maxWidth: isMobile ? '425px' : undefined,
       height: '100vh',
       margin: '0 auto',
       display: 'flex',

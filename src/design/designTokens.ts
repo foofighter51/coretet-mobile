@@ -170,7 +170,34 @@ export const designTokens = {
       default: tokens.tokens.dimensions.icon.default.value,
       small: tokens.tokens.dimensions.icon.small.value,
     }
-  }
+  },
+  // Responsive breakpoints (pixels)
+  breakpoints: {
+    mobile: 768,    // < 768px = mobile
+    tablet: 1024,   // 768-1024px = tablet
+    desktop: 1280,  // >= 1024px = desktop
+    wide: 1920,     // >= 1920px = wide desktop
+  },
+  // Layout dimensions for desktop navigation
+  layout: {
+    sidebar: {
+      width: '240px',
+      widthCollapsed: '60px',
+    },
+    header: {
+      height: '64px',
+    },
+    player: {
+      height: '80px',
+    },
+    tabBar: {
+      height: '60px',
+    },
+    content: {
+      maxWidth: '1400px', // Max content width on ultra-wide screens
+      padding: '24px',
+    },
+  },
 };
 
 // Add semantic colors (backward compatibility)

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Search, Filter, Plus, Music, Upload, ArrowLeft, Play, Pause, X, Check, MessageSquare, MoreVertical, Edit2, Trash2, Headphones, ThumbsUp, Heart, HelpCircle, Settings, GripVertical, Users, Share2 } from 'lucide-react';
 import { useDesignTokens } from '../../design/useDesignTokens';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useResponsive } from '../../hooks/useResponsive';
 import { useSetList } from '../../contexts/SetListContext';
 import { useBand } from '../../contexts/BandContext';
 import { TrackRowWithPlayer } from '../molecules/TrackRowWithPlayer';
@@ -214,10 +215,12 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   const navigate = useNavigate();
   const designTokens = useDesignTokens();
   const { isDarkMode } = useTheme();
+  const { isMobile, isDesktop } = useResponsive();
 
   const baseStyle: React.CSSProperties = {
     fontFamily: designTokens.typography.fontFamily,
     width: '100%',
+    maxWidth: isMobile ? '425px' : undefined, // Conditional: mobile = 425px, desktop = full width
     minHeight: '100vh',
     height: '100vh', // Use static viewport height - prevents keyboard resize
     margin: '0 auto',
