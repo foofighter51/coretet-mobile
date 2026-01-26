@@ -12,6 +12,7 @@ import { TabBar } from '../molecules/TabBar';
 import { AudioUploader } from '../molecules/AudioUploader';
 import { PlaybackBar } from '../molecules/PlaybackBar';
 import { SwipeableTrackRow } from '../molecules/SwipeableTrackRow';
+import { AdaptiveTrackRow } from '../molecules/AdaptiveTrackRow';
 import { Tutorial } from '../molecules/Tutorial';
 import { BandModal } from '../molecules/BandModal';
 import { BandSettings } from '../molecules/BandSettings';
@@ -31,6 +32,7 @@ import { db, auth } from '../../../lib/supabase';
 import { Capacitor } from '@capacitor/core';
 import { Share } from '@capacitor/share';
 import DeepLinkService from '../../utils/deepLinkHandler';
+import AudioUploadService from '../../utils/audioUploadService';
 
 // Track Selector Modal Component
 function TrackSelectorModal({ tracks, existingTrackIds, onAddTracks, onCancel }: {
@@ -314,6 +316,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   const [loadingTracks, setLoadingTracks] = useState(false);
   const [deletingPlaylist, setDeletingPlaylist] = useState(false);
   const [deletingTracks, setDeletingTracks] = useState(false);
+  const [deletingTrackId, setDeletingTrackId] = useState<string | null>(null); // Track being permanently deleted
 
   // Playlist management state
   const [editingPlaylistTitle, setEditingPlaylistTitle] = useState<string | null>(null);
@@ -966,6 +969,37 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
     }
   };
 
+  // Permanently delete a track (removes from storage and database)
+  const handlePermanentlyDeleteTrack = async (trackId: string) => {
+    if (!currentBand?.id || deletingTrackId) return;
+
+    setDeletingTrackId(trackId);
+
+    try {
+      // Call AudioUploadService to delete file from storage and database
+      await AudioUploadService.deleteAudio(trackId);
+
+      // Stop playback if current track was deleted
+      if (currentTrack?.id === trackId && isPlaying) {
+        handlePlayPause();
+      }
+
+      // Reload playlist tracks if we're viewing a playlist
+      if (currentSetList) {
+        await loadPlaylistTracks(currentSetList.id);
+      }
+
+      // Show success message
+      setError('Track deleted successfully');
+      setTimeout(() => setError(null), 3000);
+    } catch (err) {
+      console.error('Error permanently deleting track:', err);
+      setError(err instanceof Error ? err.message : 'Failed to delete track');
+    } finally {
+      setDeletingTrackId(null);
+    }
+  };
+
   const filteredTracks = useMemo(() => {
     return bandScopedTracks
       .filter(track => {
@@ -1524,7 +1558,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                             />
                           )}
                           <div style={{ flex: 1, pointerEvents: isReordering ? 'none' : 'auto' }}>
-                            <SwipeableTrackRow
+                            <AdaptiveTrackRow
                               track={{
                                 id: item.tracks.id,
                                 title: item.tracks.title,
@@ -1538,7 +1572,9 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                               hasUnreadComments={trackUnreadStatus[item.tracks.id]}
                               onPlayPause={() => handlePlayPause(item.tracks)}
                               onRate={(rating) => handleRate(item.tracks.id, rating)}
-                              onLongPress={() => handleOpenTrackDetail(item.tracks)}
+                              onOpenDetails={() => handleOpenTrackDetail(item.tracks)}
+                              onDelete={() => handlePermanentlyDeleteTrack(item.tracks.id)}
+                              isDeleting={deletingTrackId === item.tracks.id}
                             />
                           </div>
                         </div>
