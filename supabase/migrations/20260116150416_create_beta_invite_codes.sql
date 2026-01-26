@@ -4,7 +4,7 @@
 
 -- Create beta_invite_codes table
 CREATE TABLE beta_invite_codes (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   code TEXT UNIQUE NOT NULL,
   created_by UUID REFERENCES profiles(id),
   max_uses INTEGER DEFAULT 1,
@@ -19,7 +19,7 @@ CREATE TABLE beta_invite_codes (
 
 -- Create beta_code_usage tracking table
 CREATE TABLE beta_code_usage (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   code_id UUID REFERENCES beta_invite_codes(id) ON DELETE CASCADE,
   user_id UUID REFERENCES profiles(id),
   used_at TIMESTAMP DEFAULT NOW(),
@@ -42,7 +42,7 @@ CREATE POLICY "Admins can manage invite codes"
   USING (
     EXISTS (
       SELECT 1 FROM profiles
-      WHERE id = auth.uid()::TEXT
+      WHERE id = auth.uid()
       AND is_admin = TRUE
     )
   );
@@ -55,7 +55,7 @@ CREATE POLICY "Anyone can verify codes"
 -- RLS Policy: Users can view their own code usage
 CREATE POLICY "Users can view their code usage"
   ON beta_code_usage FOR SELECT
-  USING (user_id = auth.uid()::TEXT);
+  USING (user_id = auth.uid());
 
 -- RLS Policy: System can insert code usage (for signup process)
 CREATE POLICY "System can insert code usage"

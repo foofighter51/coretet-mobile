@@ -17,7 +17,7 @@ export function BandJoiningScreen({ onBack, onSuccess }: BandJoiningScreenProps)
   const baseStyle = {
     fontFamily: designTokens.typography.fontFamily,
     width: '100%',
-    maxWidth: '425px',
+    // maxWidth: '425px', // REMOVED - desktop support
     minHeight: '100vh',
     margin: '0 auto',
     position: 'relative' as const

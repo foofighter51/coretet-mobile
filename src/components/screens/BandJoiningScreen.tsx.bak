@@ -4,15 +4,6 @@ import { designTokens } from '../../design/designTokens';
 import { useBand } from '../../contexts/BandContext';
 import { ErrorDisplay } from '../molecules/ErrorDisplay';
 
-const baseStyle = {
-  fontFamily: designTokens.typography.fontFamily,
-  width: '100%',
-  maxWidth: '425px',
-  minHeight: '100vh',
-  margin: '0 auto',
-  position: 'relative' as const
-};
-
 interface BandJoiningScreenProps {
   onBack: () => void;
   onSuccess: () => void;
@@ -22,6 +13,15 @@ export function BandJoiningScreen({ onBack, onSuccess }: BandJoiningScreenProps)
   const { joinBand, loading, error, setError } = useBand();
 
   const [inviteCode, setInviteCode] = useState('');
+
+  const baseStyle = {
+    fontFamily: designTokens.typography.fontFamily,
+    width: '100%',
+    maxWidth: '425px',
+    minHeight: '100vh',
+    margin: '0 auto',
+    position: 'relative' as const
+  };
 
   const handleInviteCodeChange = (value: string) => {
     // Only allow alphanumeric characters and limit to 8

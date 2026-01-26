@@ -207,6 +207,59 @@ export const db = {
 
       return { data, error };
     },
+
+    async incrementStorage(userId: string, bytes: number) {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          storage_used: supabase.raw(`COALESCE(storage_used, 0) + ${bytes}`)
+        })
+        .eq('id', userId);
+
+      return { error };
+    },
+
+    async decrementStorage(userId: string, bytes: number) {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          storage_used: supabase.raw(`GREATEST(COALESCE(storage_used, 0) - ${bytes}, 0)`)
+        })
+        .eq('id', userId);
+
+      return { error };
+    },
+
+    async getStorageQuota(userId: string) {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('storage_used, storage_limit')
+        .eq('id', userId)
+        .single();
+
+      if (error || !data) {
+        return {
+          used: 0,
+          limit: 1073741824, // 1GB default
+          available: 1073741824,
+          percentUsed: 0,
+          error
+        };
+      }
+
+      const used = data.storage_used || 0;
+      const limit = data.storage_limit || 1073741824;
+      const available = Math.max(0, limit - used);
+      const percentUsed = (used / limit) * 100;
+
+      return {
+        used,
+        limit,
+        available,
+        percentUsed: Math.round(percentUsed * 10) / 10, // 1 decimal place
+        error: null
+      };
+    },
   },
 
   // Track operations

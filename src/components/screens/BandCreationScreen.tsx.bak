@@ -5,15 +5,6 @@ import { useBand } from '../../contexts/BandContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { ErrorDisplay } from '../molecules/ErrorDisplay';
 
-const baseStyle = {
-  fontFamily: designTokens.typography.fontFamily,
-  width: '100%',
-  maxWidth: '425px',
-  minHeight: '100vh',
-  margin: '0 auto',
-  position: 'relative' as const
-};
-
 interface BandCreationScreenProps {
   onBack: () => void;
   onSuccess: () => void;
@@ -26,6 +17,15 @@ export function BandCreationScreen({ onBack, onSuccess }: BandCreationScreenProp
   const [bandName, setBandName] = useState('');
   const [description, setDescription] = useState('');
   const [memberPhones, setMemberPhones] = useState<string[]>(['', '', '', '']);
+
+  const baseStyle = {
+    fontFamily: designTokens.typography.fontFamily,
+    width: '100%',
+    maxWidth: '425px',
+    minHeight: '100vh',
+    margin: '0 auto',
+    position: 'relative' as const
+  };
 
   const handlePhoneChange = (index: number, value: string) => {
     const newPhones = [...memberPhones];

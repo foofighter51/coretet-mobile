@@ -10,7 +10,7 @@ export function BandActionScreen() {
     <div style={{
       fontFamily: designTokens.typography.fontFamily,
       width: '100%',
-      // maxWidth: '425px', // REMOVED - desktop support
+      maxWidth: '425px',
       minHeight: '100vh',
       margin: '0 auto',
       backgroundColor: designTokens.colors.neutral.white,

@@ -3,6 +3,8 @@ import { HelpCircle, Moon, Sun } from 'lucide-react';
 import { useDesignTokens } from '../../design/useDesignTokens';
 import { useTheme } from '../../contexts/ThemeContext';
 import { BottomSheetModal } from '../ui/BottomSheetModal';
+import { db } from '../../../lib/supabase';
+import AudioProcessor from '../../utils/audioProcessor';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -27,6 +29,44 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 }) => {
   const designTokens = useDesignTokens();
   const { isDarkMode, toggleTheme } = useTheme();
+
+  const [storageQuota, setStorageQuota] = React.useState<{
+    used: number;
+    limit: number;
+    percentUsed: number;
+    usedFormatted: string;
+    limitFormatted: string;
+  } | null>(null);
+
+  // Fetch storage quota when modal opens
+  React.useEffect(() => {
+    const fetchQuota = async () => {
+      if (!currentUser.id) return;
+
+      try {
+        const quota = await db.profiles.getStorageQuota(currentUser.id);
+
+        if (!quota || quota.error) {
+          console.error('Failed to fetch storage quota:', quota?.error);
+          return;
+        }
+
+        setStorageQuota({
+          used: quota.used || 0,
+          limit: quota.limit || 1073741824,
+          percentUsed: quota.percentUsed || 0,
+          usedFormatted: AudioProcessor.formatFileSize(quota.used || 0),
+          limitFormatted: AudioProcessor.formatFileSize(quota.limit || 1073741824),
+        });
+      } catch (error) {
+        console.error('Failed to fetch storage quota:', error);
+      }
+    };
+
+    if (isOpen) {
+      fetchQuota();
+    }
+  }, [isOpen, currentUser.id]);
 
   return (
     <BottomSheetModal
@@ -107,6 +147,76 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               }}
             >
               {currentUser.phoneNumber || currentUser.phone}
+            </p>
+          </div>
+        )}
+
+        {/* Storage Quota Display */}
+        {storageQuota && (
+          <div
+            style={{
+              marginTop: designTokens.spacing.lg,
+              paddingTop: designTokens.spacing.lg,
+              borderTop: `1px solid ${designTokens.colors.borders.subtle}`,
+            }}
+          >
+            <div style={{ marginBottom: designTokens.spacing.sm }}>
+              <p
+                style={{
+                  fontSize: designTokens.typography.fontSizes.bodySmall,
+                  color: designTokens.colors.neutral.darkGray,
+                  marginBottom: designTokens.spacing.xs,
+                }}
+              >
+                Storage
+              </p>
+              <p
+                style={{
+                  fontSize: designTokens.typography.fontSizes.body,
+                  fontWeight: designTokens.typography.fontWeights.medium,
+                  color: designTokens.colors.neutral.charcoal,
+                }}
+              >
+                {storageQuota.usedFormatted} of {storageQuota.limitFormatted} used
+              </p>
+            </div>
+
+            {/* Progress Bar */}
+            <div
+              style={{
+                width: '100%',
+                height: '8px',
+                backgroundColor: designTokens.colors.surface.secondary,
+                borderRadius: '4px',
+                overflow: 'hidden',
+                position: 'relative',
+              }}
+            >
+              <div
+                style={{
+                  width: `${Math.min(storageQuota.percentUsed, 100)}%`,
+                  height: '100%',
+                  backgroundColor:
+                    storageQuota.percentUsed > 90
+                      ? designTokens.colors.system.error
+                      : storageQuota.percentUsed > 75
+                      ? designTokens.colors.system.warning
+                      : designTokens.colors.primary.blue,
+                  transition: 'width 0.3s ease',
+                }}
+              />
+            </div>
+
+            {/* Percentage Display */}
+            <p
+              style={{
+                fontSize: designTokens.typography.fontSizes.bodySmall,
+                color: designTokens.colors.neutral.darkGray,
+                marginTop: designTokens.spacing.xs,
+                textAlign: 'right',
+              }}
+            >
+              {storageQuota.percentUsed.toFixed(1)}% used
             </p>
           </div>
         )}

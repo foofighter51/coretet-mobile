@@ -73,7 +73,38 @@ export class AudioUploadService {
 
       this.updateProgress('processing', 60, 'Preparation complete');
 
-      // Step 3: Generate unique filename - keep original extension
+      // Step 3: Check storage quota before upload
+      this.updateProgress('processing', 65, 'Checking storage quota...');
+
+      const { data: profile, error: profileError } = await db.profiles.getById(
+        this.currentUser.id
+      );
+
+      if (profileError || !profile) {
+        throw new Error('Failed to check storage quota. Please try again.');
+      }
+
+      const currentUsage = profile.storage_used || 0;
+      const quotaLimit = profile.storage_limit || 1073741824; // Default 1GB
+      const newTotal = currentUsage + file.size;
+
+      if (newTotal > quotaLimit) {
+        const usageFormatted = AudioProcessor.formatFileSize(currentUsage);
+        const limitFormatted = AudioProcessor.formatFileSize(quotaLimit);
+        const fileFormatted = AudioProcessor.formatFileSize(file.size);
+
+        throw new Error(
+          `Storage quota exceeded.\n\n` +
+          `Current usage: ${usageFormatted} of ${limitFormatted}\n` +
+          `This file: ${fileFormatted}\n` +
+          `Would total: ${AudioProcessor.formatFileSize(newTotal)}\n\n` +
+          `Delete some files or upgrade your plan for more storage.`
+        );
+      }
+
+      this.updateProgress('processing', 68, 'Quota check passed');
+
+      // Step 4: Generate unique filename - keep original extension
       const originalExtension = file.name.split('.').pop() || 'mp3';
       const timestamp = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
       const uniqueId = uuidv4().split('-')[0]; // Short unique ID
@@ -139,7 +170,22 @@ export class AudioUploadService {
         throw new Error(`Database save failed: ${dbError.message}`);
       }
 
-      // Step 7: Complete
+      // Step 7: Increment storage quota
+      this.updateProgress('saving', 95, 'Updating storage quota...');
+
+      const { error: quotaError } = await supabase
+        .from('profiles')
+        .update({
+          storage_used: supabase.raw(`COALESCE(storage_used, 0) + ${processedAudio.compressedSize}`)
+        })
+        .eq('id', this.currentUser.id);
+
+      if (quotaError) {
+        console.error('⚠️ Quota update failed:', quotaError);
+        // Don't throw - upload succeeded, quota will be corrected by sync job
+      }
+
+      // Step 8: Complete
       this.updateProgress('complete', 100, 'Upload successful!');
 
       return {
@@ -158,15 +204,18 @@ export class AudioUploadService {
 
   /**
    * Upload multiple audio files
+   * Returns successful uploads and failed uploads separately
    */
   async uploadMultipleAudios(
     files: File[],
     options: UploadOptions = {}
-  ): Promise<UploadResult[]> {
+  ): Promise<{
+    successful: UploadResult[];
+    failed: Array<{ filename: string; error: string; size: number }>;
+  }> {
     const results: UploadResult[] = [];
-    const errors: { file: string; error: string }[] = [];
+    const failures: Array<{ filename: string; error: string; size: number }> = [];
     const total = files.length;
-
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
@@ -178,7 +227,6 @@ export class AudioUploadService {
           `Uploading ${i + 1} of ${total}: ${file.name.substring(0, 30)}${file.name.length > 30 ? '...' : ''}`
         );
 
-
         const result = await this.uploadAudio(file, {
           ...options,
           title: options.title || file.name.replace(/\.[^/.]+$/, '')
@@ -189,33 +237,44 @@ export class AudioUploadService {
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : 'Unknown error';
         console.error(`❌ Failed to upload ${file.name}:`, errorMsg);
-        errors.push({ file: file.name, error: errorMsg });
+
+        // Add to failures array
+        failures.push({
+          filename: file.name,
+          error: errorMsg,
+          size: file.size
+        });
 
         // Update progress with error info
         this.updateProgress(
           'processing',
           Math.round((i / total) * 100),
-          `Failed to upload ${file.name}: ${errorMsg}. Continuing...`
+          `Failed: ${file.name.substring(0, 20)}... - ${errorMsg.substring(0, 50)}`
         );
 
-        // Small delay to show error message
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Brief delay to show error message
+        await new Promise(resolve => setTimeout(resolve, 1500));
       }
     }
 
     // Final summary
     const successCount = results.length;
-    const failCount = errors.length;
-    let message = `Upload complete: ${successCount}/${total} successful`;
+    const failCount = failures.length;
+    let message = `Complete: ${successCount}/${total} uploaded`;
 
     if (failCount > 0) {
       message += `, ${failCount} failed`;
-      console.warn('❌ Failed uploads:', errors);
+      console.warn('❌ Failed uploads:', failures);
     }
 
-    this.updateProgress(failCount > 0 ? 'processing' : 'complete', 100, message);
+    this.updateProgress(
+      failCount > 0 ? 'processing' : 'complete',
+      100,
+      message
+    );
 
-    return results;
+    // Return both successful and failed uploads
+    return { successful: results, failed: failures };
   }
 
   /**
@@ -236,34 +295,83 @@ export class AudioUploadService {
 
   /**
    * Delete audio file and associated data
+   * Also decrements storage quota
    */
   static async deleteAudio(trackId: string): Promise<void> {
     try {
-      // Get track data to find file path
+      // Step 1: Get track data
       const { data: track, error: fetchError } = await db.tracks.getById(trackId);
 
       if (fetchError || !track) {
-        throw new Error('Track not found');
+        throw new Error(`Track not found: ${trackId}`);
       }
 
-      // Extract file path from URL
+      // Step 2: Extract correct file path from signed URL
+      // Signed URL format: https://.../storage/v1/object/sign/audio-files/USER_ID/FILENAME.mp3?token=...
+      // We need: "USER_ID/FILENAME.mp3"
+
       const url = new URL(track.file_url);
-      const filePath = url.pathname.split('/').pop(); // Get filename from path
+      let filePath: string | null = null;
 
+      // Try to extract path from signed URL
+      const signedPathMatch = url.pathname.match(/\/object\/sign\/audio-files\/(.+)/);
+      if (signedPathMatch) {
+        filePath = signedPathMatch[1].split('?')[0]; // Remove query params
+      } else {
+        // Fallback: Try to extract from public URL format
+        const publicPathMatch = url.pathname.match(/\/audio-files\/(.+)/);
+        if (publicPathMatch) {
+          filePath = publicPathMatch[1];
+        }
+      }
+
+      if (!filePath) {
+        console.error('❌ Could not extract file path from URL:', track.file_url);
+        // Continue to delete DB record even if storage path is unclear
+      }
+
+      // Step 3: Delete from storage (if we have a valid path)
       if (filePath) {
-        // Delete from storage
-        await storage.deleteFile(`audio/${filePath}`);
+        const { error: storageError } = await storage.deleteFile(filePath);
+
+        if (storageError) {
+          console.error('⚠️ Storage deletion failed (file may not exist):', storageError);
+          // Don't throw - continue to delete DB record
+        } else {
+          console.log(`✅ Deleted file from storage: ${filePath}`);
+        }
       }
 
-      // Delete from database (this should cascade to related records)
-      const { error: deleteError } = await db.tracks.delete(trackId);
+      // Step 4: Delete from database (cascades to versions, comments, ratings, etc.)
+      const { error: dbError } = await db.tracks.delete(trackId);
 
-      if (deleteError) {
-        throw new Error(`Failed to delete track: ${deleteError.message}`);
+      if (dbError) {
+        throw new Error(`Database deletion failed: ${dbError.message}`);
       }
+
+      // Step 5: Decrement storage quota
+      const fileSize = track.file_size || 0;
+
+      if (fileSize > 0) {
+        const { error: quotaError } = await supabase
+          .from('profiles')
+          .update({
+            storage_used: supabase.raw(`GREATEST(COALESCE(storage_used, 0) - ${fileSize}, 0)`)
+          })
+          .eq('id', track.created_by);
+
+        if (quotaError) {
+          console.error('⚠️ Quota decrement failed:', quotaError);
+          // Don't throw - deletion succeeded, quota will be corrected by sync job
+        } else {
+          console.log(`✅ Decremented storage quota by ${AudioProcessor.formatFileSize(fileSize)}`);
+        }
+      }
+
+      console.log(`✅ Successfully deleted track ${trackId}`);
 
     } catch (error) {
-      console.error('Error deleting audio:', error);
+      console.error('❌ Error deleting audio:', error);
       throw error;
     }
   }

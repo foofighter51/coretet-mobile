@@ -218,7 +218,6 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   const baseStyle: React.CSSProperties = {
     fontFamily: designTokens.typography.fontFamily,
     width: '100%',
-    maxWidth: '425px',
     minHeight: '100vh',
     height: '100vh', // Use static viewport height - prevents keyboard resize
     margin: '0 auto',
