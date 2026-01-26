@@ -4,6 +4,7 @@ import { Search, Filter, Plus, Music, Upload, ArrowLeft, Play, Pause, X, Check, 
 import { useDesignTokens } from '../../design/useDesignTokens';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useResponsive } from '../../hooks/useResponsive';
+import { DesktopSidebar } from '../layouts/DesktopSidebar';
 import { useSetList } from '../../contexts/SetListContext';
 import { useBand } from '../../contexts/BandContext';
 import { TrackRowWithPlayer } from '../molecules/TrackRowWithPlayer';
@@ -224,6 +225,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
     minHeight: '100vh',
     height: '100vh', // Use static viewport height - prevents keyboard resize
     margin: '0 auto',
+    marginLeft: isDesktop ? designTokens.layout.sidebar.width : undefined, // Make room for sidebar on desktop
     position: 'relative',
     display: 'flex',
     flexDirection: 'column',
@@ -1646,6 +1648,21 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
 
   return (
     <div style={baseStyle}>
+      {/* Desktop Sidebar - only shown on desktop */}
+      {isDesktop && (
+        <DesktopSidebar
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+          onSettingsClick={() => setShowSettings(true)}
+          onUploadClick={() => setShowUploader(true)}
+          onSignOut={async () => {
+            await auth.signOut();
+          }}
+          bandName={currentBand?.name}
+          userName={currentUser?.name}
+        />
+      )}
+
       {/* Fixed Header */}
       <div style={{
         flexShrink: 0,
@@ -2008,7 +2025,10 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
           flex: 1,
           overflowY: 'auto' as const,
           overflowX: 'hidden' as const,
-          paddingBottom: currentTrack ? '164px' : '84px', // Extra space: TabBar (60px) + PlaybackBar (~84px) + gap (8px) + margin (12px)
+          // Desktop: no TabBar, just PlaybackBar space. Mobile: TabBar + PlaybackBar
+          paddingBottom: isDesktop
+            ? (currentTrack ? '100px' : '24px')
+            : (currentTrack ? '164px' : '84px'),
           WebkitOverflowScrolling: 'touch' as const,
         }}
       >
@@ -2019,8 +2039,8 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
       {currentTrack && (
         <div style={{
           position: 'fixed',
-          bottom: '68px', // TabBar (60px) + small gap (8px)
-          left: 0,
+          bottom: isDesktop ? '0px' : '68px', // Desktop: at bottom. Mobile: above TabBar (60px) + gap (8px)
+          left: isDesktop ? designTokens.layout.sidebar.width : 0, // Desktop: offset by sidebar
           right: 0,
           zIndex: 99, // Below TabBar (100) but above content
         }}>
@@ -2040,10 +2060,13 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
         </div>
       )}
 
-      <TabBar
-        activeTab={activeTab}
-        onTabChange={handleTabChange}
-      />
+      {/* Mobile Tab Bar - only shown on mobile */}
+      {!isDesktop && (
+        <TabBar
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+        />
+      )}
 
       {/* Track Detail Modal */}
       {selectedTrackForDetail && (
