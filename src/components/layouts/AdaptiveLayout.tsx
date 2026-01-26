@@ -70,10 +70,11 @@ export const AdaptiveLayout: React.FC<AdaptiveLayoutProps> = ({
         <main
           style={{
             marginLeft: designTokens.layout.sidebar.width,
-            flex: 1,
+            width: `calc(100vw - ${designTokens.layout.sidebar.width})`,
             minHeight: '100vh',
             display: 'flex',
             flexDirection: 'column',
+            overflow: 'hidden',
           }}
         >
           {/* Content Container with max-width for readability */}
@@ -85,6 +86,7 @@ export const AdaptiveLayout: React.FC<AdaptiveLayoutProps> = ({
               margin: '0 auto',
               padding: designTokens.layout.content.padding,
               boxSizing: 'border-box',
+              overflow: 'hidden',
             }}
           >
             {children}

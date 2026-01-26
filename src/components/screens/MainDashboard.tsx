@@ -5,6 +5,9 @@ import { useDesignTokens } from '../../design/useDesignTokens';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useResponsive } from '../../hooks/useResponsive';
 import { DesktopSidebar } from '../layouts/DesktopSidebar';
+import { DesktopSidebarWithTree } from '../layouts/DesktopSidebarWithTree';
+import { DesktopThreeColumnLayout } from '../layouts/DesktopThreeColumnLayout';
+import { TrackDetailPanel } from '../organisms/TrackDetailPanel';
 import { useSetList } from '../../contexts/SetListContext';
 import { useBand } from '../../contexts/BandContext';
 import { TrackRowWithPlayer } from '../molecules/TrackRowWithPlayer';
@@ -23,7 +26,7 @@ import { TrackDetailModal } from '../molecules/TrackDetailModal';
 import { InlineSpinner } from '../atoms/InlineSpinner';
 import { TrackSkeleton } from '../atoms/TrackSkeleton';
 import { SortButton } from '../molecules/SortButton';
-import { FilterButton } from '../molecules/FilterButton';
+import { FilterButton, RatingFilter } from '../molecules/FilterButton';
 import { UploadButton } from '../molecules/UploadButton';
 import { DropdownMenu } from '../ui/DropdownMenu';
 import { DialogModal } from '../ui/DialogModal';
@@ -219,24 +222,6 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   const designTokens = useDesignTokens();
   const { isDarkMode } = useTheme();
   const { isMobile, isDesktop } = useResponsive();
-
-  const baseStyle: React.CSSProperties = {
-    fontFamily: designTokens.typography.fontFamily,
-    width: '100%',
-    maxWidth: isMobile ? '425px' : undefined, // Conditional: mobile = 425px, desktop = full width
-    minHeight: '100vh',
-    height: '100vh', // Use static viewport height - prevents keyboard resize
-    margin: '0 auto',
-    marginLeft: isDesktop ? designTokens.layout.sidebar.width : undefined, // Make room for sidebar on desktop
-    position: 'relative',
-    display: 'flex',
-    flexDirection: 'column',
-    overflow: 'hidden',
-    boxSizing: 'border-box',
-    userSelect: 'none',
-    WebkitUserSelect: 'none',
-    backgroundColor: designTokens.colors.surface.tertiary, // Use theme background
-  };
   const { setLists, createdSetLists, followedSetLists, currentSetList, createSetList, setCurrentSetList, refreshSetLists, isLoading: setListsLoading } = useSetList();
   const { currentBand, userBands, userRole, switchBand } = useBand();
 
@@ -300,7 +285,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
 
   const [trackRatings, setTrackRatings] = useState<Record<string, 'listened' | 'liked' | 'loved'>>({});
   const [aggregatedRatings, setAggregatedRatings] = useState<Record<string, { listened: number; liked: number; loved: number }>>({});
-  const [ratingFilter, setRatingFilter] = useState<'all' | 'listened' | 'liked' | 'loved' | 'unrated'>('all');
+  const [ratingFilter, setRatingFilter] = useState<RatingFilter>('all');
   const [playlistSortBy, setPlaylistSortBy] = useState<'position' | 'name' | 'duration' | 'rating'>('position');
   const [sortAscending, setSortAscending] = useState(true);
 
@@ -317,6 +302,34 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   const [deletingPlaylist, setDeletingPlaylist] = useState(false);
   const [deletingTracks, setDeletingTracks] = useState(false);
   const [deletingTrackId, setDeletingTrackId] = useState<string | null>(null); // Track being permanently deleted
+  const [detailPanelTrack, setDetailPanelTrack] = useState<any | null>(null); // Track shown in desktop detail panel
+
+  // Calculate content width: full width minus sidebar, equal split with detail panel if shown
+  const showDetailPanel = isDesktop && detailPanelTrack;
+  const contentWidth = isDesktop
+    ? showDetailPanel
+      ? `calc((100vw - ${designTokens.layout.sidebar.width}) / 2)` // Equal width with detail panel
+      : `calc(100vw - ${designTokens.layout.sidebar.width})`
+    : '100%';
+
+  const baseStyle: React.CSSProperties = {
+    fontFamily: designTokens.typography.fontFamily,
+    width: contentWidth,
+    maxWidth: isMobile ? '425px' : undefined,
+    minHeight: '100vh',
+    height: '100vh',
+    margin: '0 auto',
+    marginLeft: isDesktop ? designTokens.layout.sidebar.width : undefined,
+    position: 'relative',
+    display: 'flex',
+    flexDirection: 'column',
+    overflow: 'hidden',
+    boxSizing: 'border-box',
+    userSelect: 'none',
+    WebkitUserSelect: 'none',
+    backgroundColor: designTokens.colors.surface.tertiary,
+    transition: 'width 0.2s ease',
+  };
 
   // Playlist management state
   const [editingPlaylistTitle, setEditingPlaylistTitle] = useState<string | null>(null);
@@ -341,14 +354,20 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   // Ref for iOS keyboard handling in create playlist
   const createSetListInputRef = useRef<HTMLInputElement>(null);
 
-  // Handle opening track detail modal with scroll position saving
+  // Handle opening track detail - uses side panel on desktop, modal on mobile
   const handleOpenTrackDetail = async (track: any) => {
     if (scrollContainerRef.current) {
       savedScrollPosition.current = scrollContainerRef.current.scrollTop;
     }
-    setSelectedTrackForDetail(track);
 
-    // Mark comments as viewed when opening modal
+    // On desktop, use the detail panel instead of modal
+    if (isDesktop) {
+      setDetailPanelTrack(track);
+    } else {
+      setSelectedTrackForDetail(track);
+    }
+
+    // Mark comments as viewed when opening
     if (track?.id && currentUser?.id) {
       await db.comments.markCommentsAsViewed(track.id, currentUser.id);
     }
@@ -464,9 +483,11 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
     setSelectedTrackIds([]);
   };
 
-  // Handle tab changes - reset view mode when switching tabs from detail view
+  // Handle tab changes - reset view mode when LEAVING playlists tab from detail view
   const handleTabChange = (newTab: TabId) => {
-    if (viewMode === 'detail' && (activeTab === 'playlists' || activeTab === 'playlists')) {
+    // Only reset when navigating AWAY from playlists tab while in detail view
+    // (not when staying on playlists tab, e.g., clicking a different playlist)
+    if (viewMode === 'detail' && activeTab === 'playlists' && newTab !== 'playlists') {
       handleBackToList();
     }
     setActiveTab(newTab);
@@ -1000,18 +1021,37 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
     }
   };
 
+  // Helper to check if track matches rating filter
+  const trackMatchesRatingFilter = (trackId: string): boolean => {
+    if (ratingFilter === 'all') return true;
+
+    const myRating = trackRatings[trackId];
+    const ratings = aggregatedRatings[trackId];
+
+    switch (ratingFilter) {
+      case 'liked_by_me':
+        return myRating === 'liked';
+      case 'liked_by_multiple':
+        return ratings ? ratings.liked >= 2 : false;
+      case 'loved_by_me':
+        return myRating === 'loved';
+      case 'loved_by_multiple':
+        return ratings ? ratings.loved >= 2 : false;
+      case 'unrated':
+        return !myRating;
+      default:
+        return true;
+    }
+  };
+
   const filteredTracks = useMemo(() => {
     return bandScopedTracks
-      .filter(track => {
-        if (ratingFilter === 'all') return true;
-        if (ratingFilter === 'unrated') return !trackRatings[track.id];
-        return trackRatings[track.id] === ratingFilter;
-      })
+      .filter(track => trackMatchesRatingFilter(track.id))
       .map(track => ({
         ...track,
         isPlaying: track.id === currentTrack?.id && isPlaying
       }));
-  }, [bandScopedTracks, currentTrack, isPlaying, ratingFilter, trackRatings]);
+  }, [bandScopedTracks, currentTrack, isPlaying, ratingFilter, trackRatings, aggregatedRatings]);
 
   const filteredPlaylistTracks = useMemo(() => {
     // If showing all tracks, convert bandScopedTracks to playlist format
@@ -1026,9 +1066,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
 
     const filtered = tracksToFilter.filter(item => {
       if (!item.tracks) return false;
-      if (ratingFilter === 'all') return true;
-      if (ratingFilter === 'unrated') return !trackRatings[item.tracks.id];
-      return trackRatings[item.tracks.id] === ratingFilter;
+      return trackMatchesRatingFilter(item.tracks.id);
     });
 
     // Apply sorting
@@ -1063,22 +1101,19 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
     });
 
     return sorted;
-  }, [playlistTracks, showAllTracks, bandScopedTracks, ratingFilter, trackRatings, playlistSortBy, sortAscending]);
+  }, [playlistTracks, showAllTracks, bandScopedTracks, ratingFilter, trackRatings, aggregatedRatings, playlistSortBy, sortAscending]);
 
   // Check if current playlist is owned by the user (moved to component level)
   const isPlaylistOwner = currentSetList ? filteredCreatedPlaylists.some(p => p.id === currentSetList.id) : false;
 
-  const renderContent = () => {
-    // Select correct playlists based on active tab
-    const currentCreatedPlaylists = activeTab === 'playlists' ? bandCreatedPlaylists :
-                                     activeTab === 'playlists' ? personalCreatedPlaylists :
-                                     filteredCreatedPlaylists;
-    const currentFollowedPlaylists = activeTab === 'playlists' ? personalFollowedPlaylists : [];
+  // Select correct playlists based on active tab (moved outside renderContent for sidebar access)
+  const currentCreatedPlaylists = activeTab === 'playlists' ? bandCreatedPlaylists :
+                                   activeTab === 'playlists' ? personalCreatedPlaylists :
+                                   filteredCreatedPlaylists;
+  const currentFollowedPlaylists = activeTab === 'playlists' ? personalFollowedPlaylists : [];
+  const displayedPlaylists = currentCreatedPlaylists;
 
-    // Determine which playlists to display based on tab and filter
-    // Band tab always shows created playlists (no following option)
-    // Personal tab respects the mine/following filter
-    const displayedPlaylists = currentCreatedPlaylists;
+  const renderContent = () => {
 
     switch (activeTab) {
       case 'playlists':
@@ -1440,7 +1475,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                 ) : loadingTracks ? (
                   <TrackSkeleton count={5} />
                 ) : (
-                  <div>
+                  <div style={{ width: '100%', overflow: 'hidden' }}>
                     {/* Reorder Mode Actions */}
                     {isReordering && !showAllTracks && (
                       <div style={{
@@ -1504,6 +1539,8 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                             gap: designTokens.spacing.sm,
                             opacity: draggedIndex === index ? 0.5 : 1,
                             transition: 'opacity 0.2s',
+                            width: '100%',
+                            minWidth: 0,
                           }}
                           draggable={isReordering}
                           onDragStart={() => isReordering && handleDragStart(index)}
@@ -1557,7 +1594,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                               aria-label={`Select ${item.tracks.title}`}
                             />
                           )}
-                          <div style={{ flex: 1, pointerEvents: isReordering ? 'none' : 'auto' }}>
+                          <div style={{ flex: 1, minWidth: 0, overflow: 'hidden', pointerEvents: isReordering ? 'none' : 'auto' }}>
                             <AdaptiveTrackRow
                               track={{
                                 id: item.tracks.id,
@@ -1684,9 +1721,9 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
 
   return (
     <div style={baseStyle}>
-      {/* Desktop Sidebar - only shown on desktop */}
+      {/* Desktop Sidebar with tree navigation - only shown on desktop */}
       {isDesktop && (
-        <DesktopSidebar
+        <DesktopSidebarWithTree
           activeTab={activeTab}
           onTabChange={handleTabChange}
           onSettingsClick={() => setShowSettings(true)}
@@ -1696,6 +1733,19 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
           }}
           bandName={currentBand?.name}
           userName={currentUser?.name}
+          setLists={displayedPlaylists.map(p => ({
+            id: p.id,
+            title: p.title,
+            track_count: p.track_count,
+          }))}
+          selectedSetListId={currentSetList?.id}
+          onSetListSelect={(setList) => {
+            const fullPlaylist = displayedPlaylists.find(p => p.id === setList.id);
+            if (fullPlaylist) {
+              handlePlaylistClick(fullPlaylist);
+            }
+          }}
+          onCreateSetList={() => setShowCreatePlaylist(true)}
         />
       )}
 
@@ -1810,14 +1860,26 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
             {(activeTab === 'playlists' || activeTab === 'playlists') && viewMode === 'detail' && (
               <div style={{ display: 'flex', gap: designTokens.spacing.xs, alignItems: 'center' }}>
                 {showAllTracks ? (
-                  <h2 style={{
-                    fontSize: designTokens.typography.fontSizes.h3,
-                    fontWeight: designTokens.typography.fontWeights.semibold,
-                    color: designTokens.colors.text.primary,
-                    margin: 0,
-                  }}>
-                    All Tracks
-                  </h2>
+                  <>
+                    <h2 style={{
+                      fontSize: designTokens.typography.fontSizes.h3,
+                      fontWeight: designTokens.typography.fontWeights.semibold,
+                      color: designTokens.colors.text.primary,
+                      margin: 0,
+                    }}>
+                      All Tracks
+                    </h2>
+                    <SortButton
+                      currentSort={playlistSortBy}
+                      sortAscending={sortAscending}
+                      onSort={handleSortChange}
+                      showReorder={false}
+                    />
+                    <FilterButton
+                      activeFilter={ratingFilter}
+                      onFilterChange={setRatingFilter}
+                    />
+                  </>
                 ) : (userRole === 'admin' || userRole === 'owner') && isEditingTracks ? (
                   <>
                     <button
@@ -2092,6 +2154,15 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
             isLoading={isLoading}
             error={audioError}
             onPlayPause={() => handlePlayPause()}
+            onTrackTitleClick={() => {
+              if (isDesktop) {
+                // On desktop, open the detail panel
+                setDetailPanelTrack(currentTrack);
+              } else {
+                // On mobile, open the track detail modal
+                handleOpenTrackDetail(currentTrack);
+              }
+            }}
           />
         </div>
       )}
@@ -2102,6 +2173,42 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
           activeTab={activeTab}
           onTabChange={handleTabChange}
         />
+      )}
+
+      {/* Desktop Detail Panel - fixed on the right, equal width to track list */}
+      {isDesktop && detailPanelTrack && (
+        <aside
+          style={{
+            position: 'fixed',
+            top: 0,
+            right: 0,
+            width: `calc((100vw - ${designTokens.layout.sidebar.width}) / 2)`, // Equal width to track list
+            height: '100vh',
+            backgroundColor: designTokens.colors.surface.secondary,
+            borderLeft: `1px solid ${designTokens.colors.borders.default}`,
+            zIndex: 50,
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          <TrackDetailPanel
+            track={{
+              id: detailPanelTrack.id,
+              title: detailPanelTrack.title,
+              duration_seconds: detailPanelTrack.duration_seconds,
+              folder_path: detailPanelTrack.folder_path,
+              created_at: detailPanelTrack.created_at,
+              uploaded_by: detailPanelTrack.uploaded_by_name || detailPanelTrack.uploaded_by,
+            }}
+            audioRef={currentTrack?.id === detailPanelTrack.id ? audioRef : undefined}
+            isPlaying={currentTrack?.id === detailPanelTrack.id && isPlaying}
+            currentRating={trackRatings[detailPanelTrack.id]}
+            aggregatedRatings={aggregatedRatings[detailPanelTrack.id]}
+            onPlayPause={() => handlePlayPause(detailPanelTrack)}
+            onRate={(rating) => handleRate(detailPanelTrack.id, rating)}
+            onClose={() => setDetailPanelTrack(null)}
+          />
+        </aside>
       )}
 
       {/* Track Detail Modal */}

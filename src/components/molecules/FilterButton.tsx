@@ -3,11 +3,22 @@ import { Filter } from 'lucide-react';
 import { useDesignTokens } from '../../design/useDesignTokens';
 import { DropdownMenu } from '../ui/DropdownMenu';
 
+export type RatingFilter = 'all' | 'liked_by_me' | 'liked_by_multiple' | 'loved_by_me' | 'loved_by_multiple' | 'unrated';
+
 interface FilterButtonProps {
-  activeFilter: 'all' | 'listened' | 'liked' | 'loved' | 'unrated';
-  onFilterChange: (filter: 'all' | 'listened' | 'liked' | 'loved' | 'unrated') => void;
+  activeFilter: RatingFilter;
+  onFilterChange: (filter: RatingFilter) => void;
   disabled?: boolean;
 }
+
+const FILTER_LABELS: Record<RatingFilter, string> = {
+  all: 'All',
+  liked_by_me: 'Liked by Me',
+  liked_by_multiple: 'Liked by Multiple',
+  loved_by_me: 'Loved by Me',
+  loved_by_multiple: 'Loved by Multiple',
+  unrated: 'Unrated',
+};
 
 export function FilterButton({
   activeFilter,
@@ -16,7 +27,7 @@ export function FilterButton({
 }: FilterButtonProps) {
   const designTokens = useDesignTokens();
   const isActive = activeFilter !== 'all';
-  const filterLabel = activeFilter.charAt(0).toUpperCase() + activeFilter.slice(1);
+  const filterLabel = FILTER_LABELS[activeFilter];
 
   return (
     <DropdownMenu
@@ -69,9 +80,10 @@ export function FilterButton({
       align="left"
     >
       <div style={{ padding: `${designTokens.spacing.xs} 0` }}>
-        {(['all', 'listened', 'liked', 'loved', 'unrated'] as const).map((filter) => {
+        {/* Rating filter options */}
+        {(['all', 'liked_by_me', 'liked_by_multiple', 'loved_by_me', 'loved_by_multiple', 'unrated'] as const).map((filter) => {
           const isCurrentFilter = activeFilter === filter;
-          const label = filter.charAt(0).toUpperCase() + filter.slice(1);
+          const label = FILTER_LABELS[filter];
 
           return (
             <button

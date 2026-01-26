@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Play, Pause, ThumbsUp, Heart, Trash2, MessageCircle, Folder } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Play, Pause, ThumbsUp, Heart, MoreVertical, Trash2, MessageCircle, Folder } from 'lucide-react';
 import { useDesignTokens } from '../../design/useDesignTokens';
 
 interface DesktopTrackRowProps {
@@ -39,7 +39,10 @@ export const DesktopTrackRow: React.FC<DesktopTrackRowProps> = ({
 }) => {
   const designTokens = useDesignTokens();
   const [isHovered, setIsHovered] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
 
   const formatDuration = (seconds?: number): string => {
     if (!seconds) return '--:--';
@@ -48,8 +51,28 @@ export const DesktopTrackRow: React.FC<DesktopTrackRowProps> = ({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const handleRowClick = () => {
+    if (!showMenu && !showDeleteConfirm) {
+      onClick?.();
+    }
+  };
+
+  const handleMenuToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!showMenu && menuButtonRef.current) {
+      const rect = menuButtonRef.current.getBoundingClientRect();
+      setMenuPosition({
+        top: rect.bottom + 4,
+        left: rect.right - 140, // 140px is the menu width
+      });
+    }
+    setShowMenu(!showMenu);
+    setShowDeleteConfirm(false);
+  };
+
   const handleDeleteClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+    setShowMenu(false);
     setShowDeleteConfirm(true);
   };
 
@@ -64,10 +87,10 @@ export const DesktopTrackRow: React.FC<DesktopTrackRowProps> = ({
     setShowDeleteConfirm(false);
   };
 
-  const handleRowClick = () => {
-    if (!showDeleteConfirm) {
-      onClick?.();
-    }
+  // Close menu when clicking outside
+  const handleRowMouseLeave = () => {
+    setIsHovered(false);
+    setShowMenu(false);
   };
 
   return (
@@ -75,7 +98,7 @@ export const DesktopTrackRow: React.FC<DesktopTrackRowProps> = ({
       style={{
         display: 'flex',
         alignItems: 'center',
-        padding: `${designTokens.spacing.md} ${designTokens.spacing.lg}`,
+        padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
         backgroundColor: isHovered
           ? designTokens.colors.surface.hover
           : designTokens.colors.surface.primary,
@@ -84,12 +107,10 @@ export const DesktopTrackRow: React.FC<DesktopTrackRowProps> = ({
         transition: 'background-color 0.15s ease',
         opacity: isDeleting ? 0.5 : 1,
         fontFamily: designTokens.typography.fontFamily,
+        gap: designTokens.spacing.sm,
       }}
       onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => {
-        setIsHovered(false);
-        if (!showDeleteConfirm) setShowDeleteConfirm(false);
-      }}
+      onMouseLeave={handleRowMouseLeave}
       onClick={handleRowClick}
     >
       {/* Play/Pause Button */}
@@ -99,9 +120,9 @@ export const DesktopTrackRow: React.FC<DesktopTrackRowProps> = ({
           onPlayPause();
         }}
         style={{
-          width: '40px',
-          height: '40px',
-          minWidth: '40px',
+          width: '36px',
+          height: '36px',
+          minWidth: '36px',
           borderRadius: '50%',
           border: 'none',
           backgroundColor: isPlaying
@@ -114,15 +135,14 @@ export const DesktopTrackRow: React.FC<DesktopTrackRowProps> = ({
           alignItems: 'center',
           justifyContent: 'center',
           cursor: 'pointer',
-          marginRight: designTokens.spacing.md,
           transition: 'all 0.15s ease',
         }}
       >
-        {isPlaying ? <Pause size={18} /> : <Play size={18} style={{ marginLeft: '2px' }} />}
+        {isPlaying ? <Pause size={16} /> : <Play size={16} style={{ marginLeft: '2px' }} />}
       </button>
 
       {/* Track Info */}
-      <div style={{ flex: 1, minWidth: 0, marginRight: designTokens.spacing.md }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
         <div
           style={{
             display: 'flex',
@@ -150,6 +170,7 @@ export const DesktopTrackRow: React.FC<DesktopTrackRowProps> = ({
                 gap: '4px',
                 fontSize: designTokens.typography.fontSizes.caption,
                 color: designTokens.colors.text.tertiary,
+                flexShrink: 0,
               }}
             >
               <Folder size={12} />
@@ -167,13 +188,12 @@ export const DesktopTrackRow: React.FC<DesktopTrackRowProps> = ({
         </span>
       </div>
 
-      {/* Rating Badges */}
+      {/* Rating Badges (aggregated from all users) */}
       {aggregatedRatings && (aggregatedRatings.liked > 0 || aggregatedRatings.loved > 0) && (
         <div
           style={{
             display: 'flex',
-            gap: designTokens.spacing.sm,
-            marginRight: designTokens.spacing.md,
+            gap: designTokens.spacing.xs,
           }}
         >
           {aggregatedRatings.loved > 0 && (
@@ -182,14 +202,14 @@ export const DesktopTrackRow: React.FC<DesktopTrackRowProps> = ({
                 display: 'flex',
                 alignItems: 'center',
                 gap: '4px',
-                padding: `${designTokens.spacing.xs} ${designTokens.spacing.sm}`,
+                padding: `2px ${designTokens.spacing.xs}`,
                 backgroundColor: designTokens.colors.ratings.loved.bgLight,
-                borderRadius: '12px',
+                borderRadius: '10px',
                 fontSize: designTokens.typography.fontSizes.caption,
                 color: designTokens.colors.system.error,
               }}
             >
-              <Heart size={12} fill="currentColor" />
+              <Heart size={10} fill="currentColor" />
               {aggregatedRatings.loved}
             </span>
           )}
@@ -199,14 +219,14 @@ export const DesktopTrackRow: React.FC<DesktopTrackRowProps> = ({
                 display: 'flex',
                 alignItems: 'center',
                 gap: '4px',
-                padding: `${designTokens.spacing.xs} ${designTokens.spacing.sm}`,
+                padding: `2px ${designTokens.spacing.xs}`,
                 backgroundColor: designTokens.colors.ratings.liked.bgLight,
-                borderRadius: '12px',
+                borderRadius: '10px',
                 fontSize: designTokens.typography.fontSizes.caption,
                 color: designTokens.colors.system.success,
               }}
             >
-              <ThumbsUp size={12} fill="currentColor" />
+              <ThumbsUp size={10} fill="currentColor" />
               {aggregatedRatings.liked}
             </span>
           )}
@@ -217,27 +237,25 @@ export const DesktopTrackRow: React.FC<DesktopTrackRowProps> = ({
       {hasComments && (
         <div
           style={{
-            marginRight: designTokens.spacing.md,
             color: hasUnreadComments
               ? designTokens.colors.primary.blue
               : designTokens.colors.text.tertiary,
           }}
         >
-          <MessageCircle size={18} />
+          <MessageCircle size={16} />
         </div>
       )}
 
-      {/* Action Buttons - Show on Hover */}
-      {isHovered && !showDeleteConfirm && (
+      {/* Always-visible Rating Buttons */}
+      {!showDeleteConfirm && (
         <div
           style={{
             display: 'flex',
             gap: designTokens.spacing.xs,
-            marginLeft: 'auto',
           }}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Rate Liked */}
+          {/* Like Button */}
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -247,13 +265,15 @@ export const DesktopTrackRow: React.FC<DesktopTrackRowProps> = ({
               width: '32px',
               height: '32px',
               borderRadius: designTokens.borderRadius.sm,
-              border: 'none',
+              border: currentRating === 'liked'
+                ? 'none'
+                : `1px solid ${designTokens.colors.borders.default}`,
               backgroundColor: currentRating === 'liked'
                 ? designTokens.colors.ratings.liked.bg
-                : designTokens.colors.surface.secondary,
+                : 'transparent',
               color: currentRating === 'liked'
                 ? designTokens.colors.neutral.white
-                : designTokens.colors.text.secondary,
+                : designTokens.colors.text.tertiary,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -262,10 +282,10 @@ export const DesktopTrackRow: React.FC<DesktopTrackRowProps> = ({
             }}
             title="Like"
           >
-            <ThumbsUp size={16} />
+            <ThumbsUp size={14} fill={currentRating === 'liked' ? 'currentColor' : 'none'} />
           </button>
 
-          {/* Rate Loved */}
+          {/* Love Button */}
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -275,13 +295,15 @@ export const DesktopTrackRow: React.FC<DesktopTrackRowProps> = ({
               width: '32px',
               height: '32px',
               borderRadius: designTokens.borderRadius.sm,
-              border: 'none',
+              border: currentRating === 'loved'
+                ? 'none'
+                : `1px solid ${designTokens.colors.borders.default}`,
               backgroundColor: currentRating === 'loved'
                 ? designTokens.colors.ratings.loved.bg
-                : designTokens.colors.surface.secondary,
+                : 'transparent',
               color: currentRating === 'loved'
                 ? designTokens.colors.neutral.white
-                : designTokens.colors.text.secondary,
+                : designTokens.colors.text.tertiary,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -290,30 +312,73 @@ export const DesktopTrackRow: React.FC<DesktopTrackRowProps> = ({
             }}
             title="Love"
           >
-            <Heart size={16} />
+            <Heart size={14} fill={currentRating === 'loved' ? 'currentColor' : 'none'} />
           </button>
 
-          {/* Delete */}
+          {/* More Menu (three dots) */}
           {onDelete && (
-            <button
-              onClick={handleDeleteClick}
-              style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: designTokens.borderRadius.sm,
-                border: 'none',
-                backgroundColor: designTokens.colors.surface.secondary,
-                color: designTokens.colors.text.secondary,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-              }}
-              title="Delete track"
-            >
-              <Trash2 size={16} />
-            </button>
+            <>
+              <button
+                ref={menuButtonRef}
+                onClick={handleMenuToggle}
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: designTokens.borderRadius.sm,
+                  border: `1px solid ${designTokens.colors.borders.default}`,
+                  backgroundColor: showMenu
+                    ? designTokens.colors.surface.secondary
+                    : 'transparent',
+                  color: designTokens.colors.text.tertiary,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+                title="More options"
+              >
+                <MoreVertical size={14} />
+              </button>
+
+              {/* Dropdown Menu - fixed positioning to escape overflow:hidden */}
+              {showMenu && (
+                <div
+                  style={{
+                    position: 'fixed',
+                    top: menuPosition.top,
+                    left: menuPosition.left,
+                    backgroundColor: designTokens.colors.surface.primary,
+                    borderRadius: designTokens.borderRadius.sm,
+                    boxShadow: designTokens.shadows.elevated,
+                    border: `1px solid ${designTokens.colors.borders.default}`,
+                    zIndex: 9999,
+                    minWidth: '140px',
+                  }}
+                >
+                  <button
+                    onClick={handleDeleteClick}
+                    style={{
+                      width: '100%',
+                      padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: designTokens.spacing.sm,
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      color: designTokens.colors.system.error,
+                      cursor: 'pointer',
+                      fontSize: designTokens.typography.fontSizes.body,
+                      fontFamily: designTokens.typography.fontFamily,
+                      textAlign: 'left',
+                    }}
+                  >
+                    <Trash2 size={16} />
+                    Delete track
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
@@ -325,7 +390,9 @@ export const DesktopTrackRow: React.FC<DesktopTrackRowProps> = ({
             display: 'flex',
             gap: designTokens.spacing.sm,
             alignItems: 'center',
-            marginLeft: 'auto',
+            backgroundColor: designTokens.colors.surface.secondary,
+            padding: designTokens.spacing.sm,
+            borderRadius: designTokens.borderRadius.sm,
           }}
           onClick={(e) => e.stopPropagation()}
         >
@@ -333,15 +400,16 @@ export const DesktopTrackRow: React.FC<DesktopTrackRowProps> = ({
             style={{
               fontSize: designTokens.typography.fontSizes.bodySmall,
               color: designTokens.colors.text.secondary,
+              whiteSpace: 'nowrap',
             }}
           >
-            Delete permanently?
+            Delete?
           </span>
           <button
             onClick={handleConfirmDelete}
             disabled={isDeleting}
             style={{
-              padding: `${designTokens.spacing.xs} ${designTokens.spacing.md}`,
+              padding: `${designTokens.spacing.xs} ${designTokens.spacing.sm}`,
               borderRadius: designTokens.borderRadius.sm,
               border: 'none',
               backgroundColor: designTokens.colors.system.error,
@@ -352,21 +420,21 @@ export const DesktopTrackRow: React.FC<DesktopTrackRowProps> = ({
               opacity: isDeleting ? 0.7 : 1,
             }}
           >
-            {isDeleting ? 'Deleting...' : 'Delete'}
+            {isDeleting ? '...' : 'Yes'}
           </button>
           <button
             onClick={handleCancelDelete}
             style={{
-              padding: `${designTokens.spacing.xs} ${designTokens.spacing.md}`,
+              padding: `${designTokens.spacing.xs} ${designTokens.spacing.sm}`,
               borderRadius: designTokens.borderRadius.sm,
               border: `1px solid ${designTokens.colors.borders.default}`,
-              backgroundColor: designTokens.colors.surface.primary,
+              backgroundColor: 'transparent',
               color: designTokens.colors.text.primary,
               fontSize: designTokens.typography.fontSizes.bodySmall,
               cursor: 'pointer',
             }}
           >
-            Cancel
+            No
           </button>
         </div>
       )}

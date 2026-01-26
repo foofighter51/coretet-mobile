@@ -184,6 +184,11 @@ export const designTokens = {
       width: '240px',
       widthCollapsed: '60px',
     },
+    detailPanel: {
+      width: '420px',
+      minWidth: '360px',
+      maxWidth: '500px',
+    },
     header: {
       height: '64px',
     },

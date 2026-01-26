@@ -14,6 +14,8 @@ interface PlaybackBarProps {
   isLoading?: boolean;
   error?: string | null;
   onPlayPause: () => void;
+  /** Called when user clicks on the track title */
+  onTrackTitleClick?: () => void;
 }
 
 export const PlaybackBar: React.FC<PlaybackBarProps> = ({
@@ -22,7 +24,8 @@ export const PlaybackBar: React.FC<PlaybackBarProps> = ({
   isPlaying,
   isLoading = false,
   error = null,
-  onPlayPause
+  onPlayPause,
+  onTrackTitleClick,
 }) => {
   const designTokens = useDesignTokens();
   const [currentTime, setCurrentTime] = useState(0);
@@ -280,15 +283,20 @@ export const PlaybackBar: React.FC<PlaybackBarProps> = ({
         </button>
 
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{
-            fontSize: '14px',
-            fontWeight: '500',
-            color: designTokens.colors.neutral.charcoal,
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            margin: 0,
-          }}>
+          <p
+            onClick={onTrackTitleClick}
+            style={{
+              fontSize: '14px',
+              fontWeight: '500',
+              color: designTokens.colors.neutral.charcoal,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              margin: 0,
+              cursor: onTrackTitleClick ? 'pointer' : 'default',
+            }}
+            title={onTrackTitleClick ? 'Click to view track details' : undefined}
+          >
             {track.title}
           </p>
           <p style={{
