@@ -425,6 +425,7 @@ export const db = {
         .from('version_groups')
         .select('*')
         .eq('band_id', bandId)
+        .is('deleted_at', null) // Only return non-deleted items
         .order('created_at', { ascending: false });
 
       return { data, error };
@@ -472,6 +473,74 @@ export const db = {
         .from('version_groups')
         .select('*')
         .eq('id', track.version_group_id)
+        .single();
+
+      return { data, error };
+    },
+
+    async rename(groupId: string, newName: string) {
+      const { data, error } = await supabase
+        .from('version_groups')
+        .update({ name: newName, updated_at: new Date().toISOString() })
+        .eq('id', groupId)
+        .select()
+        .single();
+
+      return { data, error };
+    },
+
+    async delete(groupId: string, deletedBy: string) {
+      // Soft delete using RPC function
+      const { data, error } = await supabase.rpc('soft_delete_version_group', {
+        p_group_id: groupId,
+        p_deleted_by: deletedBy,
+      });
+
+      return { data, error };
+    },
+
+    async restore(groupId: string) {
+      // Restore from recycle bin
+      const { data, error } = await supabase.rpc('restore_version_group', {
+        p_group_id: groupId,
+      });
+
+      return { data, error };
+    },
+
+    async permanentDelete(groupId: string) {
+      // First, unassign all tracks from this group
+      const { error: unassignError } = await supabase
+        .from('tracks')
+        .update({ version_group_id: null })
+        .eq('version_group_id', groupId);
+
+      if (unassignError) {
+        return { data: null, error: unassignError };
+      }
+
+      // Then permanently delete the group
+      const { data, error } = await supabase
+        .from('version_groups')
+        .delete()
+        .eq('id', groupId);
+
+      return { data, error };
+    },
+
+    async createEmpty(params: {
+      name: string;
+      band_id: string | null;
+      created_by: string;
+    }) {
+      const { data, error } = await supabase
+        .from('version_groups')
+        .insert({
+          name: params.name,
+          band_id: params.band_id,
+          created_by: params.created_by,
+        })
+        .select()
         .single();
 
       return { data, error };
@@ -1632,6 +1701,113 @@ export const db = {
         .eq('id', commentId);
 
       return { error };
+    },
+  },
+
+  // Recycle Bin operations
+  recycleBin: {
+    async getItems(bandId: string) {
+      // Get all deleted items for a band
+      const { data, error } = await supabase
+        .from('recycle_bin_items')
+        .select('*')
+        .eq('band_id', bandId)
+        .order('deleted_at', { ascending: false });
+
+      return { data, error };
+    },
+
+    async getItemsByType(bandId: string, itemType: 'track' | 'work' | 'set_list') {
+      const { data, error } = await supabase
+        .from('recycle_bin_items')
+        .select('*')
+        .eq('band_id', bandId)
+        .eq('item_type', itemType)
+        .order('deleted_at', { ascending: false });
+
+      return { data, error };
+    },
+
+    async restoreTrack(trackId: string) {
+      const { data, error } = await supabase.rpc('restore_track', {
+        p_track_id: trackId,
+      });
+
+      return { data, error };
+    },
+
+    async restoreWork(groupId: string) {
+      const { data, error } = await supabase.rpc('restore_version_group', {
+        p_group_id: groupId,
+      });
+
+      return { data, error };
+    },
+
+    async restoreSetList(setListId: string) {
+      const { data, error } = await supabase.rpc('restore_set_list', {
+        p_set_list_id: setListId,
+      });
+
+      return { data, error };
+    },
+
+    async permanentDeleteTrack(trackId: string) {
+      const { data, error } = await supabase
+        .from('tracks')
+        .delete()
+        .eq('id', trackId);
+
+      return { data, error };
+    },
+
+    async permanentDeleteWork(groupId: string) {
+      // First unassign tracks
+      await supabase
+        .from('tracks')
+        .update({ version_group_id: null })
+        .eq('version_group_id', groupId);
+
+      // Then delete the group
+      const { data, error } = await supabase
+        .from('version_groups')
+        .delete()
+        .eq('id', groupId);
+
+      return { data, error };
+    },
+
+    async permanentDeleteSetList(setListId: string) {
+      const { data, error } = await supabase
+        .from('set_lists')
+        .delete()
+        .eq('id', setListId);
+
+      return { data, error };
+    },
+
+    async emptyRecycleBin(bandId: string) {
+      // Permanently delete all items for this band that are in the recycle bin
+      // Delete tracks first (they may reference version groups)
+      await supabase
+        .from('tracks')
+        .delete()
+        .eq('band_id', bandId)
+        .not('deleted_at', 'is', null);
+
+      await supabase
+        .from('version_groups')
+        .delete()
+        .eq('band_id', bandId)
+        .not('deleted_at', 'is', null);
+
+      await supabase
+        .from('set_lists')
+        .delete()
+        .eq('band_id', bandId)
+        .not('deleted_at', 'is', null);
+
+      return { data: true, error: null };
     },
   },
 };

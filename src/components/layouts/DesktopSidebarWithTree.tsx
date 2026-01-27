@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronDown, ChevronRight, Share2, Settings, LogOut, Upload, Plus, List } from 'lucide-react';
+import { ChevronDown, ChevronRight, Share2, Settings, LogOut, Upload, Plus, List, Music, Trash2 } from 'lucide-react';
 import { useDesignTokens } from '../../design/useDesignTokens';
 import { TabId } from '../../types';
 
@@ -9,18 +9,31 @@ interface SetListItem {
   track_count?: number;
 }
 
+interface WorkItem {
+  id: string;
+  name: string;
+  version_count?: number;
+  hero_track_id?: string | null;
+}
+
 interface DesktopSidebarWithTreeProps {
   activeTab: TabId;
   onTabChange: (tab: TabId) => void;
   onSettingsClick: () => void;
   onUploadClick: () => void;
   onSignOut: () => void;
+  onRecycleBinClick?: () => void;
   bandName?: string;
   userName?: string;
   setLists?: SetListItem[];
   selectedSetListId?: string | null;
   onSetListSelect?: (setList: SetListItem) => void;
   onCreateSetList?: () => void;
+  /** Works (song projects) containing multiple track versions */
+  works?: WorkItem[];
+  selectedWorkId?: string | null;
+  onWorkSelect?: (work: WorkItem) => void;
+  onCreateWork?: () => void;
 }
 
 export const DesktopSidebarWithTree: React.FC<DesktopSidebarWithTreeProps> = ({
@@ -29,20 +42,31 @@ export const DesktopSidebarWithTree: React.FC<DesktopSidebarWithTreeProps> = ({
   onSettingsClick,
   onUploadClick,
   onSignOut,
+  onRecycleBinClick,
   bandName,
   userName,
   setLists = [],
   selectedSetListId,
   onSetListSelect,
   onCreateSetList,
+  works = [],
+  selectedWorkId,
+  onWorkSelect,
+  onCreateWork,
 }) => {
   const designTokens = useDesignTokens();
   const [setListsExpanded, setSetListsExpanded] = useState(true);
+  const [worksExpanded, setWorksExpanded] = useState(true);
   const [sharedExpanded, setSharedExpanded] = useState(false);
 
   const handleSetListClick = (setList: SetListItem) => {
     onSetListSelect?.(setList);
     onTabChange('playlists');
+  };
+
+  const handleWorkClick = (work: WorkItem) => {
+    onWorkSelect?.(work);
+    onTabChange('works');
   };
 
   return (
@@ -116,11 +140,7 @@ export const DesktopSidebarWithTree: React.FC<DesktopSidebarWithTreeProps> = ({
         {/* Set Lists Section */}
         <div style={{ marginBottom: designTokens.spacing.sm }}>
           {/* Set Lists Header (expandable) */}
-          <button
-            onClick={() => {
-              setSetListsExpanded(!setListsExpanded);
-              onTabChange('playlists');
-            }}
+          <div
             style={{
               width: '100%',
               display: 'flex',
@@ -130,7 +150,6 @@ export const DesktopSidebarWithTree: React.FC<DesktopSidebarWithTreeProps> = ({
               backgroundColor: activeTab === 'playlists' && !selectedSetListId
                 ? designTokens.colors.surface.active
                 : 'transparent',
-              border: 'none',
               borderRadius: designTokens.borderRadius.sm,
               color: activeTab === 'playlists'
                 ? designTokens.colors.primary.blue
@@ -139,7 +158,18 @@ export const DesktopSidebarWithTree: React.FC<DesktopSidebarWithTreeProps> = ({
               fontSize: designTokens.typography.fontSizes.body,
               fontWeight: designTokens.typography.fontWeights.medium,
               fontFamily: designTokens.typography.fontFamily,
-              textAlign: 'left',
+            }}
+            onClick={() => {
+              setSetListsExpanded(!setListsExpanded);
+              onTabChange('playlists');
+            }}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                setSetListsExpanded(!setListsExpanded);
+                onTabChange('playlists');
+              }
             }}
           >
             {setListsExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
@@ -165,7 +195,7 @@ export const DesktopSidebarWithTree: React.FC<DesktopSidebarWithTreeProps> = ({
             >
               <Plus size={16} />
             </button>
-          </button>
+          </div>
 
           {/* Set Lists Tree Items */}
           {setListsExpanded && (
@@ -227,6 +257,135 @@ export const DesktopSidebarWithTree: React.FC<DesktopSidebarWithTreeProps> = ({
                         }}
                       >
                         {setList.track_count}
+                      </span>
+                    )}
+                  </button>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Works Section (Song Projects) */}
+        <div style={{ marginBottom: designTokens.spacing.sm }}>
+          {/* Works Header (expandable) */}
+          <div
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              gap: designTokens.spacing.sm,
+              padding: `${designTokens.spacing.sm} ${designTokens.spacing.sm}`,
+              backgroundColor: activeTab === 'works' && !selectedWorkId
+                ? designTokens.colors.surface.active
+                : 'transparent',
+              borderRadius: designTokens.borderRadius.sm,
+              color: activeTab === 'works'
+                ? designTokens.colors.primary.blue
+                : designTokens.colors.text.primary,
+              cursor: 'pointer',
+              fontSize: designTokens.typography.fontSizes.body,
+              fontWeight: designTokens.typography.fontWeights.medium,
+              fontFamily: designTokens.typography.fontFamily,
+            }}
+            onClick={() => {
+              setWorksExpanded(!worksExpanded);
+              onTabChange('works');
+            }}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                setWorksExpanded(!worksExpanded);
+                onTabChange('works');
+              }
+            }}
+          >
+            {worksExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+            <Music size={18} />
+            <span style={{ flex: 1 }}>Works</span>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onCreateWork?.();
+              }}
+              style={{
+                padding: '4px',
+                backgroundColor: 'transparent',
+                border: 'none',
+                borderRadius: designTokens.borderRadius.sm,
+                color: designTokens.colors.text.tertiary,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+              title="Create new work"
+            >
+              <Plus size={16} />
+            </button>
+          </div>
+
+          {/* Works Tree Items */}
+          {worksExpanded && (
+            <div style={{ marginLeft: '24px', marginTop: '2px' }}>
+              {works.length === 0 ? (
+                <div
+                  style={{
+                    padding: `${designTokens.spacing.sm} ${designTokens.spacing.sm}`,
+                    fontSize: designTokens.typography.fontSizes.bodySmall,
+                    color: designTokens.colors.text.muted,
+                    fontStyle: 'italic',
+                  }}
+                >
+                  No works yet
+                </div>
+              ) : (
+                works.map((work) => (
+                  <button
+                    key={work.id}
+                    onClick={() => handleWorkClick(work)}
+                    style={{
+                      width: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: designTokens.spacing.sm,
+                      padding: `${designTokens.spacing.xs} ${designTokens.spacing.sm}`,
+                      backgroundColor: selectedWorkId === work.id
+                        ? designTokens.colors.surface.active
+                        : 'transparent',
+                      border: 'none',
+                      borderRadius: designTokens.borderRadius.sm,
+                      color: selectedWorkId === work.id
+                        ? designTokens.colors.primary.blue
+                        : designTokens.colors.text.secondary,
+                      cursor: 'pointer',
+                      fontSize: designTokens.typography.fontSizes.bodySmall,
+                      fontFamily: designTokens.typography.fontFamily,
+                      textAlign: 'left',
+                      transition: 'background-color 0.15s ease',
+                    }}
+                  >
+                    <span
+                      style={{
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        flex: 1,
+                      }}
+                    >
+                      {work.name}
+                    </span>
+                    {work.version_count !== undefined && (
+                      <span
+                        style={{
+                          fontSize: designTokens.typography.fontSizes.caption,
+                          color: designTokens.colors.text.muted,
+                          flexShrink: 0,
+                        }}
+                      >
+                        {work.version_count} {work.version_count === 1 ? 'version' : 'versions'}
                       </span>
                     )}
                   </button>
@@ -313,7 +472,7 @@ export const DesktopSidebarWithTree: React.FC<DesktopSidebarWithTreeProps> = ({
             alignItems: 'center',
             gap: designTokens.spacing.sm,
             padding: `${designTokens.spacing.sm} ${designTokens.spacing.sm}`,
-            marginBottom: designTokens.spacing.sm,
+            marginBottom: designTokens.spacing.xs,
             backgroundColor: 'transparent',
             border: 'none',
             borderRadius: designTokens.borderRadius.sm,
@@ -327,6 +486,32 @@ export const DesktopSidebarWithTree: React.FC<DesktopSidebarWithTreeProps> = ({
           <Settings size={18} />
           Settings
         </button>
+
+        {/* Recycle Bin */}
+        {onRecycleBinClick && (
+          <button
+            onClick={onRecycleBinClick}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              gap: designTokens.spacing.sm,
+              padding: `${designTokens.spacing.sm} ${designTokens.spacing.sm}`,
+              marginBottom: designTokens.spacing.sm,
+              backgroundColor: 'transparent',
+              border: 'none',
+              borderRadius: designTokens.borderRadius.sm,
+              color: designTokens.colors.text.secondary,
+              cursor: 'pointer',
+              fontSize: designTokens.typography.fontSizes.body,
+              fontFamily: designTokens.typography.fontFamily,
+              textAlign: 'left',
+            }}
+          >
+            <Trash2 size={18} />
+            Recycle Bin
+          </button>
+        )}
 
         {/* User Info & Sign Out */}
         <div

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Pause, ThumbsUp, Heart, MessageCircle, Download, Clock, Calendar, User, Folder, X } from 'lucide-react';
+import { Play, Pause, ThumbsUp, Heart, MessageCircle, Download, Clock, Calendar, User, Folder, X, Music } from 'lucide-react';
 import { useDesignTokens } from '../../design/useDesignTokens';
 
 interface TrackVersion {
@@ -15,6 +15,12 @@ interface Comment {
   content: string;
   created_at: string;
   timestamp_seconds?: number;
+}
+
+interface WorkInfo {
+  id: string;
+  name: string;
+  version_count?: number;
 }
 
 interface TrackDetailPanelProps {
@@ -36,11 +42,15 @@ interface TrackDetailPanelProps {
   };
   versions?: TrackVersion[];
   comments?: Comment[];
+  /** Work (song project) this track belongs to */
+  work?: WorkInfo | null;
   onPlayPause?: () => void;
   onRate?: (rating: 'liked' | 'loved') => void;
   onClose?: () => void;
   onVersionSelect?: (version: TrackVersion) => void;
   onAddComment?: (content: string) => void;
+  /** Called when user clicks to view the work */
+  onWorkClick?: (work: WorkInfo) => void;
 }
 
 /**
@@ -61,11 +71,13 @@ export const TrackDetailPanel: React.FC<TrackDetailPanelProps> = ({
   aggregatedRatings,
   versions = [],
   comments = [],
+  work,
   onPlayPause,
   onRate,
   onClose,
   onVersionSelect,
   onAddComment,
+  onWorkClick,
 }) => {
   const designTokens = useDesignTokens();
   const [currentTime, setCurrentTime] = useState(0);
@@ -326,6 +338,38 @@ export const TrackDetailPanel: React.FC<TrackDetailPanelProps> = ({
                   By: {track.uploaded_by}
                 </span>
               </div>
+            )}
+            {work && (
+              <button
+                onClick={() => onWorkClick?.(work)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: designTokens.spacing.sm,
+                  backgroundColor: designTokens.colors.surface.secondary,
+                  border: `1px solid ${designTokens.colors.borders.default}`,
+                  borderRadius: designTokens.borderRadius.sm,
+                  padding: `${designTokens.spacing.xs} ${designTokens.spacing.sm}`,
+                  cursor: onWorkClick ? 'pointer' : 'default',
+                  marginTop: designTokens.spacing.xs,
+                }}
+              >
+                <Music size={14} color={designTokens.colors.primary.blue} />
+                <span style={{
+                  fontSize: designTokens.typography.fontSizes.bodySmall,
+                  color: designTokens.colors.text.primary,
+                }}>
+                  Part of: <strong>{work.name}</strong>
+                </span>
+                {work.version_count && work.version_count > 1 && (
+                  <span style={{
+                    fontSize: designTokens.typography.fontSizes.caption,
+                    color: designTokens.colors.text.muted,
+                  }}>
+                    ({work.version_count} versions)
+                  </span>
+                )}
+              </button>
             )}
           </div>
         </div>

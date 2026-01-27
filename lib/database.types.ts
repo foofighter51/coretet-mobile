@@ -977,6 +977,8 @@ export type Database = {
           band_id: string | null
           created_at: string | null
           created_by: string
+          deleted_at: string | null
+          deleted_by: string | null
           description: string | null
           id: string
           is_public: boolean | null
@@ -988,6 +990,8 @@ export type Database = {
           band_id?: string | null
           created_at?: string | null
           created_by: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           description?: string | null
           id?: string
           is_public?: boolean | null
@@ -999,6 +1003,8 @@ export type Database = {
           band_id?: string | null
           created_at?: string | null
           created_by?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           description?: string | null
           id?: string
           is_public?: boolean | null
@@ -1423,6 +1429,8 @@ export type Database = {
           band_id: string | null
           created_at: string | null
           created_by: string
+          deleted_at: string | null
+          deleted_by: string | null
           duration_seconds: number | null
           file_size: number | null
           file_url: string
@@ -1436,6 +1444,8 @@ export type Database = {
           band_id?: string | null
           created_at?: string | null
           created_by: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           duration_seconds?: number | null
           file_size?: number | null
           file_url: string
@@ -1449,6 +1459,8 @@ export type Database = {
           band_id?: string | null
           created_at?: string | null
           created_by?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           duration_seconds?: number | null
           file_size?: number | null
           file_url?: string
@@ -1540,6 +1552,8 @@ export type Database = {
           band_id: string | null
           created_at: string | null
           created_by: string
+          deleted_at: string | null
+          deleted_by: string | null
           hero_track_id: string | null
           id: string
           name: string
@@ -1549,6 +1563,8 @@ export type Database = {
           band_id?: string | null
           created_at?: string | null
           created_by: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           hero_track_id?: string | null
           id?: string
           name: string
@@ -1558,6 +1574,8 @@ export type Database = {
           band_id?: string | null
           created_at?: string | null
           created_by?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           hero_track_id?: string | null
           id?: string
           name?: string
@@ -1598,6 +1616,19 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      recycle_bin_items: {
+        Row: {
+          band_id: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          deleted_by_name: string | null
+          expires_at: string | null
+          id: string | null
+          item_type: string | null
+          name: string | null
+        }
+        Relationships: []
       }
       set_list_details: {
         Row: {
@@ -1697,6 +1728,14 @@ export type Database = {
         Args: { p_added_by: string; p_keyword_id: string; p_track_id: string }
         Returns: string
       }
+      cleanup_recycle_bin: {
+        Args: never
+        Returns: {
+          deleted_groups: number
+          deleted_set_lists: number
+          deleted_tracks: number
+        }[]
+      }
       clerk_user_id: { Args: never; Returns: string }
       create_version_group: {
         Args: {
@@ -1747,8 +1786,26 @@ export type Database = {
         }
         Returns: string
       }
+      restore_set_list: { Args: { p_set_list_id: string }; Returns: undefined }
+      restore_track: { Args: { p_track_id: string }; Returns: undefined }
+      restore_version_group: {
+        Args: { p_group_id: string }
+        Returns: undefined
+      }
       set_hero_track: {
         Args: { p_group_id: string; p_hero_track_id: string }
+        Returns: undefined
+      }
+      soft_delete_set_list: {
+        Args: { p_deleted_by: string; p_set_list_id: string }
+        Returns: undefined
+      }
+      soft_delete_track: {
+        Args: { p_deleted_by: string; p_track_id: string }
+        Returns: undefined
+      }
+      soft_delete_version_group: {
+        Args: { p_deleted_by: string; p_group_id: string }
         Returns: undefined
       }
       ungroup_tracks: { Args: { p_group_id: string }; Returns: undefined }

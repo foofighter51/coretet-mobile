@@ -36,7 +36,24 @@ export interface Playlist {
   updatedAt: string;
 }
 
-export type TabId = 'playlists' | 'shared';
+/**
+ * A Work represents a song/composition as a creative project.
+ * It contains multiple tracks that are different versions/iterations
+ * of the same underlying song (demos, acoustic, studio, live, etc.)
+ */
+export interface Work {
+  id: string;
+  name: string;
+  band_id: string;
+  created_by: string;
+  hero_track_id?: string | null;
+  created_at: string;
+  updated_at?: string;
+  /** Number of track versions in this work */
+  version_count?: number;
+}
+
+export type TabId = 'playlists' | 'shared' | 'works';
 
 export type ScreenId = 'welcome' | 'phone' | 'verify' | 'onboarding' | 'bandAction' | 'main';
 
