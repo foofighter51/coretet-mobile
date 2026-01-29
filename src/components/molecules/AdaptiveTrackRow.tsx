@@ -2,6 +2,7 @@ import React from 'react';
 import { useIsDesktop } from '../../hooks/useResponsive';
 import { SwipeableTrackRow } from './SwipeableTrackRow';
 import { DesktopTrackRow } from './DesktopTrackRow';
+import { VersionType } from './VersionTypeSelector';
 
 interface AdaptiveTrackRowProps {
   track: {
@@ -9,6 +10,7 @@ interface AdaptiveTrackRowProps {
     title: string;
     duration_seconds?: number;
     folder_path?: string;
+    version_type?: string | null;
   };
   isPlaying: boolean;
   currentRating?: 'liked' | 'loved' | null;
@@ -18,6 +20,8 @@ interface AdaptiveTrackRowProps {
   };
   hasComments?: boolean;
   hasUnreadComments?: boolean;
+  /** Available version types for the selector */
+  versionTypes?: VersionType[];
   onPlayPause: () => void;
   onRate: (rating: 'liked' | 'loved') => void;
   /** Mobile: triggered by long press. Desktop: triggered by click */
@@ -26,6 +30,10 @@ interface AdaptiveTrackRowProps {
   onDelete?: () => void;
   /** Whether this track is currently being deleted */
   isDeleting?: boolean;
+  /** Called when version type changes (desktop only) */
+  onVersionTypeChange?: (versionType: string | null) => void;
+  /** Called when creating a custom version type */
+  onCreateVersionType?: (name: string) => Promise<void>;
 }
 
 /**
@@ -48,11 +56,14 @@ export const AdaptiveTrackRow: React.FC<AdaptiveTrackRowProps> = ({
   aggregatedRatings,
   hasComments,
   hasUnreadComments,
+  versionTypes,
   onPlayPause,
   onRate,
   onOpenDetails,
   onDelete,
   isDeleting,
+  onVersionTypeChange,
+  onCreateVersionType,
 }) => {
   const isDesktop = useIsDesktop();
 
@@ -65,11 +76,14 @@ export const AdaptiveTrackRow: React.FC<AdaptiveTrackRowProps> = ({
         aggregatedRatings={aggregatedRatings}
         hasComments={hasComments}
         hasUnreadComments={hasUnreadComments}
+        versionTypes={versionTypes}
         onPlayPause={onPlayPause}
         onRate={onRate}
         onDelete={onDelete}
         onClick={onOpenDetails}
         isDeleting={isDeleting}
+        onVersionTypeChange={onVersionTypeChange}
+        onCreateVersionType={onCreateVersionType}
       />
     );
   }

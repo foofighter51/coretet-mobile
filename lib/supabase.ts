@@ -320,6 +320,17 @@ export const db = {
 
       return { data, error };
     },
+
+    async updateVersionType(trackId: string, versionType: string | null) {
+      const { data, error } = await supabase
+        .from('tracks')
+        .update({ version_type: versionType })
+        .eq('id', trackId)
+        .select()
+        .single();
+
+      return { data, error };
+    },
   },
 
   // Track Version operations
@@ -1808,6 +1819,410 @@ export const db = {
         .not('deleted_at', 'is', null);
 
       return { data: true, error: null };
+    },
+  },
+
+  // Work-level Comments operations
+  workComments: {
+    async create(comment: {
+      version_group_id: string;
+      user_id: string;
+      content: string;
+      track_id?: string;
+      timestamp_seconds?: number;
+    }) {
+      const { data, error } = await supabase
+        .from('work_comments')
+        .insert(comment)
+        .select(`
+          *,
+          profiles (
+            name,
+            avatar_url
+          )
+        `)
+        .single();
+
+      return { data, error };
+    },
+
+    async getByWork(versionGroupId: string) {
+      const { data, error } = await supabase
+        .from('work_comments')
+        .select(`
+          *,
+          profiles (
+            name,
+            avatar_url
+          )
+        `)
+        .eq('version_group_id', versionGroupId)
+        .order('timestamp_seconds', { ascending: true, nullsFirst: false });
+
+      return { data, error };
+    },
+
+    async getByTrack(trackId: string) {
+      const { data, error } = await supabase
+        .from('work_comments')
+        .select(`
+          *,
+          profiles (
+            name,
+            avatar_url
+          )
+        `)
+        .eq('track_id', trackId)
+        .order('timestamp_seconds', { ascending: true, nullsFirst: false });
+
+      return { data, error };
+    },
+
+    async update(commentId: string, content: string) {
+      const { data, error } = await supabase
+        .from('work_comments')
+        .update({ content, updated_at: new Date().toISOString() })
+        .eq('id', commentId)
+        .select()
+        .single();
+
+      return { data, error };
+    },
+
+    async delete(commentId: string) {
+      const { error } = await supabase
+        .from('work_comments')
+        .delete()
+        .eq('id', commentId);
+
+      return { error };
+    },
+
+    async markAsViewed(versionGroupId: string, userId: string) {
+      const { error } = await supabase
+        .from('work_comment_views')
+        .upsert(
+          {
+            version_group_id: versionGroupId,
+            user_id: userId,
+            last_viewed_at: new Date().toISOString(),
+          },
+          {
+            onConflict: 'version_group_id,user_id',
+          }
+        );
+
+      return { error };
+    },
+
+    async getUnreadCount(versionGroupId: string, userId: string) {
+      // Get user's last viewed time
+      const { data: viewData } = await supabase
+        .from('work_comment_views')
+        .select('last_viewed_at')
+        .eq('version_group_id', versionGroupId)
+        .eq('user_id', userId)
+        .single();
+
+      const lastViewed = viewData?.last_viewed_at;
+
+      // Count comments newer than last viewed
+      let query = supabase
+        .from('work_comments')
+        .select('*', { count: 'exact', head: true })
+        .eq('version_group_id', versionGroupId);
+
+      if (lastViewed) {
+        query = query.gt('created_at', lastViewed);
+      }
+
+      const { count, error } = await query;
+
+      return { count: count || 0, error };
+    },
+
+    async checkWorksHaveUnreadComments(workIds: string[], userId: string): Promise<Record<string, boolean>> {
+      if (workIds.length === 0) return {};
+
+      // Get user's last viewed times
+      const { data: views } = await supabase
+        .from('work_comment_views')
+        .select('version_group_id, last_viewed_at')
+        .eq('user_id', userId)
+        .in('version_group_id', workIds);
+
+      // Get all comments for these works
+      const { data: comments } = await supabase
+        .from('work_comments')
+        .select('version_group_id, created_at')
+        .in('version_group_id', workIds)
+        .order('created_at', { ascending: false });
+
+      // Build view map
+      const viewMap: Record<string, Date> = {};
+      (views || []).forEach(view => {
+        viewMap[view.version_group_id] = new Date(view.last_viewed_at);
+      });
+
+      // Check for unread
+      const unreadMap: Record<string, boolean> = {};
+      workIds.forEach(workId => {
+        const workComments = (comments || []).filter(c => c.version_group_id === workId);
+        if (workComments.length === 0) {
+          unreadMap[workId] = false;
+          return;
+        }
+
+        const lastViewed = viewMap[workId];
+        if (!lastViewed) {
+          unreadMap[workId] = true;
+          return;
+        }
+
+        unreadMap[workId] = workComments.some(
+          comment => new Date(comment.created_at) > lastViewed
+        );
+      });
+
+      return unreadMap;
+    },
+  },
+
+  // Work-level Ratings operations
+  workRatings: {
+    async rate(params: {
+      version_group_id: string;
+      user_id: string;
+      rating: 'liked' | 'loved';
+      track_id?: string;
+    }) {
+      const { data, error } = await supabase
+        .from('work_ratings')
+        .upsert(
+          {
+            version_group_id: params.version_group_id,
+            user_id: params.user_id,
+            rating: params.rating,
+            track_id: params.track_id || null,
+            updated_at: new Date().toISOString(),
+          },
+          {
+            onConflict: 'version_group_id,user_id,track_id',
+          }
+        )
+        .select()
+        .single();
+
+      return { data, error };
+    },
+
+    async removeRating(versionGroupId: string, userId: string, trackId?: string) {
+      let query = supabase
+        .from('work_ratings')
+        .delete()
+        .eq('version_group_id', versionGroupId)
+        .eq('user_id', userId);
+
+      if (trackId) {
+        query = query.eq('track_id', trackId);
+      } else {
+        query = query.is('track_id', null);
+      }
+
+      const { error } = await query;
+      return { error };
+    },
+
+    async getByWork(versionGroupId: string, currentUserId: string) {
+      const { data, error } = await supabase
+        .from('work_ratings')
+        .select(`
+          *,
+          profiles (
+            name
+          )
+        `)
+        .eq('version_group_id', versionGroupId);
+
+      if (error || !data) {
+        return {
+          personal: null,
+          collaborators: { liked: 0, loved: 0, names: [] },
+          cumulative: { liked: 0, loved: 0 },
+          error,
+        };
+      }
+
+      const personal = data.find(r => r.user_id === currentUserId);
+      const collaborators = data.filter(r => r.user_id !== currentUserId);
+
+      return {
+        personal: personal?.rating || null,
+        collaborators: {
+          liked: collaborators.filter(r => r.rating === 'liked').length,
+          loved: collaborators.filter(r => r.rating === 'loved').length,
+          names: collaborators.map(r => (r as any).profiles?.name).filter(Boolean) as string[],
+        },
+        cumulative: {
+          liked: data.filter(r => r.rating === 'liked').length,
+          loved: data.filter(r => r.rating === 'loved').length,
+        },
+        error: null,
+      };
+    },
+
+    async getByTrack(trackId: string, currentUserId: string) {
+      const { data, error } = await supabase
+        .from('work_ratings')
+        .select(`
+          *,
+          profiles (
+            name
+          )
+        `)
+        .eq('track_id', trackId);
+
+      if (error || !data) {
+        return {
+          personal: null,
+          collaborators: { liked: 0, loved: 0, names: [] },
+          cumulative: { liked: 0, loved: 0 },
+          error,
+        };
+      }
+
+      const personal = data.find(r => r.user_id === currentUserId);
+      const collaborators = data.filter(r => r.user_id !== currentUserId);
+
+      return {
+        personal: personal?.rating || null,
+        collaborators: {
+          liked: collaborators.filter(r => r.rating === 'liked').length,
+          loved: collaborators.filter(r => r.rating === 'loved').length,
+          names: collaborators.map(r => (r as any).profiles?.name).filter(Boolean) as string[],
+        },
+        cumulative: {
+          liked: data.filter(r => r.rating === 'liked').length,
+          loved: data.filter(r => r.rating === 'loved').length,
+        },
+        error: null,
+      };
+    },
+  },
+
+  // Track Waveform cache operations
+  trackWaveforms: {
+    async get(trackId: string) {
+      const { data, error } = await supabase
+        .from('track_waveforms')
+        .select('*')
+        .eq('track_id', trackId)
+        .single();
+
+      return { data, error };
+    },
+
+    async save(trackId: string, waveformData: {
+      amplitudes: number[];
+      sampleCount: number;
+      duration: number;
+    }) {
+      const { data, error } = await supabase
+        .from('track_waveforms')
+        .upsert(
+          {
+            track_id: trackId,
+            waveform_data: waveformData.amplitudes,
+            sample_count: waveformData.sampleCount,
+            duration_seconds: waveformData.duration,
+          },
+          {
+            onConflict: 'track_id',
+          }
+        )
+        .select()
+        .single();
+
+      return { data, error };
+    },
+
+    async delete(trackId: string) {
+      const { error } = await supabase
+        .from('track_waveforms')
+        .delete()
+        .eq('track_id', trackId);
+
+      return { error };
+    },
+  },
+
+  // Version Types operations
+  versionTypes: {
+    async getAll(bandId?: string) {
+      // Get default types (band_id IS NULL)
+      const { data: defaultTypes, error: defaultError } = await supabase
+        .from('version_types')
+        .select('*')
+        .is('band_id', null)
+        .order('display_order', { ascending: true });
+
+      if (defaultError) {
+        return { data: null, error: defaultError };
+      }
+
+      // Get band-specific custom types if bandId provided
+      let customTypes: any[] = [];
+      if (bandId) {
+        const { data: bandTypes, error: bandError } = await supabase
+          .from('version_types')
+          .select('*')
+          .eq('band_id', bandId)
+          .order('display_order', { ascending: true });
+
+        if (bandError) {
+          return { data: null, error: bandError };
+        }
+        customTypes = bandTypes || [];
+      }
+
+      // Combine: defaults first, then custom
+      const allTypes = [...(defaultTypes || []), ...customTypes];
+
+      return { data: allTypes, error: null };
+    },
+
+    async create(bandId: string, name: string) {
+      // Get max display_order for this band
+      const { data: existing } = await supabase
+        .from('version_types')
+        .select('display_order')
+        .eq('band_id', bandId)
+        .order('display_order', { ascending: false })
+        .limit(1);
+
+      const maxOrder = existing?.[0]?.display_order || 100;
+
+      const { data, error } = await supabase
+        .from('version_types')
+        .insert({
+          band_id: bandId,
+          name: name.trim(),
+          is_default: false,
+          display_order: maxOrder + 1,
+        })
+        .select()
+        .single();
+
+      return { data, error };
+    },
+
+    async delete(typeId: string) {
+      const { error } = await supabase
+        .from('version_types')
+        .delete()
+        .eq('id', typeId);
+
+      return { error };
     },
   },
 };

@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Play, Pause, ThumbsUp, Heart, MessageCircle, Download, Clock, Calendar, User, Folder, X, Music } from 'lucide-react';
 import { useDesignTokens } from '../../design/useDesignTokens';
+import { WaveformVisualizer, TimestampedComment } from '../molecules/WaveformVisualizer';
+import { WaveformData } from '../../utils/waveformGenerator';
 
 interface TrackVersion {
   id: string;
@@ -27,6 +29,7 @@ interface TrackDetailPanelProps {
   track: {
     id: string;
     title: string;
+    file_url?: string;
     duration_seconds?: number;
     folder_path?: string;
     created_at?: string;
@@ -44,13 +47,21 @@ interface TrackDetailPanelProps {
   comments?: Comment[];
   /** Work (song project) this track belongs to */
   work?: WorkInfo | null;
+  /** Cached waveform data for this track */
+  cachedWaveformData?: WaveformData;
+  /** Timestamped comments for waveform markers */
+  timestampedComments?: TimestampedComment[];
   onPlayPause?: () => void;
   onRate?: (rating: 'liked' | 'loved') => void;
   onClose?: () => void;
   onVersionSelect?: (version: TrackVersion) => void;
-  onAddComment?: (content: string) => void;
+  onAddComment?: (content: string, timestampSeconds?: number) => void;
   /** Called when user clicks to view the work */
   onWorkClick?: (work: WorkInfo) => void;
+  /** Called when user seeks to a position */
+  onSeek?: (time: number) => void;
+  /** Called when waveform is generated (for caching) */
+  onWaveformGenerated?: (data: WaveformData) => void;
 }
 
 /**
@@ -72,15 +83,32 @@ export const TrackDetailPanel: React.FC<TrackDetailPanelProps> = ({
   versions = [],
   comments = [],
   work,
+  cachedWaveformData,
+  timestampedComments = [],
   onPlayPause,
   onRate,
   onClose,
   onVersionSelect,
   onAddComment,
   onWorkClick,
+  onSeek,
+  onWaveformGenerated,
 }) => {
   const designTokens = useDesignTokens();
   const [currentTime, setCurrentTime] = useState(0);
+  const [commentTimestamp, setCommentTimestamp] = useState<number | null>(null);
+
+  // Handle adding a comment at a specific timestamp from waveform
+  const handleAddCommentAtTimestamp = useCallback((timestamp: number) => {
+    setCommentTimestamp(timestamp);
+  }, []);
+
+  // Handle clicking on a comment marker to seek
+  const handleCommentClick = useCallback((comment: TimestampedComment) => {
+    if (comment.timestamp_seconds !== null && onSeek) {
+      onSeek(comment.timestamp_seconds);
+    }
+  }, [onSeek]);
 
   // Sync with audio playback progress
   useEffect(() => {
@@ -219,7 +247,7 @@ export const TrackDetailPanel: React.FC<TrackDetailPanelProps> = ({
           padding: designTokens.spacing.md,
         }}
       >
-        {/* Waveform Placeholder */}
+        {/* Waveform Section */}
         <div
           style={{
             backgroundColor: designTokens.colors.surface.tertiary,
@@ -228,23 +256,42 @@ export const TrackDetailPanel: React.FC<TrackDetailPanelProps> = ({
             marginBottom: designTokens.spacing.lg,
           }}
         >
-          {/* Waveform visualization placeholder */}
-          <div
-            style={{
-              height: '80px',
-              backgroundColor: designTokens.colors.surface.primary,
-              borderRadius: designTokens.borderRadius.sm,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginBottom: designTokens.spacing.md,
-              border: `1px dashed ${designTokens.colors.borders.default}`,
-            }}
-          >
-            <span style={{ color: designTokens.colors.text.muted, fontSize: designTokens.typography.fontSizes.bodySmall }}>
-              Waveform visualization coming soon
-            </span>
-          </div>
+          {/* Waveform Visualizer */}
+          {track.file_url ? (
+            <div style={{ marginBottom: designTokens.spacing.md }}>
+              <WaveformVisualizer
+                audioUrl={track.file_url}
+                duration={track.duration_seconds || 0}
+                currentTime={currentTime}
+                isPlaying={isPlaying}
+                comments={timestampedComments}
+                cachedWaveformData={cachedWaveformData}
+                onSeek={onSeek}
+                onAddComment={handleAddCommentAtTimestamp}
+                onCommentClick={handleCommentClick}
+                onWaveformGenerated={onWaveformGenerated}
+                height={80}
+                showCommentMarkers={true}
+              />
+            </div>
+          ) : (
+            <div
+              style={{
+                height: '80px',
+                backgroundColor: designTokens.colors.surface.primary,
+                borderRadius: designTokens.borderRadius.sm,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: designTokens.spacing.md,
+                border: `1px dashed ${designTokens.colors.borders.default}`,
+              }}
+            >
+              <span style={{ color: designTokens.colors.text.muted, fontSize: designTokens.typography.fontSizes.bodySmall }}>
+                No audio file available
+              </span>
+            </div>
+          )}
 
           {/* Playback Controls */}
           <div
@@ -300,6 +347,41 @@ export const TrackDetailPanel: React.FC<TrackDetailPanelProps> = ({
               {formatDuration(currentTime)} / {formatDuration(track.duration_seconds)}
             </span>
           </div>
+
+          {/* Timestamp Comment Indicator */}
+          {commentTimestamp !== null && (
+            <div
+              style={{
+                marginTop: designTokens.spacing.sm,
+                display: 'flex',
+                alignItems: 'center',
+                gap: designTokens.spacing.xs,
+                padding: `${designTokens.spacing.xs} ${designTokens.spacing.sm}`,
+                backgroundColor: `${designTokens.colors.accent.coral}15`,
+                borderRadius: designTokens.borderRadius.sm,
+                fontSize: designTokens.typography.fontSizes.caption,
+                color: designTokens.colors.accent.coral,
+              }}
+            >
+              <Clock size={12} />
+              Adding comment at {Math.floor(commentTimestamp / 60)}:{String(Math.floor(commentTimestamp % 60)).padStart(2, '0')}
+              <button
+                onClick={() => setCommentTimestamp(null)}
+                style={{
+                  marginLeft: 'auto',
+                  padding: '2px 6px',
+                  backgroundColor: 'transparent',
+                  border: `1px solid ${designTokens.colors.borders.default}`,
+                  borderRadius: designTokens.borderRadius.sm,
+                  color: designTokens.colors.text.muted,
+                  fontSize: designTokens.typography.fontSizes.caption,
+                  cursor: 'pointer',
+                }}
+              >
+                Clear
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Track Info */}

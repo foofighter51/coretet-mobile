@@ -29,6 +29,10 @@ import { InlineSpinner } from '../atoms/InlineSpinner';
 import { TrackSkeleton } from '../atoms/TrackSkeleton';
 import { SortButton } from '../molecules/SortButton';
 import { FilterButton, RatingFilter } from '../molecules/FilterButton';
+import { PlaylistHeader, SortField, SortDirection } from '../molecules/PlaylistHeader';
+import { TrackListHeader } from '../molecules/TrackListHeader';
+import { VersionType } from '../molecules/VersionTypeSelector';
+import { DraggableTrack, PlaylistDropZone, DragTrackData, useDragState } from '../molecules/DraggableTrack';
 import { UploadButton } from '../molecules/UploadButton';
 import { DropdownMenu } from '../ui/DropdownMenu';
 import { DialogModal } from '../ui/DialogModal';
@@ -306,6 +310,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   const [deletingTracks, setDeletingTracks] = useState(false);
   const [deletingTrackId, setDeletingTrackId] = useState<string | null>(null); // Track being permanently deleted
   const [detailPanelTrack, setDetailPanelTrack] = useState<any | null>(null); // Track shown in desktop detail panel
+  const [detailPanelComments, setDetailPanelComments] = useState<any[]>([]); // Comments for detail panel track
 
   // Works (song projects) state
   const [works, setWorks] = useState<any[]>([]);
@@ -316,6 +321,12 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   const [newWorkName, setNewWorkName] = useState('');
   const [createWorkLoading, setCreateWorkLoading] = useState(false);
   const createWorkInputRef = useRef<HTMLInputElement>(null);
+
+  // Version types state
+  const [versionTypes, setVersionTypes] = useState<VersionType[]>([]);
+
+  // Drag-drop state for tracks to playlists
+  const isDraggingTrack = useDragState();
 
   // Calculate content width: full width minus sidebar, equal split with detail panel if shown
   const showDetailPanel = isDesktop && detailPanelTrack;
@@ -940,6 +951,67 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
     fetchWorks();
   }, [currentBand?.id]);
 
+  // Default to 'works' tab when works are loaded (Works-first navigation)
+  const hasSetDefaultTab = useRef(false);
+  useEffect(() => {
+    // Only switch to works tab on initial load when user has works
+    // and hasn't already interacted with the tabs
+    if (!hasSetDefaultTab.current && !loadingWorks && works.length > 0) {
+      setActiveTab('works');
+      hasSetDefaultTab.current = true;
+    }
+  }, [works, loadingWorks]);
+
+  // Reset default tab flag when band changes
+  useEffect(() => {
+    hasSetDefaultTab.current = false;
+  }, [currentBand?.id]);
+
+  // Load version types when band changes
+  useEffect(() => {
+    const loadVersionTypes = async () => {
+      const { data, error } = await db.versionTypes.getAll(currentBand?.id);
+      if (!error && data) {
+        setVersionTypes(data);
+      }
+    };
+    loadVersionTypes();
+  }, [currentBand?.id]);
+
+  // Load comments when a track is shown in the detail panel
+  useEffect(() => {
+    const fetchDetailPanelComments = async () => {
+      if (!detailPanelTrack?.id) {
+        setDetailPanelComments([]);
+        return;
+      }
+
+      try {
+        const { data, error } = await db.comments.getByTrack(detailPanelTrack.id);
+
+        if (error) {
+          console.error('Failed to fetch comments for detail panel:', error);
+          return;
+        }
+
+        // Map comments with user names from the joined profiles
+        const commentsWithNames = (data || []).map((comment: any) => ({
+          id: comment.id,
+          user_name: comment.profiles?.name || 'Unknown User',
+          content: comment.content,
+          created_at: comment.created_at,
+          timestamp_seconds: comment.timestamp_seconds,
+        }));
+
+        setDetailPanelComments(commentsWithNames);
+      } catch (error) {
+        console.error('Error fetching detail panel comments:', error);
+      }
+    };
+
+    fetchDetailPanelComments();
+  }, [detailPanelTrack?.id]);
+
   // Load work versions when a work is selected
   const loadWorkVersions = async (workId: string) => {
     try {
@@ -1099,6 +1171,97 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
       await fetchAggregatedRatings([trackId]);
     } catch (error) {
       console.error('Error rating track:', error);
+    }
+  };
+
+  // Handle version type change for a track
+  const handleVersionTypeChange = async (trackId: string, versionType: string | null) => {
+    try {
+      // Optimistically update local state for immediate UI feedback
+      setPlaylistTracks(prev => prev.map(item =>
+        item.tracks?.id === trackId
+          ? { ...item, tracks: { ...item.tracks, version_type: versionType } }
+          : item
+      ));
+      setBandScopedTracks(prev => prev.map(track =>
+        track.id === trackId
+          ? { ...track, version_type: versionType }
+          : track
+      ));
+      setWorkVersions(prev => prev.map(track =>
+        track.id === trackId
+          ? { ...track, version_type: versionType }
+          : track
+      ));
+
+      const { error } = await db.tracks.updateVersionType(trackId, versionType);
+      if (error) {
+        console.error('Failed to update version type:', error);
+        // Revert optimistic update on error - refresh from server
+        if (currentSetList) {
+          const { data } = await db.setListEntries.getBySetList(currentSetList.id);
+          setPlaylistTracks(data || []);
+        }
+        if (currentBand?.id) {
+          const { data } = await db.tracks.getByBand(currentBand.id);
+          setBandScopedTracks(data || []);
+        }
+        return;
+      }
+    } catch (error) {
+      console.error('Error updating version type:', error);
+    }
+  };
+
+  // Handle creating a new custom version type for the band
+  const handleCreateVersionType = async (name: string) => {
+    if (!currentBand?.id) return;
+    try {
+      const { data, error } = await db.versionTypes.create(currentBand.id, name);
+      if (error) {
+        console.error('Failed to create version type:', error);
+        return;
+      }
+      // Refresh version types list
+      const { data: updated } = await db.versionTypes.getAll(currentBand.id);
+      if (updated) {
+        setVersionTypes(updated);
+      }
+    } catch (error) {
+      console.error('Error creating version type:', error);
+    }
+  };
+
+  // Handle dropping a track onto a playlist
+  const handleTrackDropOnPlaylist = async (trackData: DragTrackData, playlistId: string) => {
+    try {
+      // Get current max position in playlist
+      const { data: entries } = await db.setListEntries.getBySetList(playlistId);
+      const maxPosition = entries?.reduce((max: number, entry: any) =>
+        Math.max(max, entry.position || 0), 0) || 0;
+
+      // Add track to playlist
+      const { error } = await db.setListEntries.create({
+        set_list_id: playlistId,
+        track_id: trackData.trackId,
+        position: maxPosition + 1,
+      });
+
+      if (error) {
+        console.error('Failed to add track to playlist:', error);
+        return;
+      }
+
+      // Refresh playlist tracks if this is the current playlist
+      if (currentSetList?.id === playlistId) {
+        const { data } = await db.setListEntries.getBySetList(playlistId);
+        setPlaylistTracks(data || []);
+      }
+
+      // Show success feedback (optional - could add a toast notification)
+      console.log(`Track "${trackData.trackTitle}" added to playlist`);
+    } catch (error) {
+      console.error('Error adding track to playlist:', error);
     }
   };
 
@@ -1776,6 +1939,24 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                   <TrackSkeleton count={5} />
                 ) : (
                   <div style={{ width: '100%', overflow: 'hidden' }}>
+                    {/* Playlist Header with Sort/Filter (visible on all screen sizes) */}
+                    {!isReordering && (
+                      <PlaylistHeader
+                        sortBy={playlistSortBy as SortField}
+                        sortDirection={sortAscending ? 'asc' : 'desc'}
+                        ratingFilter={ratingFilter}
+                        onSortChange={(field, direction) => {
+                          setPlaylistSortBy(field as 'position' | 'name' | 'duration' | 'rating');
+                          setSortAscending(direction === 'asc');
+                        }}
+                        onRatingFilterChange={setRatingFilter}
+                        trackCount={showAllTracks ? bandScopedTracks.length : playlistTracks.length}
+                      />
+                    )}
+
+                    {/* Column Headers (desktop only) */}
+                    {isDesktop && !isReordering && <TrackListHeader />}
+
                     {/* Reorder Mode Actions */}
                     {isReordering && !showAllTracks && (
                       <div style={{
@@ -1895,24 +2076,38 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                             />
                           )}
                           <div style={{ flex: 1, minWidth: 0, overflow: 'hidden', pointerEvents: isReordering ? 'none' : 'auto' }}>
-                            <AdaptiveTrackRow
-                              track={{
-                                id: item.tracks.id,
-                                title: item.tracks.title,
-                                duration_seconds: item.tracks.duration_seconds,
-                                folder_path: item.tracks.folder_path
+                            <DraggableTrack
+                              trackData={{
+                                trackId: item.tracks.id,
+                                trackTitle: item.tracks.title,
+                                sourceType: 'playlist',
+                                sourceId: currentSetList?.id,
                               }}
-                              isPlaying={currentTrack?.id === item.tracks.id && isPlaying}
-                              currentRating={trackRatings[item.tracks.id]}
-                              aggregatedRatings={aggregatedRatings[item.tracks.id]}
-                              hasComments={trackCommentStatus[item.tracks.id]}
-                              hasUnreadComments={trackUnreadStatus[item.tracks.id]}
-                              onPlayPause={() => handlePlayPause(item.tracks)}
-                              onRate={(rating) => handleRate(item.tracks.id, rating)}
-                              onOpenDetails={() => handleOpenTrackDetail(item.tracks)}
-                              onDelete={() => handlePermanentlyDeleteTrack(item.tracks.id)}
-                              isDeleting={deletingTrackId === item.tracks.id}
-                            />
+                              enabled={!isReordering && !isEditingTracks}
+                            >
+                              <AdaptiveTrackRow
+                                track={{
+                                  id: item.tracks.id,
+                                  title: item.tracks.title,
+                                  duration_seconds: item.tracks.duration_seconds,
+                                  folder_path: item.tracks.folder_path,
+                                  version_type: item.tracks.version_type,
+                                }}
+                                isPlaying={currentTrack?.id === item.tracks.id && isPlaying}
+                                currentRating={trackRatings[item.tracks.id]}
+                                aggregatedRatings={aggregatedRatings[item.tracks.id]}
+                                hasComments={trackCommentStatus[item.tracks.id]}
+                                hasUnreadComments={trackUnreadStatus[item.tracks.id]}
+                                versionTypes={versionTypes}
+                                onPlayPause={() => handlePlayPause(item.tracks)}
+                                onRate={(rating) => handleRate(item.tracks.id, rating)}
+                                onOpenDetails={() => handleOpenTrackDetail(item.tracks)}
+                                onDelete={() => handlePermanentlyDeleteTrack(item.tracks.id)}
+                                isDeleting={deletingTrackId === item.tracks.id}
+                                onVersionTypeChange={(type) => handleVersionTypeChange(item.tracks.id, type)}
+                                onCreateVersionType={handleCreateVersionType}
+                              />
+                            </DraggableTrack>
                           </div>
                         </div>
                       )
@@ -1937,54 +2132,61 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: designTokens.spacing.md }}>
                 {displayedPlaylists.map((playlist) => (
-                  <div
+                  <PlaylistDropZone
                     key={playlist.id}
-                    onClick={() => handlePlaylistClick(playlist)}
-                    style={{
-                      padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
-                      backgroundColor: currentSetList?.id === playlist.id ? designTokens.colors.surface.hover : designTokens.colors.surface.primary,
-                      border: currentSetList?.id === playlist.id ? `2px solid ${designTokens.colors.primary.blue}` : `1px solid ${designTokens.colors.borders.default}`,
-                      borderRadius: designTokens.borderRadius.md,
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                    }}
+                    playlistId={playlist.id}
+                    playlistName={playlist.title}
+                    onTrackDrop={handleTrackDropOnPlaylist}
+                    active={isDraggingTrack}
                   >
-                    <div style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'flex-start',
-                      gap: designTokens.spacing.sm,
-                    }}>
-                      <div style={{ flex: 1 }}>
-                        <h3 style={{
-                          fontSize: designTokens.typography.fontSizes.body,
-                          fontWeight: designTokens.typography.fontWeights.semibold,
-                          color: designTokens.colors.neutral.charcoal,
-                          margin: 0,
-                          marginBottom: '2px',
-                        }}>
-                          {playlist.title}
-                        </h3>
-                        <p style={{
-                          fontSize: designTokens.typography.fontSizes.caption,
-                          color: designTokens.colors.neutral.gray,
-                          margin: 0,
-                        }}>
-                          {playlist.set_list_entries?.[0]?.count ?? 0} {(playlist.set_list_entries?.[0]?.count ?? 0) === 1 ? 'track' : 'tracks'}
-                        </p>
-                        {playlist.description && (
-                          <p style={{
-                            fontSize: designTokens.typography.fontSizes.bodySmall,
-                            color: designTokens.colors.neutral.darkGray,
-                            marginTop: '6px',
-                            marginBottom: 0,
+                    <div
+                      onClick={() => handlePlaylistClick(playlist)}
+                      style={{
+                        padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
+                        backgroundColor: currentSetList?.id === playlist.id ? designTokens.colors.surface.hover : designTokens.colors.surface.primary,
+                        border: currentSetList?.id === playlist.id ? `2px solid ${designTokens.colors.primary.blue}` : `1px solid ${designTokens.colors.borders.default}`,
+                        borderRadius: designTokens.borderRadius.md,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                      }}
+                    >
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'flex-start',
+                        gap: designTokens.spacing.sm,
+                      }}>
+                        <div style={{ flex: 1 }}>
+                          <h3 style={{
+                            fontSize: designTokens.typography.fontSizes.body,
+                            fontWeight: designTokens.typography.fontWeights.semibold,
+                            color: designTokens.colors.neutral.charcoal,
+                            margin: 0,
+                            marginBottom: '2px',
                           }}>
-                            {playlist.description}
+                            {playlist.title}
+                          </h3>
+                          <p style={{
+                            fontSize: designTokens.typography.fontSizes.caption,
+                            color: designTokens.colors.neutral.gray,
+                            margin: 0,
+                          }}>
+                            {playlist.set_list_entries?.[0]?.count ?? 0} {(playlist.set_list_entries?.[0]?.count ?? 0) === 1 ? 'track' : 'tracks'}
                           </p>
-                        )}
+                          {playlist.description && (
+                            <p style={{
+                              fontSize: designTokens.typography.fontSizes.bodySmall,
+                              color: designTokens.colors.neutral.darkGray,
+                              marginTop: '6px',
+                              marginBottom: 0,
+                            }}>
+                              {playlist.description}
+                            </p>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  </PlaylistDropZone>
                 ))}
               </div>
             )}
@@ -2041,6 +2243,9 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
               onRename={handleRenameWork}
               onDelete={handleDeleteWork}
               onBack={() => setSelectedWork(null)}
+              versionTypes={versionTypes}
+              onVersionTypeChange={handleVersionTypeChange}
+              onCreateVersionType={handleCreateVersionType}
             />
           );
         }
@@ -2624,6 +2829,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
             isPlaying={currentTrack?.id === detailPanelTrack.id && isPlaying}
             currentRating={trackRatings[detailPanelTrack.id]}
             aggregatedRatings={aggregatedRatings[detailPanelTrack.id]}
+            comments={detailPanelComments}
             onPlayPause={() => handlePlayPause(detailPanelTrack)}
             onRate={(rating) => handleRate(detailPanelTrack.id, rating)}
             onClose={() => setDetailPanelTrack(null)}
