@@ -1,6 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { ArrowUpDown, Filter, Check, ChevronDown, X, User, Users } from 'lucide-react';
 import { useDesignTokens } from '../../design/useDesignTokens';
+import { Z_INDEX } from '../../constants/zIndex';
 import type { RatingFilter } from './FilterButton';
 
 export type SortField = 'position' | 'name' | 'duration' | 'rating' | 'date' | 'type';
@@ -61,6 +63,7 @@ const RATING_FILTERS: { value: RatingFilter; label: string; icon?: 'user' | 'use
  * - Filter by rating: all, loved, liked, unrated
  * - Filter by version type
  * - Compact mode for space-constrained UIs
+ * - Portal-based dropdowns to escape overflow:hidden containers
  */
 export const PlaylistHeader: React.FC<PlaylistHeaderProps> = ({
   sortBy,
@@ -77,22 +80,87 @@ export const PlaylistHeader: React.FC<PlaylistHeaderProps> = ({
   const designTokens = useDesignTokens();
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [showFilterMenu, setShowFilterMenu] = useState(false);
+  const [sortMenuPosition, setSortMenuPosition] = useState({ top: 0, left: 0 });
+  const [filterMenuPosition, setFilterMenuPosition] = useState({ top: 0, left: 0 });
+
+  const sortTriggerRef = useRef<HTMLButtonElement>(null);
+  const filterTriggerRef = useRef<HTMLButtonElement>(null);
   const sortMenuRef = useRef<HTMLDivElement>(null);
   const filterMenuRef = useRef<HTMLDivElement>(null);
+
+  // Calculate menu positions
+  const updateSortMenuPosition = useCallback(() => {
+    if (!sortTriggerRef.current) return;
+    const rect = sortTriggerRef.current.getBoundingClientRect();
+    setSortMenuPosition({
+      top: rect.bottom + 4,
+      left: rect.left,
+    });
+  }, []);
+
+  const updateFilterMenuPosition = useCallback(() => {
+    if (!filterTriggerRef.current) return;
+    const rect = filterTriggerRef.current.getBoundingClientRect();
+    const menuWidth = 180;
+    let left = rect.right - menuWidth; // Align to right edge
+    if (left < 8) left = 8;
+    setFilterMenuPosition({
+      top: rect.bottom + 4,
+      left,
+    });
+  }, []);
+
+  // Update positions when menus open
+  useEffect(() => {
+    if (showSortMenu) updateSortMenuPosition();
+  }, [showSortMenu, updateSortMenuPosition]);
+
+  useEffect(() => {
+    if (showFilterMenu) updateFilterMenuPosition();
+  }, [showFilterMenu, updateFilterMenuPosition]);
+
+  // Update positions on scroll/resize
+  useEffect(() => {
+    if (!showSortMenu && !showFilterMenu) return;
+
+    const handleScrollOrResize = () => {
+      if (showSortMenu) updateSortMenuPosition();
+      if (showFilterMenu) updateFilterMenuPosition();
+    };
+
+    window.addEventListener('scroll', handleScrollOrResize, true);
+    window.addEventListener('resize', handleScrollOrResize);
+
+    return () => {
+      window.removeEventListener('scroll', handleScrollOrResize, true);
+      window.removeEventListener('resize', handleScrollOrResize);
+    };
+  }, [showSortMenu, showFilterMenu, updateSortMenuPosition, updateFilterMenuPosition]);
 
   // Close menus when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (sortMenuRef.current && !sortMenuRef.current.contains(e.target as Node)) {
-        setShowSortMenu(false);
+      const target = e.target as Node;
+
+      if (showSortMenu) {
+        const clickedSortTrigger = sortTriggerRef.current?.contains(target);
+        const clickedSortMenu = sortMenuRef.current?.contains(target);
+        if (!clickedSortTrigger && !clickedSortMenu) {
+          setShowSortMenu(false);
+        }
       }
-      if (filterMenuRef.current && !filterMenuRef.current.contains(e.target as Node)) {
-        setShowFilterMenu(false);
+
+      if (showFilterMenu) {
+        const clickedFilterTrigger = filterTriggerRef.current?.contains(target);
+        const clickedFilterMenu = filterMenuRef.current?.contains(target);
+        if (!clickedFilterTrigger && !clickedFilterMenu) {
+          setShowFilterMenu(false);
+        }
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [showSortMenu, showFilterMenu]);
 
   const currentSortLabel = SORT_OPTIONS.find(o => o.field === sortBy)?.label || 'Order';
   const hasActiveFilter = ratingFilter !== 'all' || typeFilter;
@@ -125,16 +193,13 @@ export const PlaylistHeader: React.FC<PlaylistHeaderProps> = ({
   };
 
   const menuStyle: React.CSSProperties = {
-    position: 'absolute',
-    top: '100%',
-    left: 0,
-    marginTop: 4,
+    position: 'fixed',
     minWidth: '160px',
     backgroundColor: designTokens.colors.surface.primary,
     border: `1px solid ${designTokens.colors.borders.default}`,
     borderRadius: designTokens.borderRadius.md,
     boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
-    zIndex: 100,
+    zIndex: Z_INDEX.DROPDOWN,
     overflow: 'hidden',
   };
 
@@ -178,9 +243,11 @@ export const PlaylistHeader: React.FC<PlaylistHeaderProps> = ({
       {/* Right: Sort and Filter */}
       <div style={{ display: 'flex', alignItems: 'center', gap: designTokens.spacing.sm }}>
         {/* Sort Dropdown */}
-        <div ref={sortMenuRef} style={{ position: 'relative' }}>
+        <div style={{ position: 'relative' }}>
           <button
+            ref={sortTriggerRef}
             onClick={() => {
+              if (!showSortMenu) updateSortMenuPosition();
               setShowSortMenu(!showSortMenu);
               setShowFilterMenu(false);
             }}
@@ -192,8 +259,15 @@ export const PlaylistHeader: React.FC<PlaylistHeaderProps> = ({
             {sortDirection === 'asc' && <span style={{ fontSize: '10px' }}>↑</span>}
           </button>
 
-          {showSortMenu && (
-            <div style={menuStyle}>
+          {showSortMenu && createPortal(
+            <div
+              ref={sortMenuRef}
+              style={{
+                ...menuStyle,
+                top: sortMenuPosition.top,
+                left: sortMenuPosition.left,
+              }}
+            >
               {SORT_OPTIONS.map((option) => (
                 <button
                   key={option.field}
@@ -213,14 +287,17 @@ export const PlaylistHeader: React.FC<PlaylistHeaderProps> = ({
                   )}
                 </button>
               ))}
-            </div>
+            </div>,
+            document.body
           )}
         </div>
 
         {/* Filter Dropdown */}
-        <div ref={filterMenuRef} style={{ position: 'relative' }}>
+        <div style={{ position: 'relative' }}>
           <button
+            ref={filterTriggerRef}
             onClick={() => {
+              if (!showFilterMenu) updateFilterMenuPosition();
               setShowFilterMenu(!showFilterMenu);
               setShowSortMenu(false);
             }}
@@ -248,8 +325,16 @@ export const PlaylistHeader: React.FC<PlaylistHeaderProps> = ({
             )}
           </button>
 
-          {showFilterMenu && (
-            <div style={{ ...menuStyle, right: 0, left: 'auto', minWidth: '180px' }}>
+          {showFilterMenu && createPortal(
+            <div
+              ref={filterMenuRef}
+              style={{
+                ...menuStyle,
+                top: filterMenuPosition.top,
+                left: filterMenuPosition.left,
+                minWidth: '180px',
+              }}
+            >
               {/* Rating Filter Section */}
               <div
                 style={{
@@ -364,7 +449,8 @@ export const PlaylistHeader: React.FC<PlaylistHeaderProps> = ({
                   <span>Clear Filters</span>
                 </button>
               )}
-            </div>
+            </div>,
+            document.body
           )}
         </div>
       </div>

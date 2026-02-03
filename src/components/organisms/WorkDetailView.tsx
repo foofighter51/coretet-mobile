@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Play, Pause, Star, Clock, Calendar, User, ChevronRight, Plus, MoreVertical, Pencil, Trash2, ArrowLeft, MessageSquare, Send, Tag } from 'lucide-react';
+import { Play, Pause, Star, Clock, Calendar, User, ChevronRight, Plus, MoreVertical, Pencil, Trash2, ArrowLeft, MessageSquare, Send, Tag, ThumbsUp, Heart, MessageCircle, ListPlus } from 'lucide-react';
 import { useDesignTokens } from '../../design/useDesignTokens';
 import { WaveformVisualizer, TimestampedComment } from '../molecules/WaveformVisualizer';
 import { TimestampedCommentList } from '../molecules/TimestampedCommentList';
@@ -8,6 +8,8 @@ import { VersionTypeSelector, VersionType } from '../molecules/VersionTypeSelect
 import { TrackListHeader, getTrackGridTemplate } from '../molecules/TrackListHeader';
 import { WaveformData } from '../../utils/waveformGenerator';
 import { useIsDesktop } from '../../hooks/useResponsive';
+import { VersionTimeline } from './VersionTimeline';
+import { TimelineTrackVersion } from '../molecules/VersionTimelineCard';
 
 interface TrackVersion {
   id: string;
@@ -26,6 +28,7 @@ interface WorkDetailViewProps {
   work: {
     id: string;
     name: string;
+    description?: string | null;
     hero_track_id?: string | null;
     created_at: string;
   };
@@ -35,10 +38,15 @@ interface WorkDetailViewProps {
   onPlayTrack: (track: TrackVersion) => void;
   onSetHero?: (trackId: string) => void;
   onAddVersion?: () => void;
+  /** Called when user wants to add existing tracks from library */
+  onAddExistingTracks?: () => void;
   onTrackClick?: (track: TrackVersion) => void;
   onRename?: (newName: string) => void;
+  onUpdateDescription?: (description: string | null) => void;
   onDelete?: () => void;
   onBack?: () => void;
+  /** Whether the current user can edit Work metadata (band admins only) */
+  canEdit?: boolean;
   // New props for enhanced Work experience
   /** Current playback time in seconds */
   currentTime?: number;
@@ -60,6 +68,8 @@ interface WorkDetailViewProps {
   onAddComment?: (content: string, timestampSeconds?: number) => void;
   /** Called when user clicks a comment to seek */
   onCommentClick?: (comment: TimestampedComment) => void;
+  /** Called when user clicks a comment on a different track - switches to that track and seeks */
+  onCommentTrackSelect?: (trackId: string, timestamp: number) => void;
   /** Called when user changes their rating */
   onRate?: (rating: RatingValue) => void;
   /** Called when waveform is generated (for caching) */
@@ -76,6 +86,12 @@ interface WorkDetailViewProps {
   onVersionTypeChange?: (trackId: string, versionType: string | null) => void;
   /** Called when user creates a custom version type */
   onCreateVersionType?: (name: string) => Promise<void>;
+  /** Per-track ratings (trackId -> rating value) */
+  trackRatings?: Record<string, RatingValue>;
+  /** Per-track aggregated ratings (trackId -> {liked, loved}) */
+  trackAggregatedRatings?: Record<string, { liked: number; loved: number }>;
+  /** Per-track comment counts (trackId -> count) */
+  trackCommentCounts?: Record<string, number>;
 }
 
 /**
@@ -92,10 +108,13 @@ export const WorkDetailView: React.FC<WorkDetailViewProps> = ({
   onPlayTrack,
   onSetHero,
   onAddVersion,
+  onAddExistingTracks,
   onTrackClick,
   onRename,
+  onUpdateDescription,
   onDelete,
   onBack,
+  canEdit = false,
   // New enhanced props
   currentTime = 0,
   comments = [],
@@ -107,6 +126,7 @@ export const WorkDetailView: React.FC<WorkDetailViewProps> = ({
   onSeek,
   onAddComment,
   onCommentClick,
+  onCommentTrackSelect,
   onRate,
   onWaveformGenerated,
   showWaveform = true,
@@ -115,6 +135,9 @@ export const WorkDetailView: React.FC<WorkDetailViewProps> = ({
   versionTypes = [],
   onVersionTypeChange,
   onCreateVersionType,
+  trackRatings = {},
+  trackAggregatedRatings = {},
+  trackCommentCounts = {},
 }) => {
   const designTokens = useDesignTokens();
   const isDesktop = useIsDesktop();
@@ -124,6 +147,9 @@ export const WorkDetailView: React.FC<WorkDetailViewProps> = ({
   const [renameValue, setRenameValue] = useState(work.name);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [activeTab, setActiveTab] = useState<'versions' | 'comments'>('versions');
+  const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const [descriptionValue, setDescriptionValue] = useState(work.description || '');
+  const [isSavingDescription, setIsSavingDescription] = useState(false);
   const [commentInput, setCommentInput] = useState('');
   const [commentTimestamp, setCommentTimestamp] = useState<number | null>(null);
   const [isAddingComment, setIsAddingComment] = useState(false);
@@ -150,6 +176,12 @@ export const WorkDetailView: React.FC<WorkDetailViewProps> = ({
     }
   }, [isRenaming]);
 
+  // Sync description value when work changes
+  useEffect(() => {
+    setDescriptionValue(work.description || '');
+    setIsEditingDescription(false);
+  }, [work.id, work.description]);
+
   const handleRenameSubmit = () => {
     if (renameValue.trim() && renameValue !== work.name && onRename) {
       onRename(renameValue.trim());
@@ -167,6 +199,26 @@ export const WorkDetailView: React.FC<WorkDetailViewProps> = ({
     setIsAddingComment(false);
   }, [commentInput, commentTimestamp, onAddComment]);
 
+  // Handle saving description
+  const handleSaveDescription = useCallback(async () => {
+    if (!onUpdateDescription) return;
+    const newDescription = descriptionValue.trim() || null;
+    if (newDescription === (work.description || null)) {
+      setIsEditingDescription(false);
+      return;
+    }
+
+    setIsSavingDescription(true);
+    try {
+      await onUpdateDescription(newDescription);
+      setIsEditingDescription(false);
+    } catch (error) {
+      console.error('Failed to update description:', error);
+    } finally {
+      setIsSavingDescription(false);
+    }
+  }, [descriptionValue, work.description, onUpdateDescription]);
+
   // Handle clicking on waveform to add comment at timestamp
   const handleAddCommentAtTimestamp = useCallback((timestamp: number) => {
     setCommentTimestamp(timestamp);
@@ -176,13 +228,24 @@ export const WorkDetailView: React.FC<WorkDetailViewProps> = ({
     setTimeout(() => commentInputRef.current?.focus(), 100);
   }, []);
 
-  // Handle comment click to seek
+  // Handle comment click to seek - switch tracks if comment is on different version
   const handleCommentSeek = useCallback((comment: TimestampedComment) => {
+    // If comment has track context and it's a different track, switch to it
+    if (comment.track_id && comment.track_id !== currentTrackId) {
+      // Find the track in versions and trigger play at timestamp
+      const targetTrack = versions.find(v => v.id === comment.track_id);
+      if (targetTrack && comment.timestamp_seconds !== null && onCommentTrackSelect) {
+        onCommentTrackSelect(comment.track_id, comment.timestamp_seconds);
+        return;
+      }
+    }
+
+    // Same track or no track context - just seek within current track
     if (comment.timestamp_seconds !== null && onSeek) {
       onSeek(comment.timestamp_seconds);
     }
     onCommentClick?.(comment);
-  }, [onSeek, onCommentClick]);
+  }, [currentTrackId, versions, onSeek, onCommentClick, onCommentTrackSelect]);
 
   const formatDuration = (seconds?: number): string => {
     if (!seconds) return '--:--';
@@ -386,6 +449,110 @@ export const WorkDetailView: React.FC<WorkDetailViewProps> = ({
         >
           {versions.length} {versions.length === 1 ? 'version' : 'versions'}
         </p>
+
+        {/* Description Section */}
+        {(work.description || canEdit) && (
+          <div
+            style={{
+              marginTop: designTokens.spacing.md,
+              marginLeft: onBack ? '36px' : 0,
+            }}
+          >
+            {isEditingDescription ? (
+              <div>
+                <textarea
+                  value={descriptionValue}
+                  onChange={(e) => setDescriptionValue(e.target.value)}
+                  placeholder="Add notes about this song..."
+                  disabled={isSavingDescription}
+                  onBlur={handleSaveDescription}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') {
+                      setDescriptionValue(work.description || '');
+                      setIsEditingDescription(false);
+                    }
+                    // Ctrl/Cmd + Enter to save
+                    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                      handleSaveDescription();
+                    }
+                  }}
+                  autoFocus
+                  rows={3}
+                  style={{
+                    width: '100%',
+                    padding: designTokens.spacing.sm,
+                    fontSize: designTokens.typography.fontSizes.bodySmall,
+                    color: designTokens.colors.text.secondary,
+                    backgroundColor: designTokens.colors.surface.secondary,
+                    border: `1px solid ${designTokens.colors.primary.blue}`,
+                    borderRadius: designTokens.borderRadius.sm,
+                    outline: 'none',
+                    resize: 'vertical',
+                    fontFamily: 'inherit',
+                    boxSizing: 'border-box',
+                  }}
+                />
+                <div
+                  style={{
+                    marginTop: designTokens.spacing.xs,
+                    fontSize: designTokens.typography.fontSizes.caption,
+                    color: designTokens.colors.text.muted,
+                  }}
+                >
+                  Press Escape to cancel, Cmd/Ctrl+Enter to save
+                </div>
+              </div>
+            ) : work.description ? (
+              <div
+                onClick={() => canEdit && setIsEditingDescription(true)}
+                style={{
+                  fontSize: designTokens.typography.fontSizes.bodySmall,
+                  color: designTokens.colors.text.secondary,
+                  fontStyle: 'italic',
+                  cursor: canEdit ? 'pointer' : 'default',
+                  padding: designTokens.spacing.sm,
+                  backgroundColor: designTokens.colors.surface.secondary,
+                  borderRadius: designTokens.borderRadius.sm,
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: designTokens.spacing.sm,
+                }}
+                title={canEdit ? 'Click to edit' : undefined}
+              >
+                <span style={{ flex: 1 }}>{work.description}</span>
+                {canEdit && (
+                  <Pencil
+                    size={14}
+                    style={{
+                      opacity: 0.5,
+                      flexShrink: 0,
+                      marginTop: '2px',
+                    }}
+                  />
+                )}
+              </div>
+            ) : canEdit ? (
+              <button
+                onClick={() => setIsEditingDescription(true)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: designTokens.spacing.xs,
+                  padding: `${designTokens.spacing.xs} ${designTokens.spacing.sm}`,
+                  fontSize: designTokens.typography.fontSizes.bodySmall,
+                  color: designTokens.colors.text.muted,
+                  backgroundColor: 'transparent',
+                  border: `1px dashed ${designTokens.colors.borders.default}`,
+                  borderRadius: designTokens.borderRadius.sm,
+                  cursor: 'pointer',
+                }}
+              >
+                <Pencil size={12} />
+                Add notes about this song...
+              </button>
+            ) : null}
+          </div>
+        )}
       </div>
 
       {/* Delete Confirmation Dialog */}
@@ -514,269 +681,434 @@ export const WorkDetailView: React.FC<WorkDetailViewProps> = ({
         </div>
       )}
 
-      {/* Tabs: Versions / Comments */}
-      {showComments && (
+      {/* Desktop: Side-by-side layout (60% Versions / 40% Comments) */}
+      {isDesktop && showComments ? (
         <div
           style={{
+            flex: 1,
             display: 'flex',
-            borderBottom: `1px solid ${designTokens.colors.borders.default}`,
+            flexDirection: 'row',
+            overflow: 'hidden',
           }}
         >
-          <button
-            onClick={() => setActiveTab('versions')}
+          {/* Left: Versions Timeline (60%) */}
+          <div
             style={{
-              flex: 1,
-              padding: designTokens.spacing.sm,
-              backgroundColor: 'transparent',
-              border: 'none',
-              borderBottom: activeTab === 'versions'
-                ? `2px solid ${designTokens.colors.primary.blue}`
-                : '2px solid transparent',
-              color: activeTab === 'versions'
-                ? designTokens.colors.primary.blue
-                : designTokens.colors.text.secondary,
-              fontSize: designTokens.typography.fontSizes.body,
-              fontWeight: designTokens.typography.fontWeights.medium,
-              cursor: 'pointer',
-            }}
-          >
-            Versions ({versions.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('comments')}
-            style={{
-              flex: 1,
-              padding: designTokens.spacing.sm,
-              backgroundColor: 'transparent',
-              border: 'none',
-              borderBottom: activeTab === 'comments'
-                ? `2px solid ${designTokens.colors.primary.blue}`
-                : '2px solid transparent',
-              color: activeTab === 'comments'
-                ? designTokens.colors.primary.blue
-                : designTokens.colors.text.secondary,
-              fontSize: designTokens.typography.fontSizes.body,
-              fontWeight: designTokens.typography.fontWeights.medium,
-              cursor: 'pointer',
+              flex: 3,
               display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: designTokens.spacing.xs,
+              flexDirection: 'column',
+              borderRight: `1px solid ${designTokens.colors.borders.default}`,
+              overflow: 'hidden',
             }}
           >
-            <MessageSquare size={16} />
-            Comments ({comments.length})
-          </button>
-        </div>
-      )}
-
-      {/* Comments Tab Content */}
-      {showComments && activeTab === 'comments' && (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          {/* Comment List */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: designTokens.spacing.md }}>
-            <TimestampedCommentList
-              comments={comments}
-              currentTime={currentTime}
-              duration={heroVersion?.duration_seconds || 0}
-              onCommentClick={handleCommentSeek}
-              currentUserId={currentUserId}
-              emptyMessage="No comments yet. Click on the waveform to add a comment at a specific time."
-            />
-          </div>
-
-          {/* Comment Input */}
-          {onAddComment && (
+            {/* Section Header */}
             <div
               style={{
-                padding: designTokens.spacing.md,
-                borderTop: `1px solid ${designTokens.colors.borders.default}`,
-                backgroundColor: designTokens.colors.surface.secondary,
+                padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
+                borderBottom: `1px solid ${designTokens.colors.borders.default}`,
+                fontSize: designTokens.typography.fontSizes.bodySmall,
+                fontWeight: designTokens.typography.fontWeights.medium,
+                color: designTokens.colors.text.secondary,
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
               }}
             >
-              {commentTimestamp !== null && (
+              Versions ({versions.length})
+            </div>
+            <div style={{ flex: 1, overflowY: 'auto', padding: designTokens.spacing.md }}>
+              {versions.length > 0 ? (
+                <VersionTimeline
+                  versions={versions as TimelineTrackVersion[]}
+                  heroTrackId={work.hero_track_id}
+                  currentTrackId={currentTrackId}
+                  isPlaying={isPlaying}
+                  versionTypes={versionTypes}
+                  trackAggregatedRatings={trackAggregatedRatings}
+                  trackCommentCounts={trackCommentCounts}
+                  onPlayTrack={onPlayTrack}
+                  onTrackClick={onTrackClick}
+                  onSetHero={onSetHero}
+                />
+              ) : (
                 <div
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: designTokens.spacing.xs,
-                    marginBottom: designTokens.spacing.xs,
-                    fontSize: designTokens.typography.fontSizes.caption,
-                    color: designTokens.colors.accent.coral,
+                    textAlign: 'center',
+                    padding: designTokens.spacing.xl,
+                    color: designTokens.colors.text.muted,
                   }}
                 >
-                  <Clock size={12} />
-                  @ {Math.floor(commentTimestamp / 60)}:{String(Math.floor(commentTimestamp % 60)).padStart(2, '0')}
+                  <p style={{ margin: 0, marginBottom: designTokens.spacing.md }}>
+                    No versions yet.
+                  </p>
+                </div>
+              )}
+            </div>
+            {/* Add Version/Tracks Buttons */}
+            {(onAddVersion || onAddExistingTracks) && (
+              <div
+                style={{
+                  padding: designTokens.spacing.sm,
+                  borderTop: `1px solid ${designTokens.colors.borders.default}`,
+                  display: 'flex',
+                  gap: designTokens.spacing.sm,
+                }}
+              >
+                {onAddExistingTracks && (
                   <button
-                    onClick={() => setCommentTimestamp(null)}
+                    onClick={onAddExistingTracks}
                     style={{
-                      marginLeft: designTokens.spacing.xs,
-                      padding: '2px 6px',
+                      flex: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: designTokens.spacing.xs,
+                      padding: designTokens.spacing.xs,
                       backgroundColor: 'transparent',
-                      border: `1px solid ${designTokens.colors.borders.default}`,
+                      border: `1px dashed ${designTokens.colors.borders.default}`,
                       borderRadius: designTokens.borderRadius.sm,
-                      color: designTokens.colors.text.muted,
-                      fontSize: designTokens.typography.fontSizes.caption,
+                      color: designTokens.colors.text.secondary,
+                      fontSize: designTokens.typography.fontSizes.bodySmall,
                       cursor: 'pointer',
                     }}
                   >
-                    Clear
+                    <ListPlus size={14} />
+                    Add Tracks
                   </button>
-                </div>
-              )}
-              <div style={{ display: 'flex', gap: designTokens.spacing.sm }}>
-                <textarea
-                  ref={commentInputRef}
-                  value={commentInput}
-                  onChange={(e) => setCommentInput(e.target.value)}
-                  placeholder="Add a comment..."
-                  style={{
-                    flex: 1,
-                    padding: designTokens.spacing.sm,
-                    backgroundColor: designTokens.colors.surface.primary,
-                    border: `1px solid ${designTokens.colors.borders.default}`,
-                    borderRadius: designTokens.borderRadius.sm,
-                    color: designTokens.colors.text.primary,
-                    fontSize: designTokens.typography.fontSizes.body,
-                    fontFamily: designTokens.typography.fontFamily,
-                    resize: 'none',
-                    minHeight: '60px',
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-                      handleSubmitComment();
-                    }
-                  }}
-                />
-                <button
-                  onClick={handleSubmitComment}
-                  disabled={!commentInput.trim()}
-                  style={{
-                    padding: designTokens.spacing.sm,
-                    backgroundColor: commentInput.trim()
-                      ? designTokens.colors.primary.blue
-                      : designTokens.colors.surface.tertiary,
-                    border: 'none',
-                    borderRadius: designTokens.borderRadius.sm,
-                    color: commentInput.trim()
-                      ? designTokens.colors.neutral.white
-                      : designTokens.colors.text.muted,
-                    cursor: commentInput.trim() ? 'pointer' : 'not-allowed',
-                    alignSelf: 'flex-end',
-                  }}
-                >
-                  <Send size={18} />
-                </button>
+                )}
+                {onAddVersion && (
+                  <button
+                    onClick={onAddVersion}
+                    style={{
+                      flex: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: designTokens.spacing.xs,
+                      padding: designTokens.spacing.xs,
+                      backgroundColor: 'transparent',
+                      border: `1px dashed ${designTokens.colors.borders.default}`,
+                      borderRadius: designTokens.borderRadius.sm,
+                      color: designTokens.colors.text.secondary,
+                      fontSize: designTokens.typography.fontSizes.bodySmall,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <Plus size={14} />
+                    Upload
+                  </button>
+                )}
               </div>
-            </div>
-          )}
-        </div>
-      )}
+            )}
+          </div>
 
-      {/* Version List (conditionally shown based on tab) */}
-      {(!showComments || activeTab === 'versions') && (
-      <>
-      <div style={{ flex: 1, overflowY: 'auto', padding: isDesktop ? 0 : designTokens.spacing.md }}>
-        {/* Column Headers (desktop only) */}
-        {isDesktop && versions.length > 0 && <TrackListHeader />}
-        {/* Hero Version (if exists) */}
-        {heroVersion && (
-          <div style={{ marginBottom: designTokens.spacing.lg }}>
+          {/* Right: Comments Feed (40%) */}
+          <div
+            style={{
+              flex: 2,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+            }}
+          >
+            {/* Section Header */}
             <div
               style={{
+                padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
+                borderBottom: `1px solid ${designTokens.colors.borders.default}`,
+                fontSize: designTokens.typography.fontSizes.bodySmall,
+                fontWeight: designTokens.typography.fontWeights.medium,
+                color: designTokens.colors.text.secondary,
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
                 display: 'flex',
                 alignItems: 'center',
                 gap: designTokens.spacing.xs,
-                marginBottom: designTokens.spacing.sm,
-                padding: isDesktop ? `0 ${designTokens.spacing.md}` : 0,
               }}
             >
-              <Star size={14} color={designTokens.colors.accent.gold} fill={designTokens.colors.accent.gold} />
-              <span
+              <MessageSquare size={14} />
+              Comments ({comments.length})
+            </div>
+            {/* Comment List */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: designTokens.spacing.md }}>
+              <TimestampedCommentList
+                comments={comments}
+                currentTime={currentTime}
+                duration={heroVersion?.duration_seconds || 0}
+                onCommentClick={handleCommentSeek}
+                currentUserId={currentUserId}
+                emptyMessage="No comments yet. Click on the waveform to add a comment at a specific time."
+                showTrackContext={true}
+              />
+            </div>
+            {/* Comment Input */}
+            {onAddComment && (
+              <div
                 style={{
-                  fontSize: designTokens.typography.fontSizes.caption,
-                  fontWeight: designTokens.typography.fontWeights.semibold,
-                  color: '#F5C542',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px',
+                  padding: designTokens.spacing.sm,
+                  borderTop: `1px solid ${designTokens.colors.borders.default}`,
+                  backgroundColor: designTokens.colors.surface.secondary,
                 }}
               >
-                Featured Version
-              </span>
-            </div>
-            <VersionRow
-              track={heroVersion}
-              isHero
-              isCurrentTrack={currentTrackId === heroVersion.id}
-              isPlaying={isPlaying && currentTrackId === heroVersion.id}
-              isHovered={hoveredTrackId === heroVersion.id}
-              isDesktop={isDesktop}
-              onMouseEnter={() => setHoveredTrackId(heroVersion.id)}
-              onMouseLeave={() => setHoveredTrackId(null)}
-              onPlay={() => onPlayTrack(heroVersion)}
-              onClick={() => onTrackClick?.(heroVersion)}
-              designTokens={designTokens}
-              formatDuration={formatDuration}
-              formatDate={formatDate}
-              versionTypes={versionTypes}
-              onVersionTypeChange={onVersionTypeChange ? (type) => onVersionTypeChange(heroVersion.id, type) : undefined}
-              onCreateVersionType={onCreateVersionType}
-            />
+                {commentTimestamp !== null && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: designTokens.spacing.xs,
+                      marginBottom: designTokens.spacing.xs,
+                      fontSize: designTokens.typography.fontSizes.caption,
+                      color: designTokens.colors.accent.coral,
+                    }}
+                  >
+                    <Clock size={12} />
+                    @ {Math.floor(commentTimestamp / 60)}:{String(Math.floor(commentTimestamp % 60)).padStart(2, '0')}
+                    <button
+                      onClick={() => setCommentTimestamp(null)}
+                      style={{
+                        marginLeft: designTokens.spacing.xs,
+                        padding: '2px 6px',
+                        backgroundColor: 'transparent',
+                        border: `1px solid ${designTokens.colors.borders.default}`,
+                        borderRadius: designTokens.borderRadius.sm,
+                        color: designTokens.colors.text.muted,
+                        fontSize: designTokens.typography.fontSizes.caption,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Clear
+                    </button>
+                  </div>
+                )}
+                <div style={{ display: 'flex', gap: designTokens.spacing.sm }}>
+                  <textarea
+                    ref={commentInputRef}
+                    value={commentInput}
+                    onChange={(e) => setCommentInput(e.target.value)}
+                    placeholder="Add a comment..."
+                    style={{
+                      flex: 1,
+                      padding: designTokens.spacing.sm,
+                      backgroundColor: designTokens.colors.surface.primary,
+                      border: `1px solid ${designTokens.colors.borders.default}`,
+                      borderRadius: designTokens.borderRadius.sm,
+                      color: designTokens.colors.text.primary,
+                      fontSize: designTokens.typography.fontSizes.bodySmall,
+                      fontFamily: designTokens.typography.fontFamily,
+                      resize: 'none',
+                      minHeight: '50px',
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                        handleSubmitComment();
+                      }
+                    }}
+                  />
+                  <button
+                    onClick={handleSubmitComment}
+                    disabled={!commentInput.trim()}
+                    style={{
+                      padding: designTokens.spacing.sm,
+                      backgroundColor: commentInput.trim()
+                        ? designTokens.colors.primary.blue
+                        : designTokens.colors.surface.tertiary,
+                      border: 'none',
+                      borderRadius: designTokens.borderRadius.sm,
+                      color: commentInput.trim()
+                        ? designTokens.colors.neutral.white
+                        : designTokens.colors.text.muted,
+                      cursor: commentInput.trim() ? 'pointer' : 'not-allowed',
+                      alignSelf: 'flex-end',
+                    }}
+                  >
+                    <Send size={16} />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
-        )}
-
-        {/* Other Versions */}
-        {otherVersions.length > 0 && (
-          <div>
-            <div
+        </div>
+      ) : (
+        <>
+        {/* Mobile: Tabs - Versions / Comments */}
+        {showComments && (
+          <div
+            style={{
+              display: 'flex',
+              borderBottom: `1px solid ${designTokens.colors.borders.default}`,
+            }}
+          >
+            <button
+              onClick={() => setActiveTab('versions')}
               style={{
+                flex: 1,
+                padding: designTokens.spacing.sm,
+                backgroundColor: 'transparent',
+                border: 'none',
+                borderBottom: activeTab === 'versions'
+                  ? `2px solid ${designTokens.colors.primary.blue}`
+                  : '2px solid transparent',
+                color: activeTab === 'versions'
+                  ? designTokens.colors.primary.blue
+                  : designTokens.colors.text.secondary,
+                fontSize: designTokens.typography.fontSizes.body,
+                fontWeight: designTokens.typography.fontWeights.medium,
+                cursor: 'pointer',
+              }}
+            >
+              Versions ({versions.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('comments')}
+              style={{
+                flex: 1,
+                padding: designTokens.spacing.sm,
+                backgroundColor: 'transparent',
+                border: 'none',
+                borderBottom: activeTab === 'comments'
+                  ? `2px solid ${designTokens.colors.primary.blue}`
+                  : '2px solid transparent',
+                color: activeTab === 'comments'
+                  ? designTokens.colors.primary.blue
+                  : designTokens.colors.text.secondary,
+                fontSize: designTokens.typography.fontSizes.body,
+                fontWeight: designTokens.typography.fontWeights.medium,
+                cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: designTokens.spacing.sm,
-                padding: isDesktop ? `0 ${designTokens.spacing.md}` : 0,
+                justifyContent: 'center',
+                gap: designTokens.spacing.xs,
               }}
             >
-              <span
-                style={{
-                  fontSize: designTokens.typography.fontSizes.caption,
-                  fontWeight: designTokens.typography.fontWeights.semibold,
-                  color: designTokens.colors.text.secondary,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px',
-                }}
-              >
-                All Versions
-              </span>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-              {otherVersions.map((track) => (
-                <VersionRow
-                  key={track.id}
-                  track={track}
-                  isCurrentTrack={currentTrackId === track.id}
-                  isPlaying={isPlaying && currentTrackId === track.id}
-                  isHovered={hoveredTrackId === track.id}
-                  isDesktop={isDesktop}
-                  onMouseEnter={() => setHoveredTrackId(track.id)}
-                  onMouseLeave={() => setHoveredTrackId(null)}
-                  onPlay={() => onPlayTrack(track)}
-                  onClick={() => onTrackClick?.(track)}
-                  onSetHero={onSetHero ? () => onSetHero(track.id) : undefined}
-                  designTokens={designTokens}
-                  formatDuration={formatDuration}
-                  formatDate={formatDate}
-                  versionTypes={versionTypes}
-                  onVersionTypeChange={onVersionTypeChange ? (type) => onVersionTypeChange(track.id, type) : undefined}
-                  onCreateVersionType={onCreateVersionType}
-                />
-              ))}
-            </div>
+              <MessageSquare size={16} />
+              Comments ({comments.length})
+            </button>
           </div>
         )}
 
-        {/* Empty State */}
-        {versions.length === 0 && (
+        {/* Mobile: Comments Tab Content */}
+        {showComments && activeTab === 'comments' && (
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            {/* Comment List */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: designTokens.spacing.md }}>
+              <TimestampedCommentList
+                comments={comments}
+                currentTime={currentTime}
+                duration={heroVersion?.duration_seconds || 0}
+                onCommentClick={handleCommentSeek}
+                currentUserId={currentUserId}
+                emptyMessage="No comments yet. Click on the waveform to add a comment at a specific time."
+                showTrackContext={true}
+              />
+            </div>
+
+            {/* Comment Input */}
+            {onAddComment && (
+              <div
+                style={{
+                  padding: designTokens.spacing.md,
+                  borderTop: `1px solid ${designTokens.colors.borders.default}`,
+                  backgroundColor: designTokens.colors.surface.secondary,
+                }}
+              >
+                {commentTimestamp !== null && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: designTokens.spacing.xs,
+                      marginBottom: designTokens.spacing.xs,
+                      fontSize: designTokens.typography.fontSizes.caption,
+                      color: designTokens.colors.accent.coral,
+                    }}
+                  >
+                    <Clock size={12} />
+                    @ {Math.floor(commentTimestamp / 60)}:{String(Math.floor(commentTimestamp % 60)).padStart(2, '0')}
+                    <button
+                      onClick={() => setCommentTimestamp(null)}
+                      style={{
+                        marginLeft: designTokens.spacing.xs,
+                        padding: '2px 6px',
+                        backgroundColor: 'transparent',
+                        border: `1px solid ${designTokens.colors.borders.default}`,
+                        borderRadius: designTokens.borderRadius.sm,
+                        color: designTokens.colors.text.muted,
+                        fontSize: designTokens.typography.fontSizes.caption,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Clear
+                    </button>
+                  </div>
+                )}
+                <div style={{ display: 'flex', gap: designTokens.spacing.sm }}>
+                  <textarea
+                    ref={commentInputRef}
+                    value={commentInput}
+                    onChange={(e) => setCommentInput(e.target.value)}
+                    placeholder="Add a comment..."
+                    style={{
+                      flex: 1,
+                      padding: designTokens.spacing.sm,
+                      backgroundColor: designTokens.colors.surface.primary,
+                      border: `1px solid ${designTokens.colors.borders.default}`,
+                      borderRadius: designTokens.borderRadius.sm,
+                      color: designTokens.colors.text.primary,
+                      fontSize: designTokens.typography.fontSizes.body,
+                      fontFamily: designTokens.typography.fontFamily,
+                      resize: 'none',
+                      minHeight: '60px',
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                        handleSubmitComment();
+                      }
+                    }}
+                  />
+                  <button
+                    onClick={handleSubmitComment}
+                    disabled={!commentInput.trim()}
+                    style={{
+                      padding: designTokens.spacing.sm,
+                      backgroundColor: commentInput.trim()
+                        ? designTokens.colors.primary.blue
+                        : designTokens.colors.surface.tertiary,
+                      border: 'none',
+                      borderRadius: designTokens.borderRadius.sm,
+                      color: commentInput.trim()
+                        ? designTokens.colors.neutral.white
+                        : designTokens.colors.text.muted,
+                      cursor: commentInput.trim() ? 'pointer' : 'not-allowed',
+                      alignSelf: 'flex-end',
+                    }}
+                  >
+                    <Send size={18} />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Mobile: Version Timeline (conditionally shown based on tab) */}
+        {(!showComments || activeTab === 'versions') && (
+      <>
+      <div style={{ flex: 1, overflowY: 'auto', padding: designTokens.spacing.md }}>
+        {/* Version Timeline - Visual journal of song evolution */}
+        {versions.length > 0 ? (
+          <VersionTimeline
+            versions={versions as TimelineTrackVersion[]}
+            heroTrackId={work.hero_track_id}
+            currentTrackId={currentTrackId}
+            isPlaying={isPlaying}
+            versionTypes={versionTypes}
+            trackAggregatedRatings={trackAggregatedRatings}
+            trackCommentCounts={trackCommentCounts}
+            onPlayTrack={onPlayTrack}
+            onTrackClick={onTrackClick}
+            onSetHero={onSetHero}
+          />
+        ) : (
+          /* Empty State */
           <div
             style={{
               textAlign: 'center',
@@ -785,63 +1117,115 @@ export const WorkDetailView: React.FC<WorkDetailViewProps> = ({
             }}
           >
             <p style={{ margin: 0, marginBottom: designTokens.spacing.md }}>
-              No versions yet. Add your first version of this song.
+              No versions yet. Add tracks from your library or upload new ones.
             </p>
-            {onAddVersion && (
-              <button
-                onClick={onAddVersion}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: designTokens.spacing.xs,
-                  padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
-                  backgroundColor: designTokens.colors.primary.blue,
-                  color: designTokens.colors.neutral.white,
-                  border: 'none',
-                  borderRadius: designTokens.borderRadius.sm,
-                  fontSize: designTokens.typography.fontSizes.body,
-                  fontWeight: designTokens.typography.fontWeights.medium,
-                  cursor: 'pointer',
-                }}
-              >
-                <Plus size={16} />
-                Add Version
-              </button>
-            )}
+            <div style={{ display: 'flex', gap: designTokens.spacing.sm, justifyContent: 'center' }}>
+              {onAddExistingTracks && (
+                <button
+                  onClick={onAddExistingTracks}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: designTokens.spacing.xs,
+                    padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
+                    backgroundColor: designTokens.colors.primary.blue,
+                    color: designTokens.colors.neutral.white,
+                    border: 'none',
+                    borderRadius: designTokens.borderRadius.sm,
+                    fontSize: designTokens.typography.fontSizes.body,
+                    fontWeight: designTokens.typography.fontWeights.medium,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <ListPlus size={16} />
+                  Add Tracks
+                </button>
+              )}
+              {onAddVersion && (
+                <button
+                  onClick={onAddVersion}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: designTokens.spacing.xs,
+                    padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
+                    backgroundColor: 'transparent',
+                    color: designTokens.colors.text.secondary,
+                    border: `1px solid ${designTokens.colors.borders.default}`,
+                    borderRadius: designTokens.borderRadius.sm,
+                    fontSize: designTokens.typography.fontSizes.body,
+                    fontWeight: designTokens.typography.fontWeights.medium,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <Plus size={16} />
+                  Upload New
+                </button>
+              )}
+            </div>
           </div>
         )}
       </div>
 
-      {/* Add Version Button (when versions exist) */}
-      {onAddVersion && versions.length > 0 && (
+      {/* Add Version/Tracks Buttons (when versions exist) */}
+      {(onAddVersion || onAddExistingTracks) && versions.length > 0 && (
         <div
           style={{
             padding: designTokens.spacing.md,
             borderTop: `1px solid ${designTokens.colors.borders.default}`,
+            display: 'flex',
+            gap: designTokens.spacing.sm,
           }}
         >
-          <button
-            onClick={onAddVersion}
-            style={{
-              width: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: designTokens.spacing.sm,
-              padding: designTokens.spacing.sm,
-              backgroundColor: 'transparent',
-              border: `1px dashed ${designTokens.colors.borders.default}`,
-              borderRadius: designTokens.borderRadius.sm,
-              color: designTokens.colors.text.secondary,
-              fontSize: designTokens.typography.fontSizes.body,
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-            }}
-          >
-            <Plus size={16} />
-            Add New Version
-          </button>
+          {onAddExistingTracks && (
+            <button
+              onClick={onAddExistingTracks}
+              style={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: designTokens.spacing.sm,
+                padding: designTokens.spacing.sm,
+                backgroundColor: 'transparent',
+                border: `1px dashed ${designTokens.colors.borders.default}`,
+                borderRadius: designTokens.borderRadius.sm,
+                color: designTokens.colors.text.secondary,
+                fontSize: designTokens.typography.fontSizes.body,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <ListPlus size={16} />
+              Add Tracks
+            </button>
+          )}
+          {onAddVersion && (
+            <button
+              onClick={onAddVersion}
+              style={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: designTokens.spacing.sm,
+                padding: designTokens.spacing.sm,
+                backgroundColor: 'transparent',
+                border: `1px dashed ${designTokens.colors.borders.default}`,
+                borderRadius: designTokens.borderRadius.sm,
+                color: designTokens.colors.text.secondary,
+                fontSize: designTokens.typography.fontSizes.body,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <Plus size={16} />
+              Upload New
+            </button>
+          )}
         </div>
+      )}
+      </>
       )}
       </>
       )}
@@ -868,6 +1252,10 @@ interface VersionRowProps {
   versionTypes?: VersionType[];
   onVersionTypeChange?: (versionType: string | null) => void;
   onCreateVersionType?: (name: string) => Promise<void>;
+  /** Aggregated ratings for this track */
+  aggregatedRatings?: { liked: number; loved: number };
+  /** Comment count for this track */
+  commentCount?: number;
 }
 
 const VersionRow: React.FC<VersionRowProps> = ({
@@ -888,6 +1276,8 @@ const VersionRow: React.FC<VersionRowProps> = ({
   versionTypes = [],
   onVersionTypeChange,
   onCreateVersionType,
+  aggregatedRatings = { liked: 0, loved: 0 },
+  commentCount = 0,
 }) => {
   // Desktop: Use grid layout matching TrackListHeader columns
   if (isDesktop) {
@@ -960,20 +1350,26 @@ const VersionRow: React.FC<VersionRowProps> = ({
               />
             )}
           </div>
-          {track.uploader_name && (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                fontSize: designTokens.typography.fontSizes.caption,
-                color: designTokens.colors.text.tertiary,
-              }}
-            >
-              <User size={10} />
-              {track.uploader_name}
-            </div>
-          )}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: designTokens.spacing.sm,
+              fontSize: designTokens.typography.fontSizes.caption,
+              color: designTokens.colors.text.tertiary,
+            }}
+          >
+            {track.uploader_name && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <User size={10} />
+                {track.uploader_name}
+              </span>
+            )}
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <Calendar size={10} />
+              {formatDate(track.created_at)}
+            </span>
+          </div>
         </div>
 
         {/* Column 3: Duration */}
@@ -1022,21 +1418,60 @@ const VersionRow: React.FC<VersionRowProps> = ({
           )}
         </div>
 
-        {/* Column 5: Rating - show date for Works view */}
-        <div
-          style={{
-            fontSize: designTokens.typography.fontSizes.caption,
-            color: designTokens.colors.text.muted,
-          }}
-        >
-          {formatDate(track.created_at)}
+        {/* Column 5: Rating */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: designTokens.spacing.sm }}>
+          {(aggregatedRatings.liked > 0 || aggregatedRatings.loved > 0) ? (
+            <>
+              {aggregatedRatings.liked > 0 && (
+                <span style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '2px',
+                  color: designTokens.colors.primary.blue,
+                  fontSize: designTokens.typography.fontSizes.caption
+                }}>
+                  <ThumbsUp size={12} />
+                  {aggregatedRatings.liked}
+                </span>
+              )}
+              {aggregatedRatings.loved > 0 && (
+                <span style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '2px',
+                  color: designTokens.colors.accent.coral,
+                  fontSize: designTokens.typography.fontSizes.caption
+                }}>
+                  <Heart size={12} />
+                  {aggregatedRatings.loved}
+                </span>
+              )}
+            </>
+          ) : (
+            <span style={{ color: designTokens.colors.text.muted, fontSize: designTokens.typography.fontSizes.caption }}>
+              —
+            </span>
+          )}
         </div>
 
-        {/* Column 6: Comments placeholder */}
+        {/* Column 6: Comments */}
         <div style={{ display: 'flex', justifyContent: 'center' }}>
-          <span style={{ color: designTokens.colors.text.muted, fontSize: designTokens.typography.fontSizes.caption }}>
-            —
-          </span>
+          {commentCount > 0 ? (
+            <span style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '2px',
+              color: designTokens.colors.text.secondary,
+              fontSize: designTokens.typography.fontSizes.caption
+            }}>
+              <MessageCircle size={12} />
+              {commentCount}
+            </span>
+          ) : (
+            <span style={{ color: designTokens.colors.text.muted, fontSize: designTokens.typography.fontSizes.caption }}>
+              —
+            </span>
+          )}
         </div>
 
         {/* Column 7: Actions */}

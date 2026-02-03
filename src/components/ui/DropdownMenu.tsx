@@ -1,4 +1,5 @@
-import React, { ReactNode, useState, useRef, useEffect } from 'react';
+import React, { ReactNode, useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { Z_INDEX } from '../../constants/zIndex';
 import { useDesignTokens } from '../../design/useDesignTokens';
 
@@ -17,14 +18,69 @@ export function DropdownMenu({
 }: DropdownMenuProps) {
   const designTokens = useDesignTokens();
   const [isOpen, setIsOpen] = useState(false);
+  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
+  const triggerRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Outside click handler
+  // Calculate menu position based on trigger element
+  const updateMenuPosition = useCallback(() => {
+    if (!triggerRef.current) return;
+
+    const rect = triggerRef.current.getBoundingClientRect();
+    const menuWidth = 180; // minWidth of menu
+
+    let left = align === 'left' ? rect.left : rect.right - menuWidth;
+
+    // Ensure menu doesn't go off-screen on the right
+    if (left + menuWidth > window.innerWidth) {
+      left = window.innerWidth - menuWidth - 8;
+    }
+
+    // Ensure menu doesn't go off-screen on the left
+    if (left < 8) {
+      left = 8;
+    }
+
+    setMenuPosition({
+      top: rect.bottom + 4, // 4px gap below trigger
+      left,
+    });
+  }, [align]);
+
+  // Update position when opening
+  useEffect(() => {
+    if (isOpen) {
+      updateMenuPosition();
+    }
+  }, [isOpen, updateMenuPosition]);
+
+  // Update position on scroll/resize
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleScrollOrResize = () => {
+      updateMenuPosition();
+    };
+
+    window.addEventListener('scroll', handleScrollOrResize, true);
+    window.addEventListener('resize', handleScrollOrResize);
+
+    return () => {
+      window.removeEventListener('scroll', handleScrollOrResize, true);
+      window.removeEventListener('resize', handleScrollOrResize);
+    };
+  }, [isOpen, updateMenuPosition]);
+
+  // Outside click handler - check both trigger and menu
   useEffect(() => {
     if (!isOpen) return;
 
     const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      const clickedTrigger = triggerRef.current?.contains(target);
+      const clickedMenu = menuRef.current?.contains(target);
+
+      if (!clickedTrigger && !clickedMenu) {
         setIsOpen(false);
       }
     };
@@ -53,19 +109,26 @@ export function DropdownMenu({
     }
   };
 
+  const handleTriggerClick = () => {
+    if (!isOpen) {
+      updateMenuPosition();
+    }
+    setIsOpen(!isOpen);
+  };
+
   return (
-    <div ref={menuRef} style={{ position: 'relative' }}>
-      <div onClick={() => setIsOpen(!isOpen)}>
+    <div ref={triggerRef} style={{ position: 'relative' }}>
+      <div onClick={handleTriggerClick}>
         {trigger}
       </div>
 
-      {isOpen && (
+      {isOpen && createPortal(
         <div
+          ref={menuRef}
           style={{
-            position: 'absolute',
-            top: '100%',
-            [align]: 0,
-            marginTop: designTokens.spacing.xs,
+            position: 'fixed',
+            top: menuPosition.top,
+            left: menuPosition.left,
             backgroundColor: designTokens.colors.surface.primary,
             border: `1px solid ${designTokens.colors.borders.default}`,
             borderRadius: designTokens.borderRadius.md,
@@ -77,7 +140,8 @@ export function DropdownMenu({
           onClick={handleMenuClick}
         >
           {children}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

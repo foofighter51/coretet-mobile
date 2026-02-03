@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Filter, Plus, Music, Upload, ArrowLeft, Play, Pause, X, Check, MessageSquare, MoreVertical, Edit2, Trash2, Headphones, ThumbsUp, Heart, HelpCircle, Settings, GripVertical, Users, Share2 } from 'lucide-react';
+import { Search, Filter, Plus, Music, Upload, ArrowLeft, Play, Pause, X, Check, MessageSquare, MoreVertical, Edit2, Trash2, Headphones, ThumbsUp, Heart, HelpCircle, Settings, GripVertical, Users, Share2, ArrowUpDown, Calendar } from 'lucide-react';
 import { useDesignTokens } from '../../design/useDesignTokens';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useResponsive } from '../../hooks/useResponsive';
@@ -212,6 +212,188 @@ function TrackSelectorModal({ tracks, existingTrackIds, onAddTracks, onCancel }:
   );
 }
 
+// Work Track Selector Modal - Enhanced version for adding tracks to works
+// Shows warning for tracks already in other works
+function WorkTrackSelectorModal({ tracks, existingTrackIds, works, targetWorkId, onAddTracks, onCancel }: {
+  tracks: any[];
+  existingTrackIds: string[];
+  works: any[];
+  targetWorkId: string;
+  onAddTracks: (trackIds: string[]) => void;
+  onCancel: () => void;
+}) {
+  const designTokens = useDesignTokens();
+  const [selectedTracks, setSelectedTracks] = useState<string[]>([]);
+
+  // Filter out tracks already in this work
+  const availableTracks = tracks.filter(track => !existingTrackIds.includes(track.id));
+
+  // Check if a track is in another work
+  const getTrackWorkInfo = (track: any) => {
+    if (!track.version_group_id || track.version_group_id === targetWorkId) {
+      return null;
+    }
+    const work = works.find(w => w.id === track.version_group_id);
+    return work?.name || 'another work';
+  };
+
+  const toggleTrack = (trackId: string) => {
+    setSelectedTracks(prev =>
+      prev.includes(trackId)
+        ? prev.filter(id => id !== trackId)
+        : [...prev, trackId]
+    );
+  };
+
+  const selectedInOtherWorks = selectedTracks.filter(id => {
+    const track = tracks.find(t => t.id === id);
+    return track?.version_group_id && track.version_group_id !== targetWorkId;
+  });
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+      {availableTracks.length === 0 ? (
+        <p style={{
+          fontSize: designTokens.typography.fontSizes.bodySmall,
+          color: designTokens.colors.text.secondary,
+          textAlign: 'center',
+          padding: designTokens.spacing.xl,
+        }}>
+          All your tracks are already in this work
+        </p>
+      ) : (
+        <>
+          <div style={{
+            flex: 1,
+            overflowY: 'auto',
+            marginBottom: designTokens.spacing.md,
+            border: `1px solid ${designTokens.colors.borders.default}`,
+            borderRadius: designTokens.borderRadius.sm,
+            backgroundColor: designTokens.colors.surface.secondary,
+          }}>
+            {availableTracks.map(track => {
+              const isSelected = selectedTracks.includes(track.id);
+              const inWorkName = getTrackWorkInfo(track);
+              return (
+                <div
+                  key={track.id}
+                  onClick={() => toggleTrack(track.id)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: designTokens.spacing.md,
+                    padding: designTokens.spacing.md,
+                    borderBottom: `1px solid ${designTokens.colors.borders.light}`,
+                    cursor: 'pointer',
+                    backgroundColor: isSelected ? designTokens.colors.surface.hover : designTokens.colors.surface.secondary,
+                    transition: 'background-color 0.2s',
+                  }}
+                >
+                  <div style={{
+                    width: '20px',
+                    height: '20px',
+                    borderRadius: designTokens.borderRadius.sm,
+                    border: `2px solid ${isSelected ? designTokens.colors.primary.blue : designTokens.colors.text.disabled}`,
+                    backgroundColor: isSelected ? designTokens.colors.primary.blue : designTokens.colors.surface.primary,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}>
+                    {isSelected && <Check size={14} color={designTokens.colors.text.inverse} />}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{
+                      fontSize: designTokens.typography.fontSizes.bodySmall,
+                      fontWeight: designTokens.typography.fontWeights.medium,
+                      color: designTokens.colors.text.primary,
+                      margin: 0,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}>
+                      {track.title}
+                    </p>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: designTokens.spacing.sm,
+                      marginTop: designTokens.spacing.xs,
+                    }}>
+                      {track.duration_seconds && (
+                        <span style={{
+                          fontSize: designTokens.typography.fontSizes.caption,
+                          color: designTokens.colors.text.secondary,
+                        }}>
+                          {Math.floor(track.duration_seconds / 60)}:{String(Math.floor(track.duration_seconds % 60)).padStart(2, '0')}
+                        </span>
+                      )}
+                      {inWorkName && (
+                        <span style={{
+                          fontSize: designTokens.typography.fontSizes.caption,
+                          color: designTokens.colors.accent.coral,
+                          backgroundColor: `${designTokens.colors.accent.coral}15`,
+                          padding: `1px ${designTokens.spacing.xs}`,
+                          borderRadius: designTokens.borderRadius.sm,
+                        }}>
+                          In: {inWorkName}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {selectedInOtherWorks.length > 0 && (
+            <p style={{
+              fontSize: designTokens.typography.fontSizes.caption,
+              color: designTokens.colors.accent.coral,
+              margin: 0,
+              marginBottom: designTokens.spacing.sm,
+            }}>
+              {selectedInOtherWorks.length} track{selectedInOtherWorks.length > 1 ? 's' : ''} will be moved from other works
+            </p>
+          )}
+
+          <div style={{ display: 'flex', gap: designTokens.spacing.sm, justifyContent: 'flex-end' }}>
+            <button
+              onClick={onCancel}
+              style={{
+                padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
+                backgroundColor: designTokens.colors.surface.disabled,
+                color: designTokens.colors.text.muted,
+                border: 'none',
+                borderRadius: designTokens.borderRadius.sm,
+                fontSize: designTokens.typography.fontSizes.bodySmall,
+                cursor: 'pointer',
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => onAddTracks(selectedTracks)}
+              disabled={selectedTracks.length === 0}
+              style={{
+                padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
+                backgroundColor: selectedTracks.length > 0 ? designTokens.colors.primary.blue : designTokens.colors.text.disabled,
+                color: designTokens.colors.text.inverse,
+                border: 'none',
+                borderRadius: designTokens.borderRadius.sm,
+                fontSize: designTokens.typography.fontSizes.bodySmall,
+                cursor: selectedTracks.length > 0 ? 'pointer' : 'not-allowed',
+              }}
+            >
+              Add {selectedTracks.length > 0 ? `(${selectedTracks.length})` : ''}
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 interface CurrentUser {
   id: string;
   email: string;
@@ -316,11 +498,52 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   const [works, setWorks] = useState<any[]>([]);
   const [selectedWork, setSelectedWork] = useState<any | null>(null);
   const [workVersions, setWorkVersions] = useState<any[]>([]); // Tracks in the selected work
+  const [workComments, setWorkComments] = useState<any[]>([]); // Aggregated comments for the selected work
   const [loadingWorks, setLoadingWorks] = useState(false);
   const [showCreateWork, setShowCreateWork] = useState(false);
   const [newWorkName, setNewWorkName] = useState('');
   const [createWorkLoading, setCreateWorkLoading] = useState(false);
   const createWorkInputRef = useRef<HTMLInputElement>(null);
+
+  // Add tracks to work state
+  const [showAddTracksToWork, setShowAddTracksToWork] = useState(false);
+  const [showMoveConfirmation, setShowMoveConfirmation] = useState(false);
+  const [tracksToMove, setTracksToMove] = useState<{ id: string; title: string; currentWorkName: string }[]>([]);
+  const [pendingTrackIds, setPendingTrackIds] = useState<string[]>([]); // Track IDs pending after move confirmation
+  const [pendingWorkDrop, setPendingWorkDrop] = useState<{
+    trackIds: string[];
+    workId: string;
+    workName: string;
+  } | null>(null); // For drag-drop to Work operations
+
+  // Work sorting state
+  type WorkSortField = 'created_at' | 'name' | 'updated_at' | 'version_count';
+  const [workSortBy, setWorkSortBy] = useState<WorkSortField>('created_at');
+  const [workSortAscending, setWorkSortAscending] = useState(false); // Default DESC for dates (newest first)
+
+  // Sorted works based on user selection
+  const sortedWorks = useMemo(() => {
+    const sorted = [...works].sort((a, b) => {
+      let comparison = 0;
+      switch (workSortBy) {
+        case 'name':
+          comparison = (a.name || '').localeCompare(b.name || '');
+          break;
+        case 'version_count':
+          comparison = (a.version_count || 0) - (b.version_count || 0);
+          break;
+        case 'updated_at':
+          comparison = new Date(a.updated_at || a.created_at).getTime() -
+                       new Date(b.updated_at || b.created_at).getTime();
+          break;
+        case 'created_at':
+        default:
+          comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      }
+      return workSortAscending ? comparison : -comparison;
+    });
+    return sorted;
+  }, [works, workSortBy, workSortAscending]);
 
   // Version types state
   const [versionTypes, setVersionTypes] = useState<VersionType[]>([]);
@@ -358,15 +581,18 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   // Playlist management state
   const [editingPlaylistTitle, setEditingPlaylistTitle] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState('');
+  const [newDescription, setNewDescription] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Edit tracks mode
   const [isEditingTracks, setIsEditingTracks] = useState(false);
   const [selectedTrackIds, setSelectedTrackIds] = useState<string[]>([]);
+  const [selectionAnchorId, setSelectionAnchorId] = useState<string | null>(null); // For shift-click range selection
 
   // Comment indicators
   const [trackCommentStatus, setTrackCommentStatus] = useState<Record<string, boolean>>({});
   const [trackUnreadStatus, setTrackUnreadStatus] = useState<Record<string, boolean>>({});
+  const [trackCommentCounts, setTrackCommentCounts] = useState<Record<string, number>>({});
 
   // Track detail modal state
   const [selectedTrackForDetail, setSelectedTrackForDetail] = useState<any | null>(null);
@@ -470,9 +696,11 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
         const trackIds = data.map((item: any) => item.tracks?.id).filter(Boolean);
         await fetchAggregatedRatings(trackIds);
 
-        // Fetch comment status for playlist tracks
+        // Fetch comment status and counts for playlist tracks
         const commentStatus = await db.comments.checkTracksHaveComments(trackIds);
         setTrackCommentStatus(commentStatus);
+        const commentCounts = await db.comments.getTrackCommentCounts(trackIds);
+        setTrackCommentCounts(prev => ({ ...prev, ...commentCounts }));
 
         // Fetch unread comment status
         if (currentUser?.id) {
@@ -514,6 +742,9 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
     if (viewMode === 'detail' && activeTab === 'playlists' && newTab !== 'playlists') {
       handleBackToList();
     }
+    // Clear selection when switching tabs
+    setSelectedTrackIds([]);
+    setSelectionAnchorId(null);
     setActiveTab(newTab);
   };
 
@@ -526,12 +757,17 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
     try {
       const { data, error: updateError } = await db.setLists.update(currentSetList.id, {
         title: newTitle.trim(),
+        description: newDescription.trim() || null,
       });
 
       if (updateError) throw updateError;
 
       // Update current playlist
-      setCurrentSetList({ ...currentSetList, title: newTitle.trim() });
+      setCurrentSetList({
+        ...currentSetList,
+        title: newTitle.trim(),
+        description: newDescription.trim() || null,
+      });
 
       // Refresh the playlist list to show updated title
       await refreshSetLists();
@@ -908,6 +1144,20 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
     fetchUserTracks();
   }, [currentUser?.id, currentBand?.id]);
 
+  // Reset sort/filter settings when switching playlists
+  useEffect(() => {
+    // Reset to default sort/filter when playlist changes
+    setRatingFilter('all');
+    setPlaylistSortBy('position');
+    setSortAscending(true);
+  }, [currentSetList?.id]);
+
+  // Reset work sorting when band changes
+  useEffect(() => {
+    setWorkSortBy('created_at');
+    setWorkSortAscending(false); // Default DESC (newest first)
+  }, [currentBand?.id]);
+
   // Fetch works (version groups) for the current band
   useEffect(() => {
     const fetchWorks = async () => {
@@ -997,9 +1247,11 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
         // Map comments with user names from the joined profiles
         const commentsWithNames = (data || []).map((comment: any) => ({
           id: comment.id,
+          user_id: comment.user_id,
           user_name: comment.profiles?.name || 'Unknown User',
           content: comment.content,
           created_at: comment.created_at,
+          updated_at: comment.updated_at,
           timestamp_seconds: comment.timestamp_seconds,
         }));
 
@@ -1025,15 +1277,59 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
 
       // The tracks already have the right format from the database
       setWorkVersions(data || []);
+
+      // Fetch ratings and comment counts for these tracks
+      const trackIds = (data || []).map((t: any) => t.id);
+      if (trackIds.length > 0) {
+        await fetchAggregatedRatings(trackIds);
+        const commentCounts = await db.comments.getTrackCommentCounts(trackIds);
+        setTrackCommentCounts(prev => ({ ...prev, ...commentCounts }));
+      }
     } catch (error) {
       console.error('Error loading work versions:', error);
+    }
+  };
+
+  // Load comments for a work (aggregated from all tracks)
+  const loadWorkComments = async (workId: string) => {
+    try {
+      const { data, error } = await db.comments.getByWork(workId);
+
+      if (error) {
+        console.error('Failed to fetch work comments:', error);
+        return;
+      }
+
+      // Transform to comment format with track context
+      const comments = (data || []).map((c: any) => ({
+        id: c.id,
+        user_id: c.user_id,
+        user_name: c.profiles?.name || 'Unknown',
+        avatar_url: c.profiles?.avatar_url,
+        content: c.content,
+        timestamp_seconds: c.timestamp_seconds,
+        created_at: c.created_at,
+        updated_at: c.updated_at,
+        // Track context for feed display
+        track_id: c.tracks?.id,
+        track_title: c.tracks?.title,
+        version_type: c.tracks?.version_type,
+      }));
+
+      setWorkComments(comments);
+    } catch (error) {
+      console.error('Error loading work comments:', error);
     }
   };
 
   // Handle work selection from sidebar
   const handleWorkSelect = async (work: any) => {
     setSelectedWork(work);
-    await loadWorkVersions(work.id);
+    // Load versions and comments in parallel
+    await Promise.all([
+      loadWorkVersions(work.id),
+      loadWorkComments(work.id),
+    ]);
   };
 
   // Refresh works list
@@ -1147,6 +1443,181 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
     }
   };
 
+  // Add existing tracks to a work
+  const handleAddTracksToWork = async (trackIds: string[]) => {
+    if (!selectedWork || trackIds.length === 0) return;
+
+    // Check if any tracks are in other works
+    const tracksInOtherWorks = trackIds
+      .map(id => {
+        const track = bandScopedTracks.find(t => t.id === id);
+        if (track?.version_group_id && track.version_group_id !== selectedWork.id) {
+          const otherWork = works.find(w => w.id === track.version_group_id);
+          return {
+            id: track.id,
+            title: track.title,
+            currentWorkName: otherWork?.name || 'another work'
+          };
+        }
+        return null;
+      })
+      .filter(Boolean) as { id: string; title: string; currentWorkName: string }[];
+
+    if (tracksInOtherWorks.length > 0) {
+      // Show confirmation dialog
+      setTracksToMove(tracksInOtherWorks);
+      setPendingTrackIds(trackIds);
+      setShowMoveConfirmation(true);
+      setShowAddTracksToWork(false);
+      return;
+    }
+
+    // No conflicts, proceed directly
+    await executeAddTracksToWork(trackIds);
+  };
+
+  // Execute the actual add tracks operation
+  const executeAddTracksToWork = async (trackIds: string[]) => {
+    if (!selectedWork) return;
+
+    try {
+      const { error } = await db.versionGroups.addTracksToWork(selectedWork.id, trackIds);
+
+      if (error) {
+        console.error('Failed to add tracks to work:', error);
+        setError(`Failed to add tracks: ${error.message}`);
+        return;
+      }
+
+      // Refresh work versions
+      await loadWorkVersions(selectedWork.id);
+      await refreshWorks();
+
+      // Close modals
+      setShowAddTracksToWork(false);
+      setShowMoveConfirmation(false);
+      setTracksToMove([]);
+      setPendingTrackIds([]);
+    } catch (error) {
+      console.error('Error adding tracks to work:', error);
+    }
+  };
+
+  // Confirm moving tracks from other works
+  const handleConfirmMoveTracksToWork = async () => {
+    // Check if this is a drag-drop operation or a modal-based add
+    if (pendingWorkDrop) {
+      await executePendingWorkDrop();
+    } else {
+      await executeAddTracksToWork(pendingTrackIds);
+    }
+  };
+
+  // Cancel the move operation
+  const handleCancelMoveTracksToWork = () => {
+    setShowMoveConfirmation(false);
+    setTracksToMove([]);
+    setPendingTrackIds([]);
+    setPendingWorkDrop(null);
+    setShowAddTracksToWork(true); // Re-open the track selector
+  };
+
+  // Handle dropping tracks onto a Work in the sidebar
+  const handleTrackDropOnWork = async (trackData: DragTrackData, workId: string) => {
+    // Get track IDs from drag data (single or multiple)
+    const trackIds = trackData.trackIds && trackData.trackIds.length > 0
+      ? trackData.trackIds
+      : [trackData.trackId];
+
+    const targetWork = works.find(w => w.id === workId);
+
+    // Check if any tracks are already in OTHER works
+    const tracksInOtherWorks = trackIds
+      .map(id => bandScopedTracks.find(t => t.id === id))
+      .filter(t => t && t.version_group_id && t.version_group_id !== workId);
+
+    if (tracksInOtherWorks.length > 0) {
+      // Store pending drop and show move confirmation dialog
+      setPendingWorkDrop({
+        trackIds,
+        workId,
+        workName: targetWork?.name || 'Work',
+      });
+      setTracksToMove(tracksInOtherWorks.map(t => ({
+        id: t!.id,
+        title: t!.title,
+        currentWorkName: works.find(w => w.id === t!.version_group_id)?.name || 'Unknown Work'
+      })));
+      setShowMoveConfirmation(true);
+      return;
+    }
+
+    // No conflicts - add tracks directly
+    try {
+      const { error } = await db.versionGroups.addTracksToWork(workId, trackIds);
+
+      if (error) {
+        console.error('Failed to add tracks to work:', error);
+        setError(`Failed to add tracks: ${error.message}`);
+        return;
+      }
+
+      // Clear selection after successful drop
+      setSelectedTrackIds([]);
+      setSelectionAnchorId(null);
+
+      // Refresh data
+      await refreshWorks();
+      if (selectedWork?.id === workId) {
+        await loadWorkVersions(workId);
+      }
+
+      // Show success feedback
+      const count = trackIds.length;
+      setError(`${count} track${count > 1 ? 's' : ''} added to "${targetWork?.name || 'work'}"`);
+      setTimeout(() => setError(null), 3000);
+    } catch (error) {
+      console.error('Error adding tracks to work:', error);
+      setError('Failed to add tracks to work');
+    }
+  };
+
+  // Execute pending work drop after move confirmation
+  const executePendingWorkDrop = async () => {
+    if (!pendingWorkDrop) return;
+
+    try {
+      const { error } = await db.versionGroups.addTracksToWork(pendingWorkDrop.workId, pendingWorkDrop.trackIds);
+
+      if (error) {
+        console.error('Failed to add tracks to work:', error);
+        setError(`Failed to add tracks: ${error.message}`);
+        return;
+      }
+
+      // Clear selection and pending state
+      setSelectedTrackIds([]);
+      setSelectionAnchorId(null);
+      setShowMoveConfirmation(false);
+      setTracksToMove([]);
+      setPendingWorkDrop(null);
+
+      // Refresh data
+      await refreshWorks();
+      if (selectedWork?.id === pendingWorkDrop.workId) {
+        await loadWorkVersions(pendingWorkDrop.workId);
+      }
+
+      // Show success feedback
+      const count = pendingWorkDrop.trackIds.length;
+      setError(`${count} track${count > 1 ? 's' : ''} moved to "${pendingWorkDrop.workName}"`);
+      setTimeout(() => setError(null), 3000);
+    } catch (error) {
+      console.error('Error adding tracks to work:', error);
+      setError('Failed to add tracks to work');
+    }
+  };
+
   const handleRate = async (trackId: string, rating: 'listened' | 'liked' | 'loved') => {
     if (!currentUser?.id) return;
 
@@ -1176,6 +1647,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
 
   // Handle version type change for a track
   const handleVersionTypeChange = async (trackId: string, versionType: string | null) => {
+    console.log('🔄 handleVersionTypeChange called:', { trackId, versionType });
     try {
       // Optimistically update local state for immediate UI feedback
       setPlaylistTracks(prev => prev.map(item =>
@@ -1183,7 +1655,8 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
           ? { ...item, tracks: { ...item.tracks, version_type: versionType } }
           : item
       ));
-      setBandScopedTracks(prev => prev.map(track =>
+      // Update tracks state (bandScopedTracks is derived from this via useMemo)
+      setTracks(prev => prev.map(track =>
         track.id === trackId
           ? { ...track, version_type: versionType }
           : track
@@ -1194,9 +1667,11 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
           : track
       ));
 
-      const { error } = await db.tracks.updateVersionType(trackId, versionType);
+      console.log('📡 Calling db.tracks.updateVersionType...');
+      const { data, error } = await db.tracks.updateVersionType(trackId, versionType);
+      console.log('📡 db.tracks.updateVersionType result:', { data, error });
       if (error) {
-        console.error('Failed to update version type:', error);
+        console.error('❌ Failed to update version type:', error);
         // Revert optimistic update on error - refresh from server
         if (currentSetList) {
           const { data } = await db.setListEntries.getBySetList(currentSetList.id);
@@ -1204,12 +1679,55 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
         }
         if (currentBand?.id) {
           const { data } = await db.tracks.getByBand(currentBand.id);
-          setBandScopedTracks(data || []);
+          setTracks(data || []);
         }
         return;
       }
+      console.log('✅ Version type updated successfully:', { trackId, versionType, data });
     } catch (error) {
-      console.error('Error updating version type:', error);
+      console.error('❌ Error updating version type:', error);
+    }
+  };
+
+  // Handle updating track metadata (title, etc.) - band admins only
+  const handleUpdateTrack = async (trackId: string, updates: {
+    title?: string;
+    version_notes?: string | null;
+    composition_date?: string | null;
+  }) => {
+    try {
+      // Optimistically update local state
+      const updateFields = { ...updates };
+
+      setTracks(prev => prev.map(track =>
+        track.id === trackId ? { ...track, ...updateFields } : track
+      ));
+      setPlaylistTracks(prev => prev.map(item =>
+        item.tracks?.id === trackId
+          ? { ...item, tracks: { ...item.tracks, ...updateFields } }
+          : item
+      ));
+      setWorkVersions(prev => prev.map(track =>
+        track.id === trackId ? { ...track, ...updateFields } : track
+      ));
+      // Update detail panel track
+      if (detailPanelTrack?.id === trackId) {
+        setDetailPanelTrack({ ...detailPanelTrack, ...updateFields });
+      }
+
+      const { error } = await db.tracks.update(trackId, updates);
+      if (error) {
+        console.error('Failed to update track:', error);
+        // Revert optimistic update on error - refresh from server
+        if (currentBand?.id) {
+          const { data } = await db.tracks.getByBand(currentBand.id);
+          setTracks(data || []);
+        }
+        throw error;
+      }
+    } catch (error) {
+      console.error('Error updating track:', error);
+      throw error;
     }
   };
 
@@ -1219,10 +1737,15 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
     try {
       const { data, error } = await db.versionTypes.create(currentBand.id, name);
       if (error) {
-        console.error('Failed to create version type:', error);
-        return;
+        // Handle duplicate key error gracefully - type already exists
+        if (error.code === '23505') {
+          console.log('Version type already exists, refreshing list...');
+        } else {
+          console.error('Failed to create version type:', error);
+          return;
+        }
       }
-      // Refresh version types list
+      // Refresh version types list (includes existing or newly created type)
       const { data: updated } = await db.versionTypes.getAll(currentBand.id);
       if (updated) {
         setVersionTypes(updated);
@@ -1298,6 +1821,40 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
         : [...prev, trackId]
     );
   };
+
+  // Handle track selection with keyboard modifiers (shift-click, cmd/ctrl-click)
+  const handleTrackSelect = useCallback((
+    trackId: string,
+    modifiers: { shift: boolean; meta: boolean },
+    orderedTrackIds: string[]
+  ) => {
+    if (modifiers.shift && selectionAnchorId) {
+      // Shift-click: Select range from anchor to clicked track
+      const anchorIdx = orderedTrackIds.indexOf(selectionAnchorId);
+      const clickIdx = orderedTrackIds.indexOf(trackId);
+
+      if (anchorIdx !== -1 && clickIdx !== -1) {
+        const start = Math.min(anchorIdx, clickIdx);
+        const end = Math.max(anchorIdx, clickIdx);
+        setSelectedTrackIds(orderedTrackIds.slice(start, end + 1));
+      }
+    } else if (modifiers.meta) {
+      // Command/Ctrl-click: Toggle individual track
+      setSelectedTrackIds(prev => {
+        if (prev.includes(trackId)) {
+          return prev.filter(id => id !== trackId);
+        } else {
+          // Set anchor when adding
+          setSelectionAnchorId(trackId);
+          return [...prev, trackId];
+        }
+      });
+    } else {
+      // Plain click with selection active - set single selection and anchor
+      setSelectedTrackIds([trackId]);
+      setSelectionAnchorId(trackId);
+    }
+  }, [selectionAnchorId]);
 
   const handleDeleteSelectedTracks = async () => {
     if (!currentSetList || selectedTrackIds.length === 0 || deletingTracks) return;
@@ -1477,215 +2034,6 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
             padding: designTokens.spacing.md,
           }}>
 
-            {showCreatePlaylist && (
-              <DialogModal
-                isOpen={true}
-                onClose={() => {
-                  setShowCreatePlaylist(false);
-                  setNewPlaylistTitle('');
-                  setError(null);
-                }}
-                title="Create New Playlist"
-                size="sm"
-                hasKeyboardInput={true}
-                keyboardInputRef={createSetListInputRef}
-                footer={
-                  <div style={{ display: 'flex', gap: designTokens.spacing.sm, justifyContent: 'flex-end' }}>
-                    <button
-                      onClick={() => {
-                        setShowCreatePlaylist(false);
-                        setNewPlaylistTitle('');
-                        setError(null);
-                      }}
-                      disabled={createSetListLoading}
-                      style={{
-                        padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
-                        backgroundColor: 'transparent',
-                        border: `1px solid ${designTokens.colors.borders.default}`,
-                        borderRadius: designTokens.borderRadius.sm,
-                        fontSize: designTokens.typography.fontSizes.bodySmall,
-                        cursor: createSetListLoading ? 'not-allowed' : 'pointer',
-                        opacity: createSetListLoading ? 0.6 : 1,
-                        color: designTokens.colors.text.secondary,
-                      }}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleCreatePlaylist}
-                      disabled={createSetListLoading}
-                      style={{
-                        padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
-                        backgroundColor: designTokens.colors.primary.blue,
-                        color: designTokens.colors.text.inverse,
-                        border: 'none',
-                        borderRadius: designTokens.borderRadius.sm,
-                        fontSize: designTokens.typography.fontSizes.bodySmall,
-                        cursor: createSetListLoading ? 'not-allowed' : 'pointer',
-                        opacity: createSetListLoading ? 0.6 : 1,
-                      }}
-                    >
-                      {createSetListLoading ? 'Creating...' : 'Create'}
-                    </button>
-                  </div>
-                }
-              >
-                <div>
-                  <input
-                    ref={createSetListInputRef}
-                    type="text"
-                    placeholder="Playlist title..."
-                    value={newPlaylistTitle}
-                    onChange={(e) => {
-                      setNewPlaylistTitle(e.target.value);
-                      setError(null);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !createSetListLoading && newPlaylistTitle.trim()) {
-                        handleCreatePlaylist();
-                      }
-                    }}
-                    disabled={createSetListLoading}
-                    autoComplete="off"
-                    autoCorrect="off"
-                    autoCapitalize="off"
-                    spellCheck="false"
-                    style={{
-                      width: '100%',
-                      padding: designTokens.spacing.md,
-                      border: `1px solid ${error ? designTokens.colors.system.error : designTokens.colors.borders.default}`,
-                      borderRadius: designTokens.borderRadius.sm,
-                      fontSize: designTokens.typography.fontSizes.body,
-                      marginBottom: error ? designTokens.spacing.sm : 0,
-                      boxSizing: 'border-box',
-                    }}
-                    autoFocus
-                  />
-                  {error && (
-                    <div style={{
-                      padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
-                      backgroundColor: designTokens.colors.feedback.error.bg,
-                      border: `1px solid ${designTokens.colors.feedback.error.border}`,
-                      borderRadius: designTokens.borderRadius.sm,
-                      color: designTokens.colors.feedback.error.text,
-                      fontSize: designTokens.typography.fontSizes.caption,
-                    }}>
-                      {error}
-                    </div>
-                  )}
-                </div>
-              </DialogModal>
-            )}
-
-            {/* Create Work Modal */}
-            {showCreateWork && (
-              <DialogModal
-                isOpen={true}
-                onClose={() => {
-                  setShowCreateWork(false);
-                  setNewWorkName('');
-                  setError(null);
-                }}
-                title="Create New Work"
-                size="sm"
-                hasKeyboardInput={true}
-                keyboardInputRef={createWorkInputRef}
-                footer={
-                  <div style={{ display: 'flex', gap: designTokens.spacing.sm, justifyContent: 'flex-end' }}>
-                    <button
-                      onClick={() => {
-                        setShowCreateWork(false);
-                        setNewWorkName('');
-                        setError(null);
-                      }}
-                      disabled={createWorkLoading}
-                      style={{
-                        padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
-                        backgroundColor: 'transparent',
-                        border: `1px solid ${designTokens.colors.borders.default}`,
-                        borderRadius: designTokens.borderRadius.sm,
-                        fontSize: designTokens.typography.fontSizes.bodySmall,
-                        cursor: createWorkLoading ? 'not-allowed' : 'pointer',
-                        opacity: createWorkLoading ? 0.6 : 1,
-                        color: designTokens.colors.text.secondary,
-                      }}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleCreateWork}
-                      disabled={createWorkLoading || !newWorkName.trim()}
-                      style={{
-                        padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
-                        backgroundColor: designTokens.colors.primary.blue,
-                        color: designTokens.colors.text.inverse,
-                        border: 'none',
-                        borderRadius: designTokens.borderRadius.sm,
-                        fontSize: designTokens.typography.fontSizes.bodySmall,
-                        cursor: createWorkLoading || !newWorkName.trim() ? 'not-allowed' : 'pointer',
-                        opacity: createWorkLoading || !newWorkName.trim() ? 0.6 : 1,
-                      }}
-                    >
-                      {createWorkLoading ? 'Creating...' : 'Create'}
-                    </button>
-                  </div>
-                }
-              >
-                <div>
-                  <p style={{
-                    fontSize: designTokens.typography.fontSizes.bodySmall,
-                    color: designTokens.colors.text.secondary,
-                    margin: 0,
-                    marginBottom: designTokens.spacing.md,
-                  }}>
-                    A work represents a song project containing all its versions (demos, recordings, mixes, etc.)
-                  </p>
-                  <input
-                    ref={createWorkInputRef}
-                    type="text"
-                    placeholder="Song name (e.g., 'Starlight', 'New Song #1')"
-                    value={newWorkName}
-                    onChange={(e) => {
-                      setNewWorkName(e.target.value);
-                      setError(null);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !createWorkLoading && newWorkName.trim()) {
-                        handleCreateWork();
-                      }
-                    }}
-                    disabled={createWorkLoading}
-                    autoComplete="off"
-                    autoCorrect="off"
-                    autoCapitalize="off"
-                    spellCheck="false"
-                    style={{
-                      width: '100%',
-                      padding: designTokens.spacing.md,
-                      border: `1px solid ${error ? designTokens.colors.system.error : designTokens.colors.borders.default}`,
-                      borderRadius: designTokens.borderRadius.sm,
-                      fontSize: designTokens.typography.fontSizes.body,
-                      marginBottom: error ? designTokens.spacing.sm : 0,
-                      boxSizing: 'border-box',
-                    }}
-                    autoFocus
-                  />
-                  {error && (
-                    <div style={{
-                      padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
-                      backgroundColor: designTokens.colors.feedback.error.bg,
-                      border: `1px solid ${designTokens.colors.feedback.error.border}`,
-                      borderRadius: designTokens.borderRadius.sm,
-                      color: designTokens.colors.feedback.error.text,
-                      fontSize: designTokens.typography.fontSizes.caption,
-                    }}>
-                      {error}
-                    </div>
-                  )}
-                </div>
-              </DialogModal>
-            )}
-
             {viewMode === 'detail' && (currentSetList || showAllTracks) ? (
               <div>
                 {/* Edit title modal */}
@@ -1737,6 +2085,17 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                     }
                   >
                     <div>
+                      <label
+                        style={{
+                          display: 'block',
+                          marginBottom: designTokens.spacing.xs,
+                          fontSize: designTokens.typography.fontSizes.bodySmall,
+                          fontWeight: designTokens.typography.fontWeights.medium,
+                          color: designTokens.colors.text.secondary,
+                        }}
+                      >
+                        Title
+                      </label>
                       <input
                         ref={playlistTitleInputRef}
                         type="text"
@@ -1745,14 +2104,14 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                           setNewTitle(e.target.value);
                           setError(null);
                         }}
-                        placeholder="Playlist title..."
+                        placeholder="Set list title..."
                         style={{
                           width: '100%',
                           padding: designTokens.spacing.md,
                           border: `1px solid ${error ? designTokens.colors.system.error : designTokens.colors.borders.default}`,
                           borderRadius: designTokens.borderRadius.sm,
                           fontSize: designTokens.typography.fontSizes.body,
-                          marginBottom: error ? designTokens.spacing.sm : 0,
+                          marginBottom: designTokens.spacing.md,
                           boxSizing: 'border-box',
                         }}
                         autoFocus
@@ -1762,6 +2121,36 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                           }
                         }}
                       />
+
+                      <label
+                        style={{
+                          display: 'block',
+                          marginBottom: designTokens.spacing.xs,
+                          fontSize: designTokens.typography.fontSizes.bodySmall,
+                          fontWeight: designTokens.typography.fontWeights.medium,
+                          color: designTokens.colors.text.secondary,
+                        }}
+                      >
+                        Description (optional)
+                      </label>
+                      <textarea
+                        value={newDescription}
+                        onChange={(e) => setNewDescription(e.target.value)}
+                        placeholder="Add notes about this set list..."
+                        rows={3}
+                        style={{
+                          width: '100%',
+                          padding: designTokens.spacing.md,
+                          border: `1px solid ${designTokens.colors.borders.default}`,
+                          borderRadius: designTokens.borderRadius.sm,
+                          fontSize: designTokens.typography.fontSizes.body,
+                          marginBottom: error ? designTokens.spacing.sm : 0,
+                          boxSizing: 'border-box',
+                          resize: 'vertical',
+                          fontFamily: 'inherit',
+                        }}
+                      />
+
                       {error && (
                         <div style={{
                           padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
@@ -1957,6 +2346,48 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                     {/* Column Headers (desktop only) */}
                     {isDesktop && !isReordering && <TrackListHeader />}
 
+                    {/* Selection Indicator Bar */}
+                    {selectedTrackIds.length > 0 && !isReordering && !isEditingTracks && (
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
+                          backgroundColor: `${designTokens.colors.primary.blue}10`,
+                          borderBottom: `1px solid ${designTokens.colors.primary.blue}30`,
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: designTokens.typography.fontSizes.bodySmall,
+                            color: designTokens.colors.primary.blue,
+                            fontWeight: designTokens.typography.fontWeights.medium,
+                          }}
+                        >
+                          {selectedTrackIds.length} track{selectedTrackIds.length !== 1 ? 's' : ''} selected
+                        </span>
+                        <button
+                          onClick={() => {
+                            setSelectedTrackIds([]);
+                            setSelectionAnchorId(null);
+                          }}
+                          style={{
+                            padding: `${designTokens.spacing.xs} ${designTokens.spacing.sm}`,
+                            backgroundColor: 'transparent',
+                            color: designTokens.colors.primary.blue,
+                            border: `1px solid ${designTokens.colors.primary.blue}`,
+                            borderRadius: designTokens.borderRadius.sm,
+                            fontSize: designTokens.typography.fontSizes.caption,
+                            fontWeight: designTokens.typography.fontWeights.medium,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    )}
+
                     {/* Reorder Mode Actions */}
                     {isReordering && !showAllTracks && (
                       <div style={{
@@ -2084,6 +2515,8 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                                 sourceId: currentSetList?.id,
                               }}
                               enabled={!isReordering && !isEditingTracks}
+                              isSelected={selectedTrackIds.includes(item.tracks.id)}
+                              selectedTrackIds={selectedTrackIds}
                             >
                               <AdaptiveTrackRow
                                 track={{
@@ -2098,6 +2531,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                                 aggregatedRatings={aggregatedRatings[item.tracks.id]}
                                 hasComments={trackCommentStatus[item.tracks.id]}
                                 hasUnreadComments={trackUnreadStatus[item.tracks.id]}
+                                commentCount={trackCommentCounts[item.tracks.id]}
                                 versionTypes={versionTypes}
                                 onPlayPause={() => handlePlayPause(item.tracks)}
                                 onRate={(rating) => handleRate(item.tracks.id, rating)}
@@ -2106,6 +2540,14 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                                 isDeleting={deletingTrackId === item.tracks.id}
                                 onVersionTypeChange={(type) => handleVersionTypeChange(item.tracks.id, type)}
                                 onCreateVersionType={handleCreateVersionType}
+                                isSelected={selectedTrackIds.includes(item.tracks.id)}
+                                onSelect={(trackId, modifiers) => {
+                                  // Get ordered track IDs from visible tracks
+                                  const orderedTrackIds = filteredPlaylistTracks
+                                    .filter((t: any) => t.tracks)
+                                    .map((t: any) => t.tracks.id);
+                                  handleTrackSelect(trackId, modifiers, orderedTrackIds);
+                                }}
                               />
                             </DraggableTrack>
                           </div>
@@ -2239,13 +2681,77 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                 }
               }}
               onAddVersion={() => setShowUploader(true)}
+              onAddExistingTracks={() => setShowAddTracksToWork(true)}
               onTrackClick={(track) => handleOpenTrackDetail(track)}
               onRename={handleRenameWork}
+              onUpdateDescription={async (description) => {
+                try {
+                  await db.versionGroups.update(selectedWork.id, { description });
+                  setSelectedWork({ ...selectedWork, description });
+                  // Refresh the works list
+                  await refreshWorks();
+                } catch (error) {
+                  console.error('Error updating work description:', error);
+                }
+              }}
               onDelete={handleDeleteWork}
               onBack={() => setSelectedWork(null)}
+              canEdit={userRole === 'admin' || userRole === 'owner'}
               versionTypes={versionTypes}
               onVersionTypeChange={handleVersionTypeChange}
               onCreateVersionType={handleCreateVersionType}
+              trackRatings={trackRatings}
+              trackAggregatedRatings={aggregatedRatings}
+              trackCommentCounts={trackCommentCounts}
+              // Comments feed props
+              comments={workComments.map(c => ({
+                id: c.id,
+                user_id: c.user_id,
+                user_name: c.user_name,
+                avatar_url: c.avatar_url,
+                content: c.content,
+                timestamp_seconds: c.timestamp_seconds,
+                created_at: c.created_at,
+                track_id: c.track_id,
+                track_title: c.track_title,
+                version_type: c.version_type,
+              }))}
+              currentUserId={currentUser?.id}
+              showComments={true}
+              onAddComment={async (content, timestampSeconds) => {
+                // Add comment to hero track or first available track
+                const targetTrackId = selectedWork?.hero_track_id || workVersions[0]?.id;
+                if (!targetTrackId || !currentUser?.id) return;
+
+                try {
+                  await db.comments.create({
+                    track_id: targetTrackId,
+                    user_id: currentUser.id,
+                    content,
+                    timestamp_seconds: timestampSeconds,
+                  });
+
+                  // Refresh work comments
+                  await loadWorkComments(selectedWork.id);
+                } catch (error) {
+                  console.error('Failed to add comment:', error);
+                }
+              }}
+              onCommentTrackSelect={(trackId, timestamp) => {
+                // Find the track in work versions
+                const track = workVersions.find(v => v.id === trackId);
+                if (!track) return;
+
+                // Start playing the track
+                handlePlayPause(track);
+
+                // Seek to timestamp after a brief delay to let audio load
+                setTimeout(() => {
+                  if (audioRef.current) {
+                    audioRef.current.currentTime = timestamp;
+                  }
+                }, 150);
+              }}
             />
           );
         }
@@ -2256,14 +2762,92 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
             padding: designTokens.spacing.md,
             paddingBottom: '100px',
           }}>
-            <h2 style={{
-              fontSize: designTokens.typography.fontSizes.h2,
-              fontWeight: designTokens.typography.fontWeights.bold,
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
               marginBottom: designTokens.spacing.md,
-              color: designTokens.colors.text.primary,
             }}>
-              Works
-            </h2>
+              <h2 style={{
+                fontSize: designTokens.typography.fontSizes.h2,
+                fontWeight: designTokens.typography.fontWeights.bold,
+                color: designTokens.colors.text.primary,
+                margin: 0,
+              }}>
+                Works
+              </h2>
+
+              {/* Sort Dropdown */}
+              {works.length > 0 && (
+                <DropdownMenu
+                  trigger={
+                    <button
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: designTokens.spacing.xs,
+                        padding: `${designTokens.spacing.xs} ${designTokens.spacing.sm}`,
+                        backgroundColor: 'transparent',
+                        border: `1px solid ${designTokens.colors.borders.default}`,
+                        borderRadius: designTokens.borderRadius.sm,
+                        color: designTokens.colors.text.secondary,
+                        fontSize: designTokens.typography.fontSizes.bodySmall,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <ArrowUpDown size={14} />
+                      {workSortBy === 'created_at' ? 'Date' :
+                       workSortBy === 'name' ? 'Name' :
+                       workSortBy === 'updated_at' ? 'Updated' : 'Versions'}
+                      <span style={{ fontSize: '10px' }}>{workSortAscending ? '↑' : '↓'}</span>
+                    </button>
+                  }
+                  align="right"
+                >
+                  {[
+                    { field: 'created_at' as const, label: 'Date Created' },
+                    { field: 'name' as const, label: 'Name' },
+                    { field: 'updated_at' as const, label: 'Last Updated' },
+                    { field: 'version_count' as const, label: 'Versions' },
+                  ].map((option) => (
+                    <button
+                      key={option.field}
+                      onClick={() => {
+                        if (option.field === workSortBy) {
+                          setWorkSortAscending(!workSortAscending);
+                        } else {
+                          setWorkSortBy(option.field);
+                          // Default direction: ASC for name, DESC for dates/counts
+                          setWorkSortAscending(option.field === 'name');
+                        }
+                      }}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
+                        backgroundColor: workSortBy === option.field
+                          ? designTokens.colors.surface.active
+                          : 'transparent',
+                        border: 'none',
+                        color: designTokens.colors.text.primary,
+                        fontSize: designTokens.typography.fontSizes.bodySmall,
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                      }}
+                    >
+                      <span>{option.label}</span>
+                      {workSortBy === option.field && (
+                        <span style={{ color: designTokens.colors.primary.blue }}>
+                          {workSortAscending ? '↑' : '↓'}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </DropdownMenu>
+              )}
+            </div>
             <p style={{
               fontSize: designTokens.typography.fontSizes.bodySmall,
               color: designTokens.colors.text.secondary,
@@ -2276,7 +2860,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
               <div style={{ display: 'flex', justifyContent: 'center', padding: designTokens.spacing.xl }}>
                 <InlineSpinner size={24} />
               </div>
-            ) : works.length === 0 ? (
+            ) : sortedWorks.length === 0 ? (
               <EmptyState
                 icon={Music}
                 title="No works yet"
@@ -2284,7 +2868,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
               />
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: designTokens.spacing.sm }}>
-                {works.map((work) => (
+                {sortedWorks.map((work) => (
                   <button
                     key={work.id}
                     onClick={() => handleWorkSelect(work)}
@@ -2311,13 +2895,33 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                       }}>
                         {work.name}
                       </h3>
-                      <p style={{
-                        fontSize: designTokens.typography.fontSizes.caption,
-                        color: designTokens.colors.text.muted,
-                        margin: `${designTokens.spacing.xs} 0 0 0`,
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: designTokens.spacing.md,
+                        marginTop: designTokens.spacing.xs,
                       }}>
-                        {work.version_count} {work.version_count === 1 ? 'version' : 'versions'}
-                      </p>
+                        <span style={{
+                          fontSize: designTokens.typography.fontSizes.caption,
+                          color: designTokens.colors.text.muted,
+                        }}>
+                          {work.version_count} {work.version_count === 1 ? 'version' : 'versions'}
+                        </span>
+                        <span style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          fontSize: designTokens.typography.fontSizes.caption,
+                          color: designTokens.colors.text.muted,
+                        }}>
+                          <Calendar size={10} />
+                          {new Date(work.created_at).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                          })}
+                        </span>
+                      </div>
                     </div>
                     <Music size={20} color={designTokens.colors.text.muted} />
                   </button>
@@ -2369,6 +2973,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
           selectedWorkId={selectedWork?.id}
           onWorkSelect={handleWorkSelect}
           onCreateWork={() => setShowCreateWork(true)}
+          onTrackDropOnWork={handleTrackDropOnWork}
         />
       )}
 
@@ -2646,6 +3251,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                 <button
                   onClick={() => {
                     setNewTitle(currentSetList?.title || '');
+                    setNewDescription(currentSetList?.description || '');
                     setEditingPlaylistTitle(currentSetList?.id || null);
                   }}
                   style={{
@@ -2820,11 +3426,16 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
             track={{
               id: detailPanelTrack.id,
               title: detailPanelTrack.title,
+              file_url: detailPanelTrack.file_url,
               duration_seconds: detailPanelTrack.duration_seconds,
               folder_path: detailPanelTrack.folder_path,
               created_at: detailPanelTrack.created_at,
               uploaded_by: detailPanelTrack.uploaded_by_name || detailPanelTrack.uploaded_by,
+              version_notes: detailPanelTrack.version_notes,
+              composition_date: detailPanelTrack.composition_date,
             }}
+            bandId={currentBand?.id}
+            userId={currentUser?.id}
             audioRef={currentTrack?.id === detailPanelTrack.id ? audioRef : undefined}
             isPlaying={currentTrack?.id === detailPanelTrack.id && isPlaying}
             currentRating={trackRatings[detailPanelTrack.id]}
@@ -2833,6 +3444,90 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
             onPlayPause={() => handlePlayPause(detailPanelTrack)}
             onRate={(rating) => handleRate(detailPanelTrack.id, rating)}
             onClose={() => setDetailPanelTrack(null)}
+            onSeek={(time) => {
+              // Start playing the track if not already the current track
+              if (currentTrack?.id !== detailPanelTrack.id) {
+                handlePlayPause(detailPanelTrack);
+              }
+              // Seek to the specified time
+              if (audioRef.current) {
+                audioRef.current.currentTime = time;
+              }
+            }}
+            timestampedComments={detailPanelComments
+              .filter(c => c.timestamp_seconds !== undefined && c.timestamp_seconds !== null)
+              .map(c => ({
+                id: c.id,
+                timestamp_seconds: c.timestamp_seconds!,
+                user_name: c.user_name,
+                content: c.content,
+                created_at: c.created_at,
+              }))}
+            onAddComment={async (content, timestampSeconds) => {
+              if (!currentUser?.id) return;
+              try {
+                await db.comments.create({
+                  track_id: detailPanelTrack.id,
+                  user_id: currentUser.id,
+                  content,
+                  timestamp_seconds: timestampSeconds,
+                });
+                // Refresh comments
+                const { data: newComments } = await db.comments.getByTrack(detailPanelTrack.id);
+                if (newComments) {
+                  const commentsWithNames = await Promise.all(
+                    newComments.map(async (comment: any) => {
+                      const { data: profile } = await db.profiles.getById(comment.user_id);
+                      return {
+                        id: comment.id,
+                        user_id: comment.user_id,
+                        user_name: profile?.name || 'Unknown User',
+                        content: comment.content,
+                        created_at: comment.created_at,
+                        updated_at: comment.updated_at,
+                        timestamp_seconds: comment.timestamp_seconds,
+                      };
+                    })
+                  );
+                  setDetailPanelComments(commentsWithNames);
+                }
+                // Update comment status
+                setTrackCommentStatus(prev => ({ ...prev, [detailPanelTrack.id]: true }));
+              } catch (error) {
+                console.error('Failed to add comment:', error);
+              }
+            }}
+            canEdit={userRole === 'admin' || userRole === 'owner'}
+            onUpdateTrack={handleUpdateTrack}
+            currentUserId={currentUser?.id}
+            onUpdateComment={async (commentId, content) => {
+              try {
+                const { error } = await db.comments.update(commentId, content);
+                if (error) throw error;
+                // Update comment in local state
+                setDetailPanelComments(prev =>
+                  prev.map(c =>
+                    c.id === commentId
+                      ? { ...c, content, updated_at: new Date().toISOString() }
+                      : c
+                  )
+                );
+              } catch (error) {
+                console.error('Failed to update comment:', error);
+                throw error;
+              }
+            }}
+            onDeleteComment={async (commentId) => {
+              try {
+                const { error } = await db.comments.delete(commentId);
+                if (error) throw error;
+                // Remove comment from local state
+                setDetailPanelComments(prev => prev.filter(c => c.id !== commentId));
+              } catch (error) {
+                console.error('Failed to delete comment:', error);
+                throw error;
+              }
+            }}
           />
         </aside>
       )}
@@ -2904,12 +3599,380 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
         />
       )}
 
+      {/* Add Tracks to Work Modal */}
+      {showAddTracksToWork && selectedWork && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+          }}
+          onClick={() => setShowAddTracksToWork(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: designTokens.colors.surface.primary,
+              borderRadius: designTokens.borderRadius.lg,
+              padding: designTokens.spacing.lg,
+              maxWidth: '500px',
+              width: '90%',
+              maxHeight: '80vh',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: designTokens.spacing.md }}>
+              <h2 style={{ margin: 0, fontSize: designTokens.typography.fontSizes.h3, color: designTokens.colors.text.primary }}>
+                Add Tracks to "{selectedWork.name}"
+              </h2>
+              <button
+                onClick={() => setShowAddTracksToWork(false)}
+                style={{
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: designTokens.spacing.xs,
+                }}
+              >
+                <X size={20} color={designTokens.colors.text.secondary} />
+              </button>
+            </div>
+            <WorkTrackSelectorModal
+              tracks={bandScopedTracks}
+              existingTrackIds={workVersions.map(v => v.id)}
+              works={works}
+              targetWorkId={selectedWork.id}
+              onAddTracks={handleAddTracksToWork}
+              onCancel={() => setShowAddTracksToWork(false)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Move Tracks Confirmation Dialog */}
+      {showMoveConfirmation && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1001,
+          }}
+          onClick={handleCancelMoveTracksToWork}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: designTokens.colors.surface.primary,
+              borderRadius: designTokens.borderRadius.lg,
+              padding: designTokens.spacing.xl,
+              maxWidth: '400px',
+              width: '90%',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+            }}
+          >
+            <h3 style={{
+              fontSize: designTokens.typography.fontSizes.h3,
+              fontWeight: designTokens.typography.fontWeights.semibold,
+              color: designTokens.colors.text.primary,
+              margin: 0,
+              marginBottom: designTokens.spacing.md,
+            }}>
+              Move Tracks?
+            </h3>
+            <p style={{
+              fontSize: designTokens.typography.fontSizes.body,
+              color: designTokens.colors.text.secondary,
+              margin: 0,
+              marginBottom: designTokens.spacing.md,
+            }}>
+              The following tracks are already in other Works:
+            </p>
+            <ul style={{
+              margin: 0,
+              marginBottom: designTokens.spacing.md,
+              paddingLeft: designTokens.spacing.lg,
+              color: designTokens.colors.text.primary,
+              fontSize: designTokens.typography.fontSizes.bodySmall,
+            }}>
+              {tracksToMove.map(track => (
+                <li key={track.id} style={{ marginBottom: designTokens.spacing.xs }}>
+                  <strong>{track.title}</strong> is in "{track.currentWorkName}"
+                </li>
+              ))}
+            </ul>
+            <p style={{
+              fontSize: designTokens.typography.fontSizes.bodySmall,
+              color: designTokens.colors.text.muted,
+              margin: 0,
+              marginBottom: designTokens.spacing.lg,
+            }}>
+              Moving them will remove them from their current Works.
+            </p>
+            <div style={{ display: 'flex', gap: designTokens.spacing.sm, justifyContent: 'flex-end' }}>
+              <button
+                onClick={handleCancelMoveTracksToWork}
+                style={{
+                  padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
+                  backgroundColor: 'transparent',
+                  border: `1px solid ${designTokens.colors.borders.default}`,
+                  borderRadius: designTokens.borderRadius.sm,
+                  color: designTokens.colors.text.secondary,
+                  fontSize: designTokens.typography.fontSizes.body,
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmMoveTracksToWork}
+                style={{
+                  padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
+                  backgroundColor: designTokens.colors.primary.blue,
+                  border: 'none',
+                  borderRadius: designTokens.borderRadius.sm,
+                  color: designTokens.colors.neutral.white,
+                  fontSize: designTokens.typography.fontSizes.body,
+                  cursor: 'pointer',
+                }}
+              >
+                Move Tracks
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Intro Modal */}
       <IntroModal
         isOpen={showIntro}
         onClose={() => setShowIntro(false)}
       />
 
+      {/* Create Set List Dialog - globally accessible */}
+      {showCreatePlaylist && (
+        <DialogModal
+          isOpen={true}
+          onClose={() => {
+            setShowCreatePlaylist(false);
+            setNewPlaylistTitle('');
+            setError(null);
+          }}
+          title="Create New Set List"
+          size="sm"
+          hasKeyboardInput={true}
+          keyboardInputRef={createSetListInputRef}
+          footer={
+            <div style={{ display: 'flex', gap: designTokens.spacing.sm, justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => {
+                  setShowCreatePlaylist(false);
+                  setNewPlaylistTitle('');
+                  setError(null);
+                }}
+                disabled={createSetListLoading}
+                style={{
+                  padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
+                  backgroundColor: 'transparent',
+                  border: `1px solid ${designTokens.colors.borders.default}`,
+                  borderRadius: designTokens.borderRadius.sm,
+                  fontSize: designTokens.typography.fontSizes.bodySmall,
+                  cursor: createSetListLoading ? 'not-allowed' : 'pointer',
+                  opacity: createSetListLoading ? 0.6 : 1,
+                  color: designTokens.colors.text.secondary,
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreatePlaylist}
+                disabled={createSetListLoading}
+                style={{
+                  padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
+                  backgroundColor: designTokens.colors.primary.blue,
+                  color: designTokens.colors.text.inverse,
+                  border: 'none',
+                  borderRadius: designTokens.borderRadius.sm,
+                  fontSize: designTokens.typography.fontSizes.bodySmall,
+                  cursor: createSetListLoading ? 'not-allowed' : 'pointer',
+                  opacity: createSetListLoading ? 0.6 : 1,
+                }}
+              >
+                {createSetListLoading ? 'Creating...' : 'Create'}
+              </button>
+            </div>
+          }
+        >
+          <div>
+            <input
+              ref={createSetListInputRef}
+              type="text"
+              placeholder="Set list title..."
+              value={newPlaylistTitle}
+              onChange={(e) => {
+                setNewPlaylistTitle(e.target.value);
+                setError(null);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !createSetListLoading && newPlaylistTitle.trim()) {
+                  handleCreatePlaylist();
+                }
+              }}
+              disabled={createSetListLoading}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck="false"
+              style={{
+                width: '100%',
+                padding: designTokens.spacing.md,
+                border: `1px solid ${error ? designTokens.colors.system.error : designTokens.colors.borders.default}`,
+                borderRadius: designTokens.borderRadius.sm,
+                fontSize: designTokens.typography.fontSizes.body,
+                marginBottom: error ? designTokens.spacing.sm : 0,
+                boxSizing: 'border-box',
+              }}
+              autoFocus
+            />
+            {error && (
+              <div style={{
+                padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
+                backgroundColor: designTokens.colors.feedback.error.bg,
+                border: `1px solid ${designTokens.colors.feedback.error.border}`,
+                borderRadius: designTokens.borderRadius.sm,
+                color: designTokens.colors.feedback.error.text,
+                fontSize: designTokens.typography.fontSizes.caption,
+              }}>
+                {error}
+              </div>
+            )}
+          </div>
+        </DialogModal>
+      )}
+
+      {/* Create Work Dialog - globally accessible */}
+      {showCreateWork && (
+        <DialogModal
+          isOpen={true}
+          onClose={() => {
+            setShowCreateWork(false);
+            setNewWorkName('');
+            setError(null);
+          }}
+          title="Create New Work"
+          size="sm"
+          hasKeyboardInput={true}
+          keyboardInputRef={createWorkInputRef}
+          footer={
+            <div style={{ display: 'flex', gap: designTokens.spacing.sm, justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => {
+                  setShowCreateWork(false);
+                  setNewWorkName('');
+                  setError(null);
+                }}
+                disabled={createWorkLoading}
+                style={{
+                  padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
+                  backgroundColor: 'transparent',
+                  border: `1px solid ${designTokens.colors.borders.default}`,
+                  borderRadius: designTokens.borderRadius.sm,
+                  fontSize: designTokens.typography.fontSizes.bodySmall,
+                  cursor: createWorkLoading ? 'not-allowed' : 'pointer',
+                  opacity: createWorkLoading ? 0.6 : 1,
+                  color: designTokens.colors.text.secondary,
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateWork}
+                disabled={createWorkLoading || !newWorkName.trim()}
+                style={{
+                  padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
+                  backgroundColor: designTokens.colors.primary.blue,
+                  color: designTokens.colors.text.inverse,
+                  border: 'none',
+                  borderRadius: designTokens.borderRadius.sm,
+                  fontSize: designTokens.typography.fontSizes.bodySmall,
+                  cursor: createWorkLoading || !newWorkName.trim() ? 'not-allowed' : 'pointer',
+                  opacity: createWorkLoading || !newWorkName.trim() ? 0.6 : 1,
+                }}
+              >
+                {createWorkLoading ? 'Creating...' : 'Create'}
+              </button>
+            </div>
+          }
+        >
+          <div>
+            <p style={{
+              fontSize: designTokens.typography.fontSizes.bodySmall,
+              color: designTokens.colors.text.secondary,
+              margin: 0,
+              marginBottom: designTokens.spacing.md,
+            }}>
+              A work represents a song project containing all its versions (demos, recordings, mixes, etc.)
+            </p>
+            <input
+              ref={createWorkInputRef}
+              type="text"
+              placeholder="Song name (e.g., 'Starlight', 'New Song #1')"
+              value={newWorkName}
+              onChange={(e) => {
+                setNewWorkName(e.target.value);
+                setError(null);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !createWorkLoading && newWorkName.trim()) {
+                  handleCreateWork();
+                }
+              }}
+              disabled={createWorkLoading}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck="false"
+              style={{
+                width: '100%',
+                padding: designTokens.spacing.md,
+                border: `1px solid ${error ? designTokens.colors.system.error : designTokens.colors.borders.default}`,
+                borderRadius: designTokens.borderRadius.sm,
+                fontSize: designTokens.typography.fontSizes.body,
+                marginBottom: error ? designTokens.spacing.sm : 0,
+                boxSizing: 'border-box',
+              }}
+              autoFocus
+            />
+            {error && (
+              <div style={{
+                padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
+                backgroundColor: designTokens.colors.feedback.error.bg,
+                border: `1px solid ${designTokens.colors.feedback.error.border}`,
+                borderRadius: designTokens.borderRadius.sm,
+                color: designTokens.colors.feedback.error.text,
+                fontSize: designTokens.typography.fontSizes.caption,
+              }}>
+                {error}
+              </div>
+            )}
+          </div>
+        </DialogModal>
+      )}
 
     </div>
   );

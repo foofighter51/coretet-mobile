@@ -331,6 +331,30 @@ export const db = {
 
       return { data, error };
     },
+
+    /**
+     * Update track metadata (title, work assignment, etc.)
+     * Used by track detail editing functionality
+     */
+    async update(trackId: string, updates: {
+      title?: string;
+      version_group_id?: string | null;
+      version_type?: string | null;
+      version_notes?: string | null;
+      composition_date?: string | null; // ISO date string (YYYY-MM-DD)
+    }) {
+      const { data, error } = await supabase
+        .from('tracks')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', trackId)
+        .select()
+        .single();
+
+      return { data, error };
+    },
   },
 
   // Track Version operations
@@ -500,6 +524,27 @@ export const db = {
       return { data, error };
     },
 
+    /**
+     * Update Work (version group) metadata
+     * Supports updating name and description
+     */
+    async update(groupId: string, updates: {
+      name?: string;
+      description?: string | null;
+    }) {
+      const { data, error } = await supabase
+        .from('version_groups')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', groupId)
+        .select()
+        .single();
+
+      return { data, error };
+    },
+
     async delete(groupId: string, deletedBy: string) {
       // Soft delete using RPC function
       const { data, error } = await supabase.rpc('soft_delete_version_group', {
@@ -551,6 +596,44 @@ export const db = {
           band_id: params.band_id,
           created_by: params.created_by,
         })
+        .select()
+        .single();
+
+      return { data, error };
+    },
+
+    /**
+     * Add multiple tracks to a Work (version group)
+     * This updates the version_group_id on each track
+     */
+    async addTracksToWork(workId: string, trackIds: string[]) {
+      if (trackIds.length === 0) {
+        return { data: [], error: null };
+      }
+
+      const { data, error } = await supabase
+        .from('tracks')
+        .update({
+          version_group_id: workId,
+          updated_at: new Date().toISOString()
+        })
+        .in('id', trackIds)
+        .select();
+
+      return { data, error };
+    },
+
+    /**
+     * Remove a track from its current Work (sets version_group_id to null)
+     */
+    async removeTrackFromWork(trackId: string) {
+      const { data, error } = await supabase
+        .from('tracks')
+        .update({
+          version_group_id: null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', trackId)
         .select()
         .single();
 
@@ -893,6 +976,29 @@ export const db = {
       return commentMap;
     },
 
+    // Get comment counts for tracks (returns map of trackId -> count)
+    async getTrackCommentCounts(trackIds: string[]): Promise<Record<string, number>> {
+      if (trackIds.length === 0) return {};
+
+      const { data, error } = await supabase
+        .from('comments')
+        .select('track_id')
+        .in('track_id', trackIds);
+
+      if (error || !data) {
+        console.error('Error getting comment counts:', error);
+        return {};
+      }
+
+      // Create a map of trackId -> count
+      const countMap: Record<string, number> = {};
+      trackIds.forEach(id => {
+        countMap[id] = data.filter(comment => comment.track_id === id).length;
+      });
+
+      return countMap;
+    },
+
     // Check if tracks have unread comments (returns map of trackId -> hasUnread)
     async checkTracksHaveUnreadComments(trackIds: string[], userId: string): Promise<Record<string, boolean>> {
       if (trackIds.length === 0) return {};
@@ -971,6 +1077,66 @@ export const db = {
       }
 
       return { error };
+    },
+
+    /**
+     * Update a comment (only the comment author can update)
+     */
+    async update(commentId: string, content: string) {
+      const { data, error } = await supabase
+        .from('comments')
+        .update({
+          content,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', commentId)
+        .select(`
+          *,
+          profiles (
+            name
+          )
+        `)
+        .single();
+
+      return { data, error };
+    },
+
+    /**
+     * Delete a comment (only the comment author can delete)
+     */
+    async delete(commentId: string) {
+      const { data, error } = await supabase
+        .from('comments')
+        .delete()
+        .eq('id', commentId);
+
+      return { data, error };
+    },
+
+    /**
+     * Get all comments for all tracks in a Work (version_group)
+     * Aggregates comments across all versions of a song for the feed view
+     */
+    async getByWork(versionGroupId: string) {
+      const { data, error } = await supabase
+        .from('comments')
+        .select(`
+          *,
+          profiles (
+            name,
+            avatar_url
+          ),
+          tracks!inner (
+            id,
+            title,
+            version_type,
+            version_group_id
+          )
+        `)
+        .eq('tracks.version_group_id', versionGroupId)
+        .order('created_at', { ascending: false });
+
+      return { data, error };
     },
   },
 

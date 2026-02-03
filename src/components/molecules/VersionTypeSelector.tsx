@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronDown, Plus, X, Tag } from 'lucide-react';
 import { useDesignTokens } from '../../design/useDesignTokens';
+import { Z_INDEX } from '../../constants/zIndex';
 
 export interface VersionType {
   id: string;
@@ -33,6 +35,7 @@ export interface VersionTypeSelectorProps {
  * - Pre-populated list of common types
  * - Custom type creation
  * - Compact inline mode for track rows
+ * - Portal-based dropdown to escape overflow:hidden containers
  */
 export const VersionTypeSelector: React.FC<VersionTypeSelectorProps> = ({
   value,
@@ -48,13 +51,71 @@ export const VersionTypeSelector: React.FC<VersionTypeSelectorProps> = ({
   const [isCreating, setIsCreating] = useState(false);
   const [newTypeName, setNewTypeName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0, width: 160 });
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Calculate menu position based on trigger element
+  const updateMenuPosition = useCallback(() => {
+    if (!triggerRef.current) return;
+
+    const rect = triggerRef.current.getBoundingClientRect();
+    const menuWidth = compact ? 160 : Math.max(160, rect.width);
+
+    let left = rect.left;
+
+    // Ensure menu doesn't go off-screen on the right
+    if (left + menuWidth > window.innerWidth) {
+      left = window.innerWidth - menuWidth - 8;
+    }
+
+    // Ensure menu doesn't go off-screen on the left
+    if (left < 8) {
+      left = 8;
+    }
+
+    setMenuPosition({
+      top: rect.bottom + 4, // 4px gap below trigger
+      left,
+      width: menuWidth,
+    });
+  }, [compact]);
+
+  // Update position when opening
+  useEffect(() => {
+    if (isOpen) {
+      updateMenuPosition();
+    }
+  }, [isOpen, updateMenuPosition]);
+
+  // Update position on scroll/resize
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleScrollOrResize = () => {
+      updateMenuPosition();
+    };
+
+    window.addEventListener('scroll', handleScrollOrResize, true);
+    window.addEventListener('resize', handleScrollOrResize);
+
+    return () => {
+      window.removeEventListener('scroll', handleScrollOrResize, true);
+      window.removeEventListener('resize', handleScrollOrResize);
+    };
+  }, [isOpen, updateMenuPosition]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
+    if (!isOpen) return;
+
     const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      const clickedTrigger = triggerRef.current?.contains(target);
+      const clickedMenu = menuRef.current?.contains(target);
+
+      if (!clickedTrigger && !clickedMenu) {
         setIsOpen(false);
         setIsCreating(false);
         setNewTypeName('');
@@ -62,7 +123,7 @@ export const VersionTypeSelector: React.FC<VersionTypeSelectorProps> = ({
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [isOpen]);
 
   // Focus input when creating
   useEffect(() => {
@@ -93,6 +154,14 @@ export const VersionTypeSelector: React.FC<VersionTypeSelectorProps> = ({
       setIsSubmitting(false);
     }
   }, [newTypeName, onCreateType, onChange]);
+
+  const handleTriggerClick = () => {
+    if (disabled) return;
+    if (!isOpen) {
+      updateMenuPosition();
+    }
+    setIsOpen(!isOpen);
+  };
 
   const selectedType = types.find(t => t.name === value);
 
@@ -129,10 +198,11 @@ export const VersionTypeSelector: React.FC<VersionTypeSelectorProps> = ({
       };
 
   return (
-    <div ref={dropdownRef} style={{ position: 'relative', display: compact ? 'inline-block' : 'block' }}>
+    <div style={{ position: 'relative', display: compact ? 'inline-block' : 'block' }}>
       {/* Trigger Button */}
       <button
-        onClick={() => !disabled && setIsOpen(!isOpen)}
+        ref={triggerRef}
+        onClick={handleTriggerClick}
         disabled={disabled}
         style={buttonStyle}
       >
@@ -149,20 +219,20 @@ export const VersionTypeSelector: React.FC<VersionTypeSelectorProps> = ({
         )}
       </button>
 
-      {/* Dropdown Menu */}
-      {isOpen && (
+      {/* Dropdown Menu - rendered via portal */}
+      {isOpen && createPortal(
         <div
+          ref={menuRef}
           style={{
-            position: 'absolute',
-            top: '100%',
-            left: 0,
-            marginTop: 4,
-            minWidth: compact ? '160px' : '100%',
+            position: 'fixed',
+            top: menuPosition.top,
+            left: menuPosition.left,
+            minWidth: menuPosition.width,
             backgroundColor: designTokens.colors.surface.primary,
             border: `1px solid ${designTokens.colors.borders.default}`,
             borderRadius: designTokens.borderRadius.md,
             boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
-            zIndex: 100,
+            zIndex: Z_INDEX.DROPDOWN,
             overflow: 'hidden',
           }}
         >
@@ -304,7 +374,8 @@ export const VersionTypeSelector: React.FC<VersionTypeSelectorProps> = ({
               )}
             </div>
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

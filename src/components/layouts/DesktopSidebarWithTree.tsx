@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { ChevronDown, ChevronRight, Share2, Settings, LogOut, Upload, Plus, List, Music, Trash2 } from 'lucide-react';
 import { useDesignTokens } from '../../design/useDesignTokens';
 import { TabId } from '../../types';
+import { WorkDropZone } from '../molecules/WorkDropZone';
+import type { DragTrackData } from '../molecules/DraggableTrack';
 
 interface SetListItem {
   id: string;
@@ -34,6 +36,8 @@ interface DesktopSidebarWithTreeProps {
   selectedWorkId?: string | null;
   onWorkSelect?: (work: WorkItem) => void;
   onCreateWork?: () => void;
+  /** Called when tracks are dropped onto a Work */
+  onTrackDropOnWork?: (trackData: DragTrackData, workId: string) => void;
 }
 
 export const DesktopSidebarWithTree: React.FC<DesktopSidebarWithTreeProps> = ({
@@ -53,6 +57,7 @@ export const DesktopSidebarWithTree: React.FC<DesktopSidebarWithTreeProps> = ({
   selectedWorkId,
   onWorkSelect,
   onCreateWork,
+  onTrackDropOnWork,
 }) => {
   const designTokens = useDesignTokens();
   const [setListsExpanded, setSetListsExpanded] = useState(true);
@@ -342,53 +347,59 @@ export const DesktopSidebarWithTree: React.FC<DesktopSidebarWithTreeProps> = ({
                 </div>
               ) : (
                 works.map((work) => (
-                  <button
+                  <WorkDropZone
                     key={work.id}
-                    onClick={() => handleWorkClick(work)}
-                    style={{
-                      width: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: designTokens.spacing.sm,
-                      padding: `${designTokens.spacing.xs} ${designTokens.spacing.sm}`,
-                      backgroundColor: selectedWorkId === work.id
-                        ? designTokens.colors.surface.active
-                        : 'transparent',
-                      border: 'none',
-                      borderRadius: designTokens.borderRadius.sm,
-                      color: selectedWorkId === work.id
-                        ? designTokens.colors.primary.blue
-                        : designTokens.colors.text.secondary,
-                      cursor: 'pointer',
-                      fontSize: designTokens.typography.fontSizes.bodySmall,
-                      fontFamily: designTokens.typography.fontFamily,
-                      textAlign: 'left',
-                      transition: 'background-color 0.15s ease',
-                    }}
+                    workId={work.id}
+                    onTrackDrop={onTrackDropOnWork || (() => {})}
+                    active={!!onTrackDropOnWork}
                   >
-                    <span
+                    <button
+                      onClick={() => handleWorkClick(work)}
                       style={{
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        flex: 1,
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: designTokens.spacing.sm,
+                        padding: `${designTokens.spacing.xs} ${designTokens.spacing.sm}`,
+                        backgroundColor: selectedWorkId === work.id
+                          ? designTokens.colors.surface.active
+                          : 'transparent',
+                        border: 'none',
+                        borderRadius: designTokens.borderRadius.sm,
+                        color: selectedWorkId === work.id
+                          ? designTokens.colors.primary.blue
+                          : designTokens.colors.text.secondary,
+                        cursor: 'pointer',
+                        fontSize: designTokens.typography.fontSizes.bodySmall,
+                        fontFamily: designTokens.typography.fontFamily,
+                        textAlign: 'left',
+                        transition: 'background-color 0.15s ease',
                       }}
                     >
-                      {work.name}
-                    </span>
-                    {work.version_count !== undefined && (
                       <span
                         style={{
-                          fontSize: designTokens.typography.fontSizes.caption,
-                          color: designTokens.colors.text.muted,
-                          flexShrink: 0,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          flex: 1,
                         }}
                       >
-                        {work.version_count} {work.version_count === 1 ? 'version' : 'versions'}
+                        {work.name}
                       </span>
-                    )}
-                  </button>
+                      {work.version_count !== undefined && (
+                        <span
+                          style={{
+                            fontSize: designTokens.typography.fontSizes.caption,
+                            color: designTokens.colors.text.muted,
+                            flexShrink: 0,
+                          }}
+                        >
+                          {work.version_count} {work.version_count === 1 ? 'version' : 'versions'}
+                        </span>
+                      )}
+                    </button>
+                  </WorkDropZone>
                 ))
               )}
             </div>

@@ -20,6 +20,10 @@ import { AcceptInvite } from './components/screens/AcceptInvite';
 import { AdminInviteCodesScreen } from './components/screens/AdminInviteCodesScreen';
 import { AdminRouteGuard } from './components/guards/AdminRouteGuard';
 import { Spinner } from './components/atoms/Spinner';
+// Development-only component playground
+const ComponentPlayground = import.meta.env.DEV
+  ? React.lazy(() => import('./components/screens/ComponentPlayground'))
+  : null;
 import DeepLinkService from './utils/deepLinkHandler';
 import { Capacitor } from '@capacitor/core';
 import { auth, db } from '../lib/supabase';
@@ -218,6 +222,15 @@ export default function App() {
           <Routes>
           {/* Email confirmation success page */}
           <Route path="/auth/confirmed" element={<EmailConfirmedScreen />} />
+
+          {/* Development-only component playground */}
+          {import.meta.env.DEV && ComponentPlayground && (
+            <Route path="/dev/playground" element={
+              <React.Suspense fallback={<div style={{ padding: '40px', textAlign: 'center' }}><Spinner label="Loading playground..." /></div>}>
+                <ComponentPlayground />
+              </React.Suspense>
+            } />
+          )}
 
           {/* Invite acceptance - handles its own authentication */}
           <Route path="/invite/:token" element={

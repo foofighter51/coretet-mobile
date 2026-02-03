@@ -11,6 +11,10 @@ export interface TimestampedComment {
   created_at: string;
   user_id?: string;
   avatar_url?: string | null;
+  // Track context for feed mode
+  track_id?: string;
+  track_title?: string;
+  version_type?: string | null;
 }
 
 export interface TimestampedCommentListProps {
@@ -34,6 +38,8 @@ export interface TimestampedCommentListProps {
   maxHeight?: number | string;
   /** Empty state message */
   emptyMessage?: string;
+  /** Whether to show track context (for feed mode) */
+  showTrackContext?: boolean;
 }
 
 /**
@@ -57,6 +63,7 @@ export const TimestampedCommentList: React.FC<TimestampedCommentListProps> = ({
   autoScroll = true,
   maxHeight = 300,
   emptyMessage = 'No comments yet',
+  showTrackContext = false,
 }) => {
   const designTokens = useDesignTokens();
   const listRef = useRef<HTMLDivElement>(null);
@@ -231,6 +238,36 @@ export const TimestampedCommentList: React.FC<TimestampedCommentListProps> = ({
                     <span style={{ fontWeight: 'normal', color: designTokens.colors.text.muted }}> (you)</span>
                   )}
                 </span>
+
+                {/* Track context for feed mode */}
+                {showTrackContext && comment.track_title && (
+                  <span
+                    style={{
+                      fontSize: designTokens.typography.fontSizes.caption,
+                      color: designTokens.colors.text.muted,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4,
+                    }}
+                  >
+                    <span style={{ color: designTokens.colors.text.tertiary }}>•</span>
+                    on "{comment.track_title}"
+                    {comment.version_type && (
+                      <span
+                        style={{
+                          padding: `1px 6px`,
+                          fontSize: designTokens.typography.fontSizes.label,
+                          backgroundColor: designTokens.colors.surface.tertiary,
+                          borderRadius: designTokens.borderRadius.sm,
+                          color: designTokens.colors.text.secondary,
+                          textTransform: 'capitalize',
+                        }}
+                      >
+                        {comment.version_type}
+                      </span>
+                    )}
+                  </span>
+                )}
               </div>
 
               {/* Timestamp badge */}

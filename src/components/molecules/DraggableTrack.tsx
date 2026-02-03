@@ -7,6 +7,10 @@ export interface DragTrackData {
   trackTitle: string;
   sourceType: 'work' | 'playlist' | 'library';
   sourceId?: string;
+  /** Array of all selected track IDs for multi-select drag */
+  trackIds?: string[];
+  /** Total count of tracks being dragged */
+  trackCount?: number;
 }
 
 export interface DraggableTrackProps {
@@ -22,6 +26,10 @@ export interface DraggableTrackProps {
   onDragStart?: () => void;
   /** Called when drag ends */
   onDragEnd?: () => void;
+  /** Whether this track is currently selected in multi-select mode */
+  isSelected?: boolean;
+  /** All currently selected track IDs (for multi-select drag) */
+  selectedTrackIds?: string[];
 }
 
 /**
@@ -37,6 +45,8 @@ export const DraggableTrack: React.FC<DraggableTrackProps> = ({
   children,
   onDragStart,
   onDragEnd,
+  isSelected = false,
+  selectedTrackIds = [],
 }) => {
   const designTokens = useDesignTokens();
   const [isDragging, setIsDragging] = useState(false);
@@ -48,13 +58,49 @@ export const DraggableTrack: React.FC<DraggableTrackProps> = ({
       return;
     }
 
+    // Build drag data - include all selected tracks if this track is selected
+    const isMultiSelect = isSelected && selectedTrackIds.length > 1;
+    const dragPayload: DragTrackData = isMultiSelect
+      ? {
+          ...trackData,
+          trackIds: selectedTrackIds,
+          trackCount: selectedTrackIds.length,
+        }
+      : trackData;
+
     // Set the drag data
-    e.dataTransfer.setData('application/json', JSON.stringify(trackData));
-    e.dataTransfer.setData('text/plain', trackData.trackTitle);
+    e.dataTransfer.setData('application/json', JSON.stringify(dragPayload));
+    e.dataTransfer.setData('text/plain',
+      isMultiSelect ? `${selectedTrackIds.length} tracks` : trackData.trackTitle
+    );
     e.dataTransfer.effectAllowed = 'copy';
 
-    // Set drag image (optional custom ghost)
-    if (dragRef.current) {
+    // Create custom drag ghost for multi-select
+    if (isMultiSelect) {
+      const ghost = document.createElement('div');
+      ghost.style.cssText = `
+        position: absolute;
+        top: -1000px;
+        left: -1000px;
+        background: ${designTokens.colors.primary.blue};
+        color: white;
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-family: ${designTokens.typography.fontFamily};
+        font-size: 14px;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      `;
+      ghost.innerHTML = `<span style="font-size: 16px;">&#9835;</span> ${selectedTrackIds.length} tracks`;
+      document.body.appendChild(ghost);
+      e.dataTransfer.setDragImage(ghost, 60, 20);
+      // Clean up ghost element after drag starts
+      setTimeout(() => document.body.removeChild(ghost), 0);
+    } else if (dragRef.current) {
+      // Default: use the element itself
       const rect = dragRef.current.getBoundingClientRect();
       e.dataTransfer.setDragImage(dragRef.current, rect.width / 2, 20);
     }

@@ -20,6 +20,8 @@ interface AdaptiveTrackRowProps {
   };
   hasComments?: boolean;
   hasUnreadComments?: boolean;
+  /** Number of comments on this track */
+  commentCount?: number;
   /** Available version types for the selector */
   versionTypes?: VersionType[];
   onPlayPause: () => void;
@@ -34,6 +36,10 @@ interface AdaptiveTrackRowProps {
   onVersionTypeChange?: (versionType: string | null) => void;
   /** Called when creating a custom version type */
   onCreateVersionType?: (name: string) => Promise<void>;
+  /** Whether this track is selected for multi-select operations (desktop only) */
+  isSelected?: boolean;
+  /** Called when track is clicked with keyboard modifiers for selection (desktop only) */
+  onSelect?: (trackId: string, modifiers: { shift: boolean; meta: boolean }) => void;
 }
 
 /**
@@ -56,6 +62,7 @@ export const AdaptiveTrackRow: React.FC<AdaptiveTrackRowProps> = ({
   aggregatedRatings,
   hasComments,
   hasUnreadComments,
+  commentCount,
   versionTypes,
   onPlayPause,
   onRate,
@@ -64,6 +71,8 @@ export const AdaptiveTrackRow: React.FC<AdaptiveTrackRowProps> = ({
   isDeleting,
   onVersionTypeChange,
   onCreateVersionType,
+  isSelected,
+  onSelect,
 }) => {
   const isDesktop = useIsDesktop();
 
@@ -76,6 +85,7 @@ export const AdaptiveTrackRow: React.FC<AdaptiveTrackRowProps> = ({
         aggregatedRatings={aggregatedRatings}
         hasComments={hasComments}
         hasUnreadComments={hasUnreadComments}
+        commentCount={commentCount}
         versionTypes={versionTypes}
         onPlayPause={onPlayPause}
         onRate={onRate}
@@ -84,6 +94,8 @@ export const AdaptiveTrackRow: React.FC<AdaptiveTrackRowProps> = ({
         isDeleting={isDeleting}
         onVersionTypeChange={onVersionTypeChange}
         onCreateVersionType={onCreateVersionType}
+        isSelected={isSelected}
+        onSelect={onSelect}
       />
     );
   }

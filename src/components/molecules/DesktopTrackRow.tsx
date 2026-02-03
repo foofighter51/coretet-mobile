@@ -20,6 +20,8 @@ interface DesktopTrackRowProps {
   };
   hasComments?: boolean;
   hasUnreadComments?: boolean;
+  /** Number of comments on this track */
+  commentCount?: number;
   /** Available version types for the selector */
   versionTypes?: VersionType[];
   onPlayPause: () => void;
@@ -31,6 +33,10 @@ interface DesktopTrackRowProps {
   onVersionTypeChange?: (versionType: string | null) => void;
   /** Called when creating a custom version type */
   onCreateVersionType?: (name: string) => Promise<void>;
+  /** Whether this track is selected for multi-select operations */
+  isSelected?: boolean;
+  /** Called when track is clicked with keyboard modifiers (shift/cmd/ctrl) */
+  onSelect?: (trackId: string, modifiers: { shift: boolean; meta: boolean }) => void;
 }
 
 export const DesktopTrackRow: React.FC<DesktopTrackRowProps> = ({
@@ -40,6 +46,7 @@ export const DesktopTrackRow: React.FC<DesktopTrackRowProps> = ({
   aggregatedRatings,
   hasComments,
   hasUnreadComments,
+  commentCount = 0,
   versionTypes = [],
   onPlayPause,
   onRate,
@@ -48,6 +55,8 @@ export const DesktopTrackRow: React.FC<DesktopTrackRowProps> = ({
   isDeleting = false,
   onVersionTypeChange,
   onCreateVersionType,
+  isSelected = false,
+  onSelect,
 }) => {
   const designTokens = useDesignTokens();
   const [isHovered, setIsHovered] = useState(false);
@@ -63,9 +72,19 @@ export const DesktopTrackRow: React.FC<DesktopTrackRowProps> = ({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const handleRowClick = () => {
+  const handleRowClick = (e: React.MouseEvent) => {
     if (!showMenu && !showDeleteConfirm) {
-      onClick?.();
+      // Check for selection modifiers (shift-click, cmd/ctrl-click)
+      if (onSelect && (e.shiftKey || e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        onSelect(track.id, {
+          shift: e.shiftKey,
+          meta: e.metaKey || e.ctrlKey,
+        });
+      } else {
+        // Regular click - open track details
+        onClick?.();
+      }
     }
   };
 
@@ -112,12 +131,17 @@ export const DesktopTrackRow: React.FC<DesktopTrackRowProps> = ({
         gridTemplateColumns: getTrackGridTemplate(),
         alignItems: 'center',
         padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
-        backgroundColor: isHovered
-          ? designTokens.colors.surface.hover
-          : designTokens.colors.surface.primary,
+        backgroundColor: isSelected
+          ? `${designTokens.colors.primary.blue}15` // Light blue for selection
+          : isHovered
+            ? designTokens.colors.surface.hover
+            : designTokens.colors.surface.primary,
         borderBottom: `1px solid ${designTokens.colors.borders.default}`,
+        borderLeft: isSelected
+          ? `3px solid ${designTokens.colors.primary.blue}`
+          : '3px solid transparent',
         cursor: 'pointer',
-        transition: 'background-color 0.15s ease',
+        transition: 'background-color 0.15s ease, border-left-color 0.15s ease',
         opacity: isDeleting ? 0.5 : 1,
         fontFamily: designTokens.typography.fontFamily,
       }}
@@ -233,39 +257,33 @@ export const DesktopTrackRow: React.FC<DesktopTrackRowProps> = ({
       </div>
 
       {/* Column 5: Rating Badges */}
-      <div style={{ display: 'flex', gap: designTokens.spacing.xs }}>
-        {aggregatedRatings?.loved && aggregatedRatings.loved > 0 ? (
-          <span
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              padding: `2px ${designTokens.spacing.xs}`,
-              backgroundColor: designTokens.colors.ratings.loved.bgLight,
-              borderRadius: '10px',
-              fontSize: designTokens.typography.fontSizes.caption,
-              color: designTokens.colors.system.error,
-            }}
-          >
-            <Heart size={10} fill="currentColor" />
-            {aggregatedRatings.loved}
-          </span>
-        ) : null}
+      <div style={{ display: 'flex', alignItems: 'center', gap: designTokens.spacing.sm }}>
         {aggregatedRatings?.liked && aggregatedRatings.liked > 0 ? (
           <span
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '4px',
-              padding: `2px ${designTokens.spacing.xs}`,
-              backgroundColor: designTokens.colors.ratings.liked.bgLight,
-              borderRadius: '10px',
+              gap: '2px',
+              color: designTokens.colors.primary.blue,
               fontSize: designTokens.typography.fontSizes.caption,
-              color: designTokens.colors.system.success,
             }}
           >
-            <ThumbsUp size={10} fill="currentColor" />
+            <ThumbsUp size={12} />
             {aggregatedRatings.liked}
+          </span>
+        ) : null}
+        {aggregatedRatings?.loved && aggregatedRatings.loved > 0 ? (
+          <span
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '2px',
+              color: designTokens.colors.accent.coral,
+              fontSize: designTokens.typography.fontSizes.caption,
+            }}
+          >
+            <Heart size={12} />
+            {aggregatedRatings.loved}
           </span>
         ) : null}
         {(!aggregatedRatings || (aggregatedRatings.liked === 0 && aggregatedRatings.loved === 0)) && (
@@ -275,20 +293,23 @@ export const DesktopTrackRow: React.FC<DesktopTrackRowProps> = ({
         )}
       </div>
 
-      {/* Column 6: Comments Indicator */}
+      {/* Column 6: Comments */}
       <div style={{ display: 'flex', justifyContent: 'center' }}>
-        {hasComments ? (
-          <div
+        {commentCount > 0 ? (
+          <span
             style={{
               display: 'flex',
               alignItems: 'center',
+              gap: '2px',
               color: hasUnreadComments
                 ? designTokens.colors.primary.blue
-                : designTokens.colors.text.tertiary,
+                : designTokens.colors.text.secondary,
+              fontSize: designTokens.typography.fontSizes.caption,
             }}
           >
-            <MessageCircle size={16} />
-          </div>
+            <MessageCircle size={12} />
+            {commentCount}
+          </span>
         ) : (
           <span style={{ color: designTokens.colors.text.muted, fontSize: designTokens.typography.fontSizes.caption }}>
             —
