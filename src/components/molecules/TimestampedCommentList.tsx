@@ -1,5 +1,5 @@
-import React, { useRef, useEffect, useMemo } from 'react';
-import { Clock, User } from 'lucide-react';
+import React, { useRef, useEffect, useMemo, useState, useCallback } from 'react';
+import { Clock, User, Pencil, Trash2, X, Check } from 'lucide-react';
 import { useDesignTokens } from '../../design/useDesignTokens';
 import { formatTimestamp } from '../../utils/waveformGenerator';
 
@@ -40,6 +40,12 @@ export interface TimestampedCommentListProps {
   emptyMessage?: string;
   /** Whether to show track context (for feed mode) */
   showTrackContext?: boolean;
+  /** Called when user edits a comment */
+  onEditComment?: (commentId: string, content: string) => Promise<void>;
+  /** Called when user deletes a comment */
+  onDeleteComment?: (commentId: string) => Promise<void>;
+  /** When true, skip internal sorting and use comments in received order */
+  skipSort?: boolean;
 }
 
 /**
@@ -64,13 +70,61 @@ export const TimestampedCommentList: React.FC<TimestampedCommentListProps> = ({
   maxHeight = 300,
   emptyMessage = 'No comments yet',
   showTrackContext = false,
+  onEditComment,
+  onDeleteComment,
+  skipSort = false,
 }) => {
   const designTokens = useDesignTokens();
   const listRef = useRef<HTMLDivElement>(null);
   const activeCommentRef = useRef<HTMLDivElement>(null);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState('');
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Handle starting to edit a comment
+  const handleStartEdit = useCallback((comment: TimestampedComment) => {
+    setEditingCommentId(comment.id);
+    setEditContent(comment.content);
+  }, []);
+
+  // Handle saving an edit
+  const handleSaveEdit = useCallback(async () => {
+    if (!editingCommentId || !editContent.trim() || !onEditComment) return;
+    setIsSubmitting(true);
+    try {
+      await onEditComment(editingCommentId, editContent.trim());
+      setEditingCommentId(null);
+      setEditContent('');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [editingCommentId, editContent, onEditComment]);
+
+  // Handle canceling an edit
+  const handleCancelEdit = useCallback(() => {
+    setEditingCommentId(null);
+    setEditContent('');
+  }, []);
+
+  // Handle deleting a comment
+  const handleDelete = useCallback(async (commentId: string) => {
+    if (!onDeleteComment) return;
+    setIsSubmitting(true);
+    try {
+      await onDeleteComment(commentId);
+      setDeleteConfirmId(null);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [onDeleteComment]);
 
   // Sort comments by timestamp (null timestamps go at the end)
+  // When skipSort is true, use comments in received order (parent handles sorting)
   const sortedComments = useMemo(() => {
+    if (skipSort) {
+      return comments;
+    }
     return [...comments].sort((a, b) => {
       if (a.timestamp_seconds === null && b.timestamp_seconds === null) {
         return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
@@ -79,7 +133,7 @@ export const TimestampedCommentList: React.FC<TimestampedCommentListProps> = ({
       if (b.timestamp_seconds === null) return -1;
       return a.timestamp_seconds - b.timestamp_seconds;
     });
-  }, [comments]);
+  }, [comments, skipSort]);
 
   // Find the comment that should be active based on current time
   const activeCommentId = useMemo(() => {
@@ -297,30 +351,200 @@ export const TimestampedCommentList: React.FC<TimestampedCommentListProps> = ({
               )}
             </div>
 
-            {/* Comment content */}
-            <p
-              style={{
-                margin: 0,
-                fontSize: designTokens.typography.fontSizes.body,
-                color: designTokens.colors.text.primary,
-                lineHeight: 1.5,
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-word',
-              }}
-            >
-              {comment.content}
-            </p>
+            {/* Comment content or edit mode */}
+            {editingCommentId === comment.id ? (
+              <div style={{ marginTop: designTokens.spacing.xs }}>
+                <textarea
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value)}
+                  disabled={isSubmitting}
+                  autoFocus
+                  style={{
+                    width: '100%',
+                    padding: designTokens.spacing.sm,
+                    fontSize: designTokens.typography.fontSizes.body,
+                    color: designTokens.colors.text.primary,
+                    backgroundColor: designTokens.colors.surface.primary,
+                    border: `1px solid ${designTokens.colors.primary.blue}`,
+                    borderRadius: designTokens.borderRadius.sm,
+                    resize: 'vertical',
+                    minHeight: '60px',
+                    fontFamily: 'inherit',
+                    boxSizing: 'border-box',
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                      handleSaveEdit();
+                    }
+                    if (e.key === 'Escape') {
+                      handleCancelEdit();
+                    }
+                  }}
+                />
+                <div style={{ display: 'flex', gap: designTokens.spacing.xs, marginTop: designTokens.spacing.xs }}>
+                  <button
+                    onClick={handleSaveEdit}
+                    disabled={isSubmitting || !editContent.trim()}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      padding: `${designTokens.spacing.xs} ${designTokens.spacing.sm}`,
+                      backgroundColor: designTokens.colors.primary.blue,
+                      border: 'none',
+                      borderRadius: designTokens.borderRadius.sm,
+                      color: designTokens.colors.neutral.white,
+                      fontSize: designTokens.typography.fontSizes.caption,
+                      cursor: isSubmitting || !editContent.trim() ? 'not-allowed' : 'pointer',
+                      opacity: isSubmitting || !editContent.trim() ? 0.5 : 1,
+                    }}
+                  >
+                    <Check size={12} />
+                    Save
+                  </button>
+                  <button
+                    onClick={handleCancelEdit}
+                    disabled={isSubmitting}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      padding: `${designTokens.spacing.xs} ${designTokens.spacing.sm}`,
+                      backgroundColor: 'transparent',
+                      border: `1px solid ${designTokens.colors.borders.default}`,
+                      borderRadius: designTokens.borderRadius.sm,
+                      color: designTokens.colors.text.secondary,
+                      fontSize: designTokens.typography.fontSizes.caption,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <X size={12} />
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : deleteConfirmId === comment.id ? (
+              <div style={{ marginTop: designTokens.spacing.xs }}>
+                <p style={{
+                  margin: 0,
+                  marginBottom: designTokens.spacing.xs,
+                  fontSize: designTokens.typography.fontSizes.bodySmall,
+                  color: designTokens.colors.system.error,
+                }}>
+                  Delete this comment?
+                </p>
+                <div style={{ display: 'flex', gap: designTokens.spacing.xs }}>
+                  <button
+                    onClick={() => handleDelete(comment.id)}
+                    disabled={isSubmitting}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      padding: `${designTokens.spacing.xs} ${designTokens.spacing.sm}`,
+                      backgroundColor: designTokens.colors.system.error,
+                      border: 'none',
+                      borderRadius: designTokens.borderRadius.sm,
+                      color: designTokens.colors.neutral.white,
+                      fontSize: designTokens.typography.fontSizes.caption,
+                      cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                      opacity: isSubmitting ? 0.5 : 1,
+                    }}
+                  >
+                    <Trash2 size={12} />
+                    Delete
+                  </button>
+                  <button
+                    onClick={() => setDeleteConfirmId(null)}
+                    disabled={isSubmitting}
+                    style={{
+                      padding: `${designTokens.spacing.xs} ${designTokens.spacing.sm}`,
+                      backgroundColor: 'transparent',
+                      border: `1px solid ${designTokens.colors.borders.default}`,
+                      borderRadius: designTokens.borderRadius.sm,
+                      color: designTokens.colors.text.secondary,
+                      fontSize: designTokens.typography.fontSizes.caption,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: designTokens.typography.fontSizes.body,
+                    color: designTokens.colors.text.primary,
+                    lineHeight: 1.5,
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                  }}
+                >
+                  {comment.content}
+                </p>
 
-            {/* Footer: Relative time */}
-            <div
-              style={{
-                marginTop: designTokens.spacing.xs,
-                fontSize: designTokens.typography.fontSizes.caption,
-                color: designTokens.colors.text.muted,
-              }}
-            >
-              {formatRelativeTime(comment.created_at)}
-            </div>
+                {/* Footer: Relative time + Edit/Delete buttons */}
+                <div
+                  style={{
+                    marginTop: designTokens.spacing.xs,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    fontSize: designTokens.typography.fontSizes.caption,
+                    color: designTokens.colors.text.muted,
+                  }}
+                >
+                  <span>{formatRelativeTime(comment.created_at)}</span>
+
+                  {/* Edit/Delete buttons for own comments */}
+                  {isOwnComment && (onEditComment || onDeleteComment) && (
+                    <div style={{ display: 'flex', gap: designTokens.spacing.xs }}>
+                      {onEditComment && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleStartEdit(comment);
+                          }}
+                          style={{
+                            padding: 4,
+                            backgroundColor: 'transparent',
+                            border: 'none',
+                            borderRadius: designTokens.borderRadius.sm,
+                            color: designTokens.colors.text.muted,
+                            cursor: 'pointer',
+                          }}
+                          title="Edit comment"
+                        >
+                          <Pencil size={12} />
+                        </button>
+                      )}
+                      {onDeleteComment && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteConfirmId(comment.id);
+                          }}
+                          style={{
+                            padding: 4,
+                            backgroundColor: 'transparent',
+                            border: 'none',
+                            borderRadius: designTokens.borderRadius.sm,
+                            color: designTokens.colors.text.muted,
+                            cursor: 'pointer',
+                          }}
+                          title="Delete comment"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         );
       })}

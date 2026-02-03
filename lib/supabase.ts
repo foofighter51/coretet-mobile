@@ -639,6 +639,68 @@ export const db = {
 
       return { data, error };
     },
+
+    /**
+     * Get a public Work by its share code
+     * Used for the public work view (/work/:shareCode)
+     */
+    async getByShareCode(shareCode: string) {
+      const { data, error } = await supabase
+        .from('version_groups')
+        .select(`
+          *,
+          tracks!tracks_version_group_id_fkey (
+            id,
+            title,
+            file_url,
+            duration_seconds,
+            created_at,
+            version_type,
+            version_notes,
+            profiles!tracks_created_by_fkey (
+              name
+            )
+          )
+        `)
+        .eq('share_code', shareCode)
+        .eq('is_public', true)
+        .is('deleted_at', null)
+        .single();
+
+      return { data, error };
+    },
+
+    /**
+     * Toggle public visibility for a Work
+     * Returns the updated work with new is_public state
+     */
+    async togglePublic(workId: string, isPublic: boolean) {
+      const { data, error } = await supabase
+        .from('version_groups')
+        .update({
+          is_public: isPublic,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', workId)
+        .select()
+        .single();
+
+      return { data, error };
+    },
+
+    /**
+     * Get the share code for a Work
+     * Returns just the share_code field
+     */
+    async getShareCode(workId: string) {
+      const { data, error } = await supabase
+        .from('version_groups')
+        .select('share_code, is_public')
+        .eq('id', workId)
+        .single();
+
+      return { data, error };
+    },
   },
 
   // Set List operations (renamed from playlists)

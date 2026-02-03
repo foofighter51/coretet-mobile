@@ -8,6 +8,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { MainDashboard } from './components/screens/MainDashboard';
 import { OnboardingScreen } from './components/screens/OnboardingScreen';
 import { PublicPlaylistView } from './components/screens/PublicPlaylistView';
+import { PublicWorkView } from './components/screens/PublicWorkView';
 import { PhoneAuthScreen } from './components/screens/PhoneAuthScreen';
 import { EmailConfirmedScreen } from './components/screens/EmailConfirmedScreen';
 // TEMPORARILY HIDDEN FOR TESTFLIGHT (TestFlight has its own feedback system)
@@ -249,6 +250,13 @@ export default function App() {
           <Route path="/playlist/:shareCode" element={
             <ErrorBoundary>
               {user ? <PublicPlaylistView /> : (Capacitor.isNativePlatform() ? <PhoneAuthScreen /> : <LandingPage />)}
+            </ErrorBoundary>
+          } />
+
+          {/* Work (song project) public view - PUBLIC WHEN is_public=true */}
+          <Route path="/work/:shareCode" element={
+            <ErrorBoundary>
+              <PublicWorkView />
             </ErrorBoundary>
           } />
 

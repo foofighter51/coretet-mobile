@@ -1,11 +1,13 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Play, Pause, Star, Clock, Calendar, User, ChevronRight, Plus, MoreVertical, Pencil, Trash2, ArrowLeft, MessageSquare, Send, Tag, ThumbsUp, Heart, MessageCircle, ListPlus } from 'lucide-react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { Play, Pause, Star, Clock, Calendar, User, ChevronRight, Plus, MoreVertical, Pencil, Trash2, ArrowLeft, MessageSquare, Send, Tag, ThumbsUp, Heart, MessageCircle, ListPlus, Share2, Link, Copy, Check } from 'lucide-react';
 import { useDesignTokens } from '../../design/useDesignTokens';
 import { WaveformVisualizer, TimestampedComment } from '../molecules/WaveformVisualizer';
 import { TimestampedCommentList } from '../molecules/TimestampedCommentList';
+import { CommentFilterHeader, CommentSortOption } from '../molecules/CommentFilterHeader';
 import { RatingSummary, RatingValue, CollaboratorRatings, CumulativeRatings } from '../molecules/RatingSummary';
 import { VersionTypeSelector, VersionType } from '../molecules/VersionTypeSelector';
 import { TrackListHeader, getTrackGridTemplate } from '../molecules/TrackListHeader';
+import { TrackDetailInline } from '../molecules/TrackDetailInline';
 import { WaveformData } from '../../utils/waveformGenerator';
 import { useIsDesktop } from '../../hooks/useResponsive';
 import { VersionTimeline } from './VersionTimeline';
@@ -92,6 +94,24 @@ interface WorkDetailViewProps {
   trackAggregatedRatings?: Record<string, { liked: number; loved: number }>;
   /** Per-track comment counts (trackId -> count) */
   trackCommentCounts?: Record<string, number>;
+  /** Per-track waveform data (trackId -> WaveformData) */
+  trackWaveformData?: Record<string, WaveformData>;
+  /** Called when user adds a comment to a specific track */
+  onAddTrackComment?: (trackId: string, content: string, timestampSeconds?: number) => void;
+  /** Called when user edits a comment */
+  onEditComment?: (commentId: string, content: string) => Promise<void>;
+  /** Called when user deletes a comment */
+  onDeleteComment?: (commentId: string) => Promise<void>;
+  /** Called when track title is updated */
+  onUpdateTrackTitle?: (trackId: string, title: string) => Promise<void>;
+  /** Called when track version notes are updated */
+  onUpdateTrackVersionNotes?: (trackId: string, notes: string | null) => Promise<void>;
+  /** Share code for this Work */
+  shareCode?: string | null;
+  /** Whether this Work is publicly shared */
+  isPublic?: boolean;
+  /** Called when user toggles public sharing */
+  onTogglePublic?: (isPublic: boolean) => Promise<void>;
 }
 
 /**
@@ -138,6 +158,15 @@ export const WorkDetailView: React.FC<WorkDetailViewProps> = ({
   trackRatings = {},
   trackAggregatedRatings = {},
   trackCommentCounts = {},
+  trackWaveformData = {},
+  onAddTrackComment,
+  onEditComment,
+  onDeleteComment,
+  onUpdateTrackTitle,
+  onUpdateTrackVersionNotes,
+  shareCode,
+  isPublic = false,
+  onTogglePublic,
 }) => {
   const designTokens = useDesignTokens();
   const isDesktop = useIsDesktop();
@@ -146,6 +175,9 @@ export const WorkDetailView: React.FC<WorkDetailViewProps> = ({
   const [isRenaming, setIsRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState(work.name);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showShareDialog, setShowShareDialog] = useState(false);
+  const [isTogglingPublic, setIsTogglingPublic] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
   const [activeTab, setActiveTab] = useState<'versions' | 'comments'>('versions');
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [descriptionValue, setDescriptionValue] = useState(work.description || '');
@@ -153,9 +185,86 @@ export const WorkDetailView: React.FC<WorkDetailViewProps> = ({
   const [commentInput, setCommentInput] = useState('');
   const [commentTimestamp, setCommentTimestamp] = useState<number | null>(null);
   const [isAddingComment, setIsAddingComment] = useState(false);
+  // Selected track state for contextual right panel
+  const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
+  // Comment filtering and sorting state
+  const [commentTrackFilter, setCommentTrackFilter] = useState<string | null>(null);
+  const [commentSort, setCommentSort] = useState<CommentSortOption>('timestamp');
   const menuRef = useRef<HTMLDivElement>(null);
   const renameInputRef = useRef<HTMLInputElement>(null);
   const commentInputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Get selected track object and its comments
+  const selectedTrack = useMemo(() => {
+    if (!selectedTrackId) return null;
+    return versions.find(v => v.id === selectedTrackId) || null;
+  }, [selectedTrackId, versions]);
+
+  const selectedTrackComments = useMemo(() => {
+    if (!selectedTrackId) return [];
+    return comments.filter(c => c.track_id === selectedTrackId);
+  }, [selectedTrackId, comments]);
+
+  // Filtered and sorted comments for the comments feed
+  const filteredSortedComments = useMemo(() => {
+    let result = [...comments];
+
+    // Filter by track
+    if (commentTrackFilter) {
+      result = result.filter(c => c.track_id === commentTrackFilter);
+    }
+
+    // Sort
+    switch (commentSort) {
+      case 'newest':
+        result.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        break;
+      case 'oldest':
+        result.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        break;
+      case 'timestamp':
+      default:
+        // Sort by timestamp (null timestamps at end), then by created_at for same timestamp
+        result.sort((a, b) => {
+          if (a.timestamp_seconds === null && b.timestamp_seconds === null) {
+            return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          }
+          if (a.timestamp_seconds === null) return 1;
+          if (b.timestamp_seconds === null) return -1;
+          return a.timestamp_seconds - b.timestamp_seconds;
+        });
+        break;
+    }
+
+    return result;
+  }, [comments, commentTrackFilter, commentSort]);
+
+  // Get unique tracks from comments for filter dropdown
+  const tracksWithComments = useMemo(() => {
+    const trackMap = new Map<string, { id: string; title: string; version_type?: string | null }>();
+    comments.forEach(c => {
+      if (c.track_id && c.track_title && !trackMap.has(c.track_id)) {
+        trackMap.set(c.track_id, {
+          id: c.track_id,
+          title: c.track_title,
+          version_type: c.version_type,
+        });
+      }
+    });
+    return Array.from(trackMap.values());
+  }, [comments]);
+
+  // Clear selection and filters when work changes
+  useEffect(() => {
+    setSelectedTrackId(null);
+    setCommentTrackFilter(null);
+    setCommentSort('timestamp');
+  }, [work.id]);
+
+  // Handle track selection from timeline
+  const handleTrackSelect = useCallback((track: TrackVersion) => {
+    setSelectedTrackId(track.id);
+  }, []);
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -409,6 +518,30 @@ export const WorkDetailView: React.FC<WorkDetailViewProps> = ({
                       Rename
                     </button>
                   )}
+                  {onTogglePublic && shareCode && (
+                    <button
+                      onClick={() => {
+                        setShowMenu(false);
+                        setShowShareDialog(true);
+                      }}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: designTokens.spacing.sm,
+                        padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
+                        backgroundColor: 'transparent',
+                        border: 'none',
+                        color: designTokens.colors.text.primary,
+                        fontSize: designTokens.typography.fontSizes.body,
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                      }}
+                    >
+                      <Share2 size={16} />
+                      Share
+                    </button>
+                  )}
                   {onDelete && (
                     <button
                       onClick={() => {
@@ -637,6 +770,221 @@ export const WorkDetailView: React.FC<WorkDetailViewProps> = ({
         </div>
       )}
 
+      {/* Share Dialog */}
+      {showShareDialog && shareCode && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1001,
+          }}
+          onClick={() => setShowShareDialog(false)}
+        >
+          <div
+            style={{
+              backgroundColor: designTokens.colors.surface.primary,
+              borderRadius: designTokens.borderRadius.lg,
+              padding: designTokens.spacing.lg,
+              maxWidth: '420px',
+              width: '90%',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3
+              style={{
+                fontSize: designTokens.typography.fontSizes.h3,
+                fontWeight: designTokens.typography.fontWeights.semibold,
+                color: designTokens.colors.text.primary,
+                margin: 0,
+                marginBottom: designTokens.spacing.md,
+                display: 'flex',
+                alignItems: 'center',
+                gap: designTokens.spacing.sm,
+              }}
+            >
+              <Share2 size={20} />
+              Share Work
+            </h3>
+
+            {/* Public Toggle */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: designTokens.spacing.md,
+                backgroundColor: designTokens.colors.surface.secondary,
+                borderRadius: designTokens.borderRadius.md,
+                marginBottom: designTokens.spacing.md,
+              }}
+            >
+              <div>
+                <p
+                  style={{
+                    fontSize: designTokens.typography.fontSizes.body,
+                    fontWeight: designTokens.typography.fontWeights.medium,
+                    color: designTokens.colors.text.primary,
+                    margin: 0,
+                    marginBottom: designTokens.spacing.xs,
+                  }}
+                >
+                  Public Link
+                </p>
+                <p
+                  style={{
+                    fontSize: designTokens.typography.fontSizes.caption,
+                    color: designTokens.colors.text.muted,
+                    margin: 0,
+                  }}
+                >
+                  {isPublic
+                    ? 'Anyone with the link can view'
+                    : 'Only band members can access'}
+                </p>
+              </div>
+              <button
+                onClick={async () => {
+                  if (!onTogglePublic) return;
+                  setIsTogglingPublic(true);
+                  try {
+                    await onTogglePublic(!isPublic);
+                  } finally {
+                    setIsTogglingPublic(false);
+                  }
+                }}
+                disabled={isTogglingPublic}
+                style={{
+                  padding: `${designTokens.spacing.xs} ${designTokens.spacing.md}`,
+                  backgroundColor: isPublic
+                    ? designTokens.colors.primary.blue
+                    : designTokens.colors.surface.tertiary,
+                  border: 'none',
+                  borderRadius: designTokens.borderRadius.xxl,
+                  color: isPublic
+                    ? designTokens.colors.neutral.white
+                    : designTokens.colors.text.secondary,
+                  fontSize: designTokens.typography.fontSizes.bodySmall,
+                  fontWeight: designTokens.typography.fontWeights.medium,
+                  cursor: isTogglingPublic ? 'wait' : 'pointer',
+                  opacity: isTogglingPublic ? 0.6 : 1,
+                }}
+              >
+                {isTogglingPublic ? '...' : isPublic ? 'On' : 'Off'}
+              </button>
+            </div>
+
+            {/* Share Link */}
+            {isPublic && (
+              <div style={{ marginBottom: designTokens.spacing.md }}>
+                <p
+                  style={{
+                    fontSize: designTokens.typography.fontSizes.caption,
+                    color: designTokens.colors.text.muted,
+                    margin: 0,
+                    marginBottom: designTokens.spacing.xs,
+                  }}
+                >
+                  Share Link
+                </p>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: designTokens.spacing.sm,
+                  }}
+                >
+                  <div
+                    style={{
+                      flex: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: designTokens.spacing.sm,
+                      padding: designTokens.spacing.sm,
+                      backgroundColor: designTokens.colors.surface.secondary,
+                      borderRadius: designTokens.borderRadius.sm,
+                      border: `1px solid ${designTokens.colors.borders.default}`,
+                    }}
+                  >
+                    <Link size={14} color={designTokens.colors.text.muted} />
+                    <span
+                      style={{
+                        fontSize: designTokens.typography.fontSizes.bodySmall,
+                        color: designTokens.colors.text.primary,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {`${window.location.origin}/work/${shareCode}`}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(
+                        `${window.location.origin}/work/${shareCode}`
+                      );
+                      setCopiedLink(true);
+                      setTimeout(() => setCopiedLink(false), 2000);
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: designTokens.spacing.xs,
+                      padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
+                      backgroundColor: copiedLink
+                        ? designTokens.colors.system.success
+                        : designTokens.colors.primary.blue,
+                      border: 'none',
+                      borderRadius: designTokens.borderRadius.sm,
+                      color: designTokens.colors.neutral.white,
+                      fontSize: designTokens.typography.fontSizes.bodySmall,
+                      fontWeight: designTokens.typography.fontWeights.medium,
+                      cursor: 'pointer',
+                      minWidth: '90px',
+                    }}
+                  >
+                    {copiedLink ? (
+                      <>
+                        <Check size={14} />
+                        Copied
+                      </>
+                    ) : (
+                      <>
+                        <Copy size={14} />
+                        Copy
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Close Button */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowShareDialog(false)}
+                style={{
+                  padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
+                  backgroundColor: designTokens.colors.surface.secondary,
+                  border: `1px solid ${designTokens.colors.borders.default}`,
+                  borderRadius: designTokens.borderRadius.sm,
+                  color: designTokens.colors.text.primary,
+                  fontSize: designTokens.typography.fontSizes.body,
+                  cursor: 'pointer',
+                }}
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Waveform Section (for hero track) */}
       {showWaveform && heroVersion && (
         <div
@@ -725,8 +1073,9 @@ export const WorkDetailView: React.FC<WorkDetailViewProps> = ({
                   versionTypes={versionTypes}
                   trackAggregatedRatings={trackAggregatedRatings}
                   trackCommentCounts={trackCommentCounts}
+                  selectedTrackId={selectedTrackId}
                   onPlayTrack={onPlayTrack}
-                  onTrackClick={onTrackClick}
+                  onTrackClick={handleTrackSelect}
                   onSetHero={onSetHero}
                 />
               ) : (
@@ -801,7 +1150,7 @@ export const WorkDetailView: React.FC<WorkDetailViewProps> = ({
             )}
           </div>
 
-          {/* Right: Comments Feed (40%) */}
+          {/* Right: Contextual Panel (40%) - Track Details or Comments Feed */}
           <div
             style={{
               flex: 2,
@@ -810,120 +1159,145 @@ export const WorkDetailView: React.FC<WorkDetailViewProps> = ({
               overflow: 'hidden',
             }}
           >
-            {/* Section Header */}
-            <div
-              style={{
-                padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
-                borderBottom: `1px solid ${designTokens.colors.borders.default}`,
-                fontSize: designTokens.typography.fontSizes.bodySmall,
-                fontWeight: designTokens.typography.fontWeights.medium,
-                color: designTokens.colors.text.secondary,
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: designTokens.spacing.xs,
-              }}
-            >
-              <MessageSquare size={14} />
-              Comments ({comments.length})
-            </div>
-            {/* Comment List */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: designTokens.spacing.md }}>
-              <TimestampedCommentList
-                comments={comments}
-                currentTime={currentTime}
-                duration={heroVersion?.duration_seconds || 0}
-                onCommentClick={handleCommentSeek}
+            {selectedTrack ? (
+              /* Track Details View */
+              <TrackDetailInline
+                track={selectedTrack}
+                isPlaying={isPlaying && currentTrackId === selectedTrack.id}
+                currentTime={currentTrackId === selectedTrack.id ? currentTime : 0}
+                comments={selectedTrackComments}
                 currentUserId={currentUserId}
-                emptyMessage="No comments yet. Click on the waveform to add a comment at a specific time."
-                showTrackContext={true}
+                waveformData={trackWaveformData[selectedTrack.id]}
+                versionTypes={versionTypes}
+                canEdit={canEdit}
+                onBack={() => setSelectedTrackId(null)}
+                onPlayPause={() => onPlayTrack(selectedTrack)}
+                onSeek={onSeek}
+                onAddComment={onAddTrackComment ? (content, ts) => onAddTrackComment(selectedTrack.id, content, ts) : undefined}
+                onCommentClick={onCommentClick}
+                onWaveformGenerated={onWaveformGenerated}
+                onVersionTypeChange={onVersionTypeChange ? (type) => onVersionTypeChange(selectedTrack.id, type) : undefined}
+                onCreateVersionType={onCreateVersionType}
+                onUpdateTitle={onUpdateTrackTitle ? (title) => onUpdateTrackTitle(selectedTrack.id, title) : undefined}
+                onUpdateVersionNotes={onUpdateTrackVersionNotes ? (notes) => onUpdateTrackVersionNotes(selectedTrack.id, notes) : undefined}
+                onEditComment={onEditComment}
+                onDeleteComment={onDeleteComment}
               />
-            </div>
-            {/* Comment Input */}
-            {onAddComment && (
-              <div
-                style={{
-                  padding: designTokens.spacing.sm,
-                  borderTop: `1px solid ${designTokens.colors.borders.default}`,
-                  backgroundColor: designTokens.colors.surface.secondary,
-                }}
-              >
-                {commentTimestamp !== null && (
+            ) : (
+              /* Comments Feed View (default) */
+              <>
+                {/* Comment Filter Header */}
+                <CommentFilterHeader
+                  commentCount={comments.length}
+                  tracks={tracksWithComments}
+                  selectedTrackId={commentTrackFilter}
+                  sortBy={commentSort}
+                  onTrackFilterChange={setCommentTrackFilter}
+                  onSortChange={setCommentSort}
+                  filteredCount={filteredSortedComments.length}
+                />
+                {/* Comment List */}
+                <div style={{ flex: 1, overflowY: 'auto', padding: designTokens.spacing.md }}>
+                  <TimestampedCommentList
+                    comments={filteredSortedComments}
+                    currentTime={currentTime}
+                    duration={heroVersion?.duration_seconds || 0}
+                    onCommentClick={handleCommentSeek}
+                    currentUserId={currentUserId}
+                    emptyMessage={commentTrackFilter ? "No comments for this track." : "No comments yet. Click on the waveform to add a comment at a specific time."}
+                    showTrackContext={!commentTrackFilter}
+                    maxHeight="none"
+                    skipSort={true}
+                    onEditComment={onEditComment}
+                    onDeleteComment={onDeleteComment}
+                  />
+                </div>
+                {/* Comment Input */}
+                {onAddComment && (
                   <div
                     style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: designTokens.spacing.xs,
-                      marginBottom: designTokens.spacing.xs,
-                      fontSize: designTokens.typography.fontSizes.caption,
-                      color: designTokens.colors.accent.coral,
+                      padding: designTokens.spacing.sm,
+                      borderTop: `1px solid ${designTokens.colors.borders.default}`,
+                      backgroundColor: designTokens.colors.surface.secondary,
                     }}
                   >
-                    <Clock size={12} />
-                    @ {Math.floor(commentTimestamp / 60)}:{String(Math.floor(commentTimestamp % 60)).padStart(2, '0')}
-                    <button
-                      onClick={() => setCommentTimestamp(null)}
-                      style={{
-                        marginLeft: designTokens.spacing.xs,
-                        padding: '2px 6px',
-                        backgroundColor: 'transparent',
-                        border: `1px solid ${designTokens.colors.borders.default}`,
-                        borderRadius: designTokens.borderRadius.sm,
-                        color: designTokens.colors.text.muted,
-                        fontSize: designTokens.typography.fontSizes.caption,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      Clear
-                    </button>
+                    {commentTimestamp !== null && (
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: designTokens.spacing.xs,
+                          marginBottom: designTokens.spacing.xs,
+                          fontSize: designTokens.typography.fontSizes.caption,
+                          color: designTokens.colors.accent.coral,
+                        }}
+                      >
+                        <Clock size={12} />
+                        @ {Math.floor(commentTimestamp / 60)}:{String(Math.floor(commentTimestamp % 60)).padStart(2, '0')}
+                        <button
+                          onClick={() => setCommentTimestamp(null)}
+                          style={{
+                            marginLeft: designTokens.spacing.xs,
+                            padding: '2px 6px',
+                            backgroundColor: 'transparent',
+                            border: `1px solid ${designTokens.colors.borders.default}`,
+                            borderRadius: designTokens.borderRadius.sm,
+                            color: designTokens.colors.text.muted,
+                            fontSize: designTokens.typography.fontSizes.caption,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', gap: designTokens.spacing.sm }}>
+                      <textarea
+                        ref={commentInputRef}
+                        value={commentInput}
+                        onChange={(e) => setCommentInput(e.target.value)}
+                        placeholder="Add a comment..."
+                        style={{
+                          flex: 1,
+                          padding: designTokens.spacing.sm,
+                          backgroundColor: designTokens.colors.surface.primary,
+                          border: `1px solid ${designTokens.colors.borders.default}`,
+                          borderRadius: designTokens.borderRadius.sm,
+                          color: designTokens.colors.text.primary,
+                          fontSize: designTokens.typography.fontSizes.bodySmall,
+                          fontFamily: designTokens.typography.fontFamily,
+                          resize: 'none',
+                          minHeight: '50px',
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                            handleSubmitComment();
+                          }
+                        }}
+                      />
+                      <button
+                        onClick={handleSubmitComment}
+                        disabled={!commentInput.trim()}
+                        style={{
+                          padding: designTokens.spacing.sm,
+                          backgroundColor: commentInput.trim()
+                            ? designTokens.colors.primary.blue
+                            : designTokens.colors.surface.tertiary,
+                          border: 'none',
+                          borderRadius: designTokens.borderRadius.sm,
+                          color: commentInput.trim()
+                            ? designTokens.colors.neutral.white
+                            : designTokens.colors.text.muted,
+                          cursor: commentInput.trim() ? 'pointer' : 'not-allowed',
+                          alignSelf: 'flex-end',
+                        }}
+                      >
+                        <Send size={16} />
+                      </button>
+                    </div>
                   </div>
                 )}
-                <div style={{ display: 'flex', gap: designTokens.spacing.sm }}>
-                  <textarea
-                    ref={commentInputRef}
-                    value={commentInput}
-                    onChange={(e) => setCommentInput(e.target.value)}
-                    placeholder="Add a comment..."
-                    style={{
-                      flex: 1,
-                      padding: designTokens.spacing.sm,
-                      backgroundColor: designTokens.colors.surface.primary,
-                      border: `1px solid ${designTokens.colors.borders.default}`,
-                      borderRadius: designTokens.borderRadius.sm,
-                      color: designTokens.colors.text.primary,
-                      fontSize: designTokens.typography.fontSizes.bodySmall,
-                      fontFamily: designTokens.typography.fontFamily,
-                      resize: 'none',
-                      minHeight: '50px',
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-                        handleSubmitComment();
-                      }
-                    }}
-                  />
-                  <button
-                    onClick={handleSubmitComment}
-                    disabled={!commentInput.trim()}
-                    style={{
-                      padding: designTokens.spacing.sm,
-                      backgroundColor: commentInput.trim()
-                        ? designTokens.colors.primary.blue
-                        : designTokens.colors.surface.tertiary,
-                      border: 'none',
-                      borderRadius: designTokens.borderRadius.sm,
-                      color: commentInput.trim()
-                        ? designTokens.colors.neutral.white
-                        : designTokens.colors.text.muted,
-                      cursor: commentInput.trim() ? 'pointer' : 'not-allowed',
-                      alignSelf: 'flex-end',
-                    }}
-                  >
-                    <Send size={16} />
-                  </button>
-                </div>
-              </div>
+              </>
             )}
           </div>
         </div>

@@ -11,6 +11,8 @@ export interface VersionTimelineProps {
   heroTrackId?: string | null;
   /** Currently playing track ID */
   currentTrackId?: string | null;
+  /** Currently selected track ID (for contextual panel) */
+  selectedTrackId?: string | null;
   /** Whether audio is playing */
   isPlaying?: boolean;
   /** Available version types for filtering */
@@ -42,6 +44,7 @@ export const VersionTimeline: React.FC<VersionTimelineProps> = ({
   versions,
   heroTrackId,
   currentTrackId,
+  selectedTrackId,
   isPlaying = false,
   versionTypes = [],
   waveformData = {},
@@ -246,61 +249,20 @@ export const VersionTimeline: React.FC<VersionTimelineProps> = ({
       </div>
 
       {/* Timeline */}
-      <div
-        style={{
-          position: 'relative',
-          paddingLeft: '20px', // Space for timeline line
-        }}
-      >
-        {/* Timeline connecting line */}
-        <div
-          style={{
-            position: 'absolute',
-            left: '8px',
-            top: '24px',
-            bottom: '24px',
-            width: '2px',
-            backgroundColor: designTokens.colors.borders.subtle,
-          }}
-        />
-
+      <div style={{ position: 'relative' }}>
         {/* Version cards */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: designTokens.spacing.lg }}>
           {processedVersions.map((track, index) => {
             const isHero = track.id === heroTrackId;
             const isCurrentTrack = track.id === currentTrackId;
             const isTrackPlaying = isPlaying && isCurrentTrack;
+            const isSelected = track.id === selectedTrackId;
 
             return (
               <div
                 key={track.id}
                 style={{ position: 'relative' }}
               >
-                {/* Timeline dot */}
-                <div
-                  style={{
-                    position: 'absolute',
-                    left: '-16px',
-                    top: '20px',
-                    width: '12px',
-                    height: '12px',
-                    borderRadius: '50%',
-                    backgroundColor: isHero
-                      ? designTokens.colors.accent.gold
-                      : isTrackPlaying
-                        ? designTokens.colors.primary.blue
-                        : designTokens.colors.surface.secondary,
-                    border: `2px solid ${
-                      isHero
-                        ? designTokens.colors.accent.gold
-                        : isTrackPlaying
-                          ? designTokens.colors.primary.blue
-                          : designTokens.colors.borders.default
-                    }`,
-                    zIndex: 1,
-                  }}
-                />
-
                 {/* Date label */}
                 <div
                   style={{
@@ -319,6 +281,7 @@ export const VersionTimeline: React.FC<VersionTimelineProps> = ({
                   isHero={isHero}
                   isPlaying={isTrackPlaying}
                   isCurrentTrack={isCurrentTrack}
+                  isSelected={isSelected}
                   waveformData={waveformData[track.id]}
                   aggregatedRatings={trackAggregatedRatings[track.id]}
                   commentCount={trackCommentCounts[track.id]}

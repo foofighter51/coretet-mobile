@@ -24,6 +24,8 @@ export interface VersionTimelineCardProps {
   isPlaying?: boolean;
   /** Whether this is the currently selected track */
   isCurrentTrack?: boolean;
+  /** Whether this track is selected for the detail panel */
+  isSelected?: boolean;
   /** Waveform amplitudes (normalized 0-1) for thumbnail */
   waveformData?: number[];
   /** Aggregated ratings for this version */
@@ -56,6 +58,7 @@ export const VersionTimelineCard: React.FC<VersionTimelineCardProps> = ({
   isHero = false,
   isPlaying = false,
   isCurrentTrack = false,
+  isSelected = false,
   waveformData,
   aggregatedRatings = { liked: 0, loved: 0 },
   commentCount = 0,
@@ -128,28 +131,35 @@ export const VersionTimelineCard: React.FC<VersionTimelineCardProps> = ({
 
   const hasEngagement = aggregatedRatings.liked > 0 || aggregatedRatings.loved > 0 || commentCount > 0;
 
+  // Compute border color explicitly to help React detect changes
+  const borderColor = isSelected
+    ? designTokens.colors.primary.blue
+    : isHero
+      ? designTokens.colors.accent.gold
+      : designTokens.colors.borders.subtle;
+
+  const backgroundColor = isSelected
+    ? `${designTokens.colors.primary.blue}12`
+    : isHovered
+      ? designTokens.colors.surface.hover
+      : designTokens.colors.surface.secondary;
+
   return (
     <div
       onClick={onClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      data-selected={isSelected}
+      data-track-id={track.id}
       style={{
-        backgroundColor: isCurrentTrack
-          ? `${designTokens.colors.primary.blue}08`
-          : isHovered
-            ? designTokens.colors.surface.hover
-            : designTokens.colors.surface.secondary,
+        backgroundColor,
         borderRadius: designTokens.borderRadius.md,
-        border: `1px solid ${
-          isCurrentTrack
-            ? designTokens.colors.primary.blue
-            : isHero
-              ? designTokens.colors.accent.gold
-              : designTokens.colors.borders.subtle
-        }`,
+        borderWidth: '2px',
+        borderStyle: 'solid',
+        borderColor,
         padding: designTokens.spacing.md,
         cursor: onClick ? 'pointer' : 'default',
-        transition: 'all 0.15s ease',
+        transition: 'background-color 0.15s ease, border-color 0.15s ease',
         position: 'relative',
       }}
     >

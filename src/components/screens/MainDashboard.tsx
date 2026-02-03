@@ -521,6 +521,11 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   const [workSortBy, setWorkSortBy] = useState<WorkSortField>('created_at');
   const [workSortAscending, setWorkSortAscending] = useState(false); // Default DESC for dates (newest first)
 
+  // Playlist list sorting state (for sorting the list of playlists, not tracks within a playlist)
+  type PlaylistListSortField = 'created_at' | 'title' | 'track_count';
+  const [playlistListSortBy, setPlaylistListSortBy] = useState<PlaylistListSortField>('created_at');
+  const [playlistListSortAscending, setPlaylistListSortAscending] = useState(false); // Default DESC for dates
+
   // Sorted works based on user selection
   const sortedWorks = useMemo(() => {
     const sorted = [...works].sort((a, b) => {
@@ -719,6 +724,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   const handlePlaylistClick = async (playlist: any) => {
     setCurrentSetList(playlist);
     setViewMode('detail');
+    setShowAllTracks(false); // Exit library view when selecting a set list
     await loadPlaylistTracks(playlist.id);
   };
 
@@ -1325,6 +1331,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   // Handle work selection from sidebar
   const handleWorkSelect = async (work: any) => {
     setSelectedWork(work);
+    setShowAllTracks(false); // Exit library view when selecting a work
     // Load versions and comments in parallel
     await Promise.all([
       loadWorkVersions(work.id),
@@ -2022,7 +2029,30 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                                    activeTab === 'playlists' ? personalCreatedPlaylists :
                                    filteredCreatedPlaylists;
   const currentFollowedPlaylists = activeTab === 'playlists' ? personalFollowedPlaylists : [];
-  const displayedPlaylists = currentCreatedPlaylists;
+
+  // Sort the playlist list based on user selection
+  const sortedPlaylists = useMemo(() => {
+    const playlists = [...currentCreatedPlaylists];
+    return playlists.sort((a, b) => {
+      let comparison = 0;
+      switch (playlistListSortBy) {
+        case 'title':
+          comparison = (a.title || '').localeCompare(b.title || '');
+          break;
+        case 'track_count':
+          const countA = a.set_list_entries?.[0]?.count ?? 0;
+          const countB = b.set_list_entries?.[0]?.count ?? 0;
+          comparison = countA - countB;
+          break;
+        case 'created_at':
+        default:
+          comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      }
+      return playlistListSortAscending ? comparison : -comparison;
+    });
+  }, [currentCreatedPlaylists, playlistListSortBy, playlistListSortAscending]);
+
+  const displayedPlaylists = sortedPlaylists;
 
   const renderContent = () => {
 
@@ -2572,65 +2602,159 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                 }}
               />
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: designTokens.spacing.md }}>
-                {displayedPlaylists.map((playlist) => (
-                  <PlaylistDropZone
-                    key={playlist.id}
-                    playlistId={playlist.id}
-                    playlistName={playlist.title}
-                    onTrackDrop={handleTrackDropOnPlaylist}
-                    active={isDraggingTrack}
+              <>
+                {/* Set Lists Header */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: designTokens.spacing.md,
+                }}>
+                  <h2 style={{
+                    fontSize: designTokens.typography.fontSizes.h2,
+                    fontWeight: designTokens.typography.fontWeights.bold,
+                    color: designTokens.colors.text.primary,
+                    margin: 0,
+                  }}>
+                    Set Lists
+                  </h2>
+
+                  {/* Sort Dropdown */}
+                  <DropdownMenu
+                    trigger={
+                      <button
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: designTokens.spacing.xs,
+                          padding: `${designTokens.spacing.xs} ${designTokens.spacing.sm}`,
+                          backgroundColor: 'transparent',
+                          border: `1px solid ${designTokens.colors.borders.default}`,
+                          borderRadius: designTokens.borderRadius.sm,
+                          color: designTokens.colors.text.secondary,
+                          fontSize: designTokens.typography.fontSizes.bodySmall,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <ArrowUpDown size={14} />
+                        {playlistListSortBy === 'created_at' ? 'Date' :
+                         playlistListSortBy === 'title' ? 'Name' : 'Tracks'}
+                        <span style={{ fontSize: '10px' }}>{playlistListSortAscending ? '↑' : '↓'}</span>
+                      </button>
+                    }
+                    align="right"
                   >
-                    <div
-                      onClick={() => handlePlaylistClick(playlist)}
-                      style={{
-                        padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
-                        backgroundColor: currentSetList?.id === playlist.id ? designTokens.colors.surface.hover : designTokens.colors.surface.primary,
-                        border: currentSetList?.id === playlist.id ? `2px solid ${designTokens.colors.primary.blue}` : `1px solid ${designTokens.colors.borders.default}`,
-                        borderRadius: designTokens.borderRadius.md,
-                        cursor: 'pointer',
-                        transition: 'all 0.2s',
-                      }}
+                    {[
+                      { field: 'created_at' as const, label: 'Date Created' },
+                      { field: 'title' as const, label: 'Name' },
+                      { field: 'track_count' as const, label: 'Track Count' },
+                    ].map((option) => (
+                      <button
+                        key={option.field}
+                        onClick={() => {
+                          if (option.field === playlistListSortBy) {
+                            setPlaylistListSortAscending(!playlistListSortAscending);
+                          } else {
+                            setPlaylistListSortBy(option.field);
+                            // Default direction: ASC for name, DESC for dates/counts
+                            setPlaylistListSortAscending(option.field === 'title');
+                          }
+                        }}
+                        style={{
+                          width: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
+                          backgroundColor: playlistListSortBy === option.field
+                            ? designTokens.colors.surface.active
+                            : 'transparent',
+                          border: 'none',
+                          color: designTokens.colors.text.primary,
+                          fontSize: designTokens.typography.fontSizes.bodySmall,
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                        }}
+                      >
+                        <span>{option.label}</span>
+                        {playlistListSortBy === option.field && (
+                          <span style={{ color: designTokens.colors.primary.blue }}>
+                            {playlistListSortAscending ? '↑' : '↓'}
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </DropdownMenu>
+                </div>
+                <p style={{
+                  fontSize: designTokens.typography.fontSizes.bodySmall,
+                  color: designTokens.colors.text.secondary,
+                  marginBottom: designTokens.spacing.lg,
+                }}>
+                  Organize tracks for performances, rehearsals, or listening sessions.
+                </p>
+
+                {/* Set Lists List */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: designTokens.spacing.md }}>
+                  {displayedPlaylists.map((playlist) => (
+                    <PlaylistDropZone
+                      key={playlist.id}
+                      playlistId={playlist.id}
+                      playlistName={playlist.title}
+                      onTrackDrop={handleTrackDropOnPlaylist}
+                      active={isDraggingTrack}
                     >
-                      <div style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'flex-start',
-                        gap: designTokens.spacing.sm,
-                      }}>
-                        <div style={{ flex: 1 }}>
-                          <h3 style={{
-                            fontSize: designTokens.typography.fontSizes.body,
-                            fontWeight: designTokens.typography.fontWeights.semibold,
-                            color: designTokens.colors.neutral.charcoal,
-                            margin: 0,
-                            marginBottom: '2px',
-                          }}>
-                            {playlist.title}
-                          </h3>
-                          <p style={{
-                            fontSize: designTokens.typography.fontSizes.caption,
-                            color: designTokens.colors.neutral.gray,
-                            margin: 0,
-                          }}>
-                            {playlist.set_list_entries?.[0]?.count ?? 0} {(playlist.set_list_entries?.[0]?.count ?? 0) === 1 ? 'track' : 'tracks'}
-                          </p>
-                          {playlist.description && (
-                            <p style={{
-                              fontSize: designTokens.typography.fontSizes.bodySmall,
-                              color: designTokens.colors.neutral.darkGray,
-                              marginTop: '6px',
-                              marginBottom: 0,
+                      <div
+                        onClick={() => handlePlaylistClick(playlist)}
+                        style={{
+                          padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
+                          backgroundColor: currentSetList?.id === playlist.id ? designTokens.colors.surface.hover : designTokens.colors.surface.primary,
+                          border: currentSetList?.id === playlist.id ? `2px solid ${designTokens.colors.primary.blue}` : `1px solid ${designTokens.colors.borders.default}`,
+                          borderRadius: designTokens.borderRadius.md,
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                        }}
+                      >
+                        <div style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'flex-start',
+                          gap: designTokens.spacing.sm,
+                        }}>
+                          <div style={{ flex: 1 }}>
+                            <h3 style={{
+                              fontSize: designTokens.typography.fontSizes.body,
+                              fontWeight: designTokens.typography.fontWeights.semibold,
+                              color: designTokens.colors.neutral.charcoal,
+                              margin: 0,
+                              marginBottom: '2px',
                             }}>
-                              {playlist.description}
+                              {playlist.title}
+                            </h3>
+                            <p style={{
+                              fontSize: designTokens.typography.fontSizes.caption,
+                              color: designTokens.colors.neutral.gray,
+                              margin: 0,
+                            }}>
+                              {playlist.set_list_entries?.[0]?.count ?? 0} {(playlist.set_list_entries?.[0]?.count ?? 0) === 1 ? 'track' : 'tracks'}
                             </p>
-                          )}
+                            {playlist.description && (
+                              <p style={{
+                                fontSize: designTokens.typography.fontSizes.bodySmall,
+                                color: designTokens.colors.neutral.darkGray,
+                                marginTop: '6px',
+                                marginBottom: 0,
+                              }}>
+                                {playlist.description}
+                              </p>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </PlaylistDropZone>
-                ))}
-              </div>
+                    </PlaylistDropZone>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         );
@@ -2751,6 +2875,22 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                     audioRef.current.currentTime = timestamp;
                   }
                 }, 150);
+              }}
+              // Sharing props
+              shareCode={selectedWork?.share_code}
+              isPublic={selectedWork?.is_public ?? false}
+              onTogglePublic={async (isPublic) => {
+                if (!selectedWork) return;
+                try {
+                  const { error } = await db.versionGroups.togglePublic(selectedWork.id, isPublic);
+                  if (!error) {
+                    setSelectedWork({ ...selectedWork, is_public: isPublic });
+                    // Refresh the works list to update any share indicators
+                    await refreshWorks();
+                  }
+                } catch (error) {
+                  console.error('Error toggling public:', error);
+                }
               }}
             />
           );
@@ -2951,6 +3091,14 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
           }}
           bandName={currentBand?.name}
           userName={currentUser?.name}
+          showLibrary={showAllTracks}
+          onLibraryClick={() => {
+            setShowAllTracks(true);
+            setViewMode('detail');
+            setCurrentSetList(null);
+            setSelectedWork(null);
+            handleTabChange('playlists');
+          }}
           setLists={displayedPlaylists.map(p => ({
             id: p.id,
             title: p.title,

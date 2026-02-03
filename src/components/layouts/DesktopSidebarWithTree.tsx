@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronDown, ChevronRight, Share2, Settings, LogOut, Upload, Plus, List, Music, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, Share2, Settings, LogOut, Upload, Plus, List, Music, Trash2, Folder } from 'lucide-react';
 import { useDesignTokens } from '../../design/useDesignTokens';
 import { TabId } from '../../types';
 import { WorkDropZone } from '../molecules/WorkDropZone';
@@ -27,6 +27,10 @@ interface DesktopSidebarWithTreeProps {
   onRecycleBinClick?: () => void;
   bandName?: string;
   userName?: string;
+  /** Whether Library (All Tracks) view is currently shown */
+  showLibrary?: boolean;
+  /** Called when Library is clicked */
+  onLibraryClick?: () => void;
   setLists?: SetListItem[];
   selectedSetListId?: string | null;
   onSetListSelect?: (setList: SetListItem) => void;
@@ -49,6 +53,8 @@ export const DesktopSidebarWithTree: React.FC<DesktopSidebarWithTreeProps> = ({
   onRecycleBinClick,
   bandName,
   userName,
+  showLibrary = false,
+  onLibraryClick,
   setLists = [],
   selectedSetListId,
   onSetListSelect,
@@ -142,6 +148,35 @@ export const DesktopSidebarWithTree: React.FC<DesktopSidebarWithTreeProps> = ({
 
       {/* Navigation Tree */}
       <nav style={{ flex: 1, overflowY: 'auto', padding: designTokens.spacing.sm }}>
+        {/* Library - All Tracks */}
+        <button
+          onClick={() => onLibraryClick?.()}
+          style={{
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            gap: designTokens.spacing.sm,
+            padding: `${designTokens.spacing.sm} ${designTokens.spacing.sm}`,
+            marginBottom: designTokens.spacing.sm,
+            backgroundColor: showLibrary
+              ? designTokens.colors.surface.active
+              : 'transparent',
+            border: 'none',
+            borderRadius: designTokens.borderRadius.sm,
+            color: showLibrary
+              ? designTokens.colors.primary.blue
+              : designTokens.colors.text.primary,
+            cursor: 'pointer',
+            fontSize: designTokens.typography.fontSizes.body,
+            fontWeight: designTokens.typography.fontWeights.medium,
+            fontFamily: designTokens.typography.fontFamily,
+            textAlign: 'left',
+          }}
+        >
+          <Folder size={18} />
+          <span>Library</span>
+        </button>
+
         {/* Set Lists Section */}
         <div style={{ marginBottom: designTokens.spacing.sm }}>
           {/* Set Lists Header (expandable) */}
