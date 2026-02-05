@@ -53,7 +53,7 @@ export interface Work {
   version_count?: number;
 }
 
-export type TabId = 'playlists' | 'shared' | 'works';
+export type TabId = 'library' | 'works' | 'playlists' | 'shared' | 'more';
 
 export type ScreenId = 'welcome' | 'phone' | 'verify' | 'onboarding' | 'bandAction' | 'main';
 

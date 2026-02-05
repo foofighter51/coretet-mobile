@@ -22,6 +22,7 @@ import { BandModal } from '../molecules/BandModal';
 import { BandSettings } from '../molecules/BandSettings';
 import { SettingsModal } from '../molecules/SettingsModal';
 import { RecycleBinModal } from '../molecules/RecycleBinModal';
+import { MobileMoreSheet } from '../molecules/MobileMoreSheet';
 import { IntroModal } from '../molecules/IntroModal';
 import { EmptyState } from '../molecules/EmptyState';
 import { TrackDetailModal } from '../molecules/TrackDetailModal';
@@ -463,6 +464,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
   const [showSettings, setShowSettings] = useState(false);
   const [showPlaylistMenu, setShowPlaylistMenu] = useState(false);
   const [showRecycleBin, setShowRecycleBin] = useState(false);
+  const [showMobileMoreSheet, setShowMobileMoreSheet] = useState(false);
 
   // Audio playback state - consolidated
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -751,6 +753,22 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
     // Clear selection when switching tabs
     setSelectedTrackIds([]);
     setSelectionAnchorId(null);
+
+    // Handle special tabs
+    if (newTab === 'library') {
+      // Library tab shows all tracks view
+      setShowAllTracks(true);
+      setViewMode('detail');
+      setCurrentSetList(null);
+      setActiveTab('playlists'); // Use playlists tab infrastructure but show all tracks
+      return;
+    }
+
+    // Reset showAllTracks when switching away from library view
+    if (activeTab === 'playlists' && showAllTracks && newTab !== 'library') {
+      setShowAllTracks(false);
+    }
+
     setActiveTab(newTab);
   };
 
@@ -3549,8 +3567,9 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
       {/* Mobile Tab Bar - only shown on mobile */}
       {!isDesktop && (
         <TabBar
-          activeTab={activeTab}
+          activeTab={showAllTracks ? 'library' : activeTab}
           onTabChange={handleTabChange}
+          onMorePress={() => setShowMobileMoreSheet(true)}
         />
       )}
 
@@ -3746,6 +3765,30 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
           }}
         />
       )}
+
+      {/* Mobile More Sheet - secondary navigation options */}
+      <MobileMoreSheet
+        isOpen={showMobileMoreSheet}
+        onClose={() => setShowMobileMoreSheet(false)}
+        onNavigateToShared={() => {
+          setShowMobileMoreSheet(false);
+          setActiveTab('shared');
+        }}
+        onOpenSettings={() => {
+          setShowMobileMoreSheet(false);
+          setShowSettings(true);
+        }}
+        onOpenRecycleBin={currentBand ? () => {
+          setShowMobileMoreSheet(false);
+          setShowRecycleBin(true);
+        } : undefined}
+        onSignOut={async () => {
+          setShowMobileMoreSheet(false);
+          await auth.signOut();
+        }}
+        userName={currentUser?.name}
+        userEmail={currentUser?.phone_number}
+      />
 
       {/* Add Tracks to Work Modal */}
       {showAddTracksToWork && selectedWork && (
