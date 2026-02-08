@@ -100,6 +100,7 @@ export function NewLandingPage() {
       backgroundColor: colors.bg,
       fontFamily: designTokens.typography.fontFamily,
       color: colors.textPrimary,
+      overflowY: 'auto',
     }}>
       {/* Hero Section with Login */}
       <section style={{
@@ -139,7 +140,7 @@ export function NewLandingPage() {
             margin: '0 0 32px 0',
             lineHeight: '1.5',
           }}>
-            Music collaboration for your band
+            Collaboration tools for songwriters and bands
           </p>
 
           {/* Login Form - directly on page */}
@@ -341,13 +342,6 @@ export function NewLandingPage() {
             </div>
           )}
 
-          <p style={{
-            fontSize: '13px',
-            color: colors.textDim,
-            marginTop: '16px',
-          }}>
-            Available on iOS &bull; Web app coming soon
-          </p>
         </div>
       </section>
 
