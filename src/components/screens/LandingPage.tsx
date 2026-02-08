@@ -1,8 +1,24 @@
 import React, { useState } from 'react';
-import { Music } from 'lucide-react';
 import { designTokens } from '../../design/designTokens';
 import { auth } from '../../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
+
+// Dark theme colors matching NewLandingPage
+const colors = {
+  bg: '#1a2332',
+  card: '#222d3a',
+  cardBorder: '#2a3545',
+  gold: '#e9a63c',
+  textPrimary: '#ffffff',
+  textSecondary: '#d0d4d8',
+  textMuted: '#8a95a0',
+  textDim: '#6b7585',
+  inputBg: '#2a3545',
+  inputBorder: '#3a4555',
+  error: '#fc8181',
+  errorBg: '#5f1a1a',
+  errorBorder: '#ef4444',
+};
 
 export function LandingPage() {
   const navigate = useNavigate();
@@ -23,7 +39,6 @@ export function LandingPage() {
       if (error) {
         setError(error.message);
       } else {
-        // Redirect to main app
         navigate('/');
       }
     } catch (err: any) {
@@ -43,7 +58,6 @@ export function LandingPage() {
       if (error) {
         setError(error.message);
       } else {
-        // Redirect to admin feedback page
         navigate('/admin/feedback');
       }
     } catch (err: any) {
@@ -52,6 +66,138 @@ export function LandingPage() {
       setLoading(false);
     }
   };
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '12px 14px',
+    backgroundColor: colors.inputBg,
+    border: `1px solid ${colors.inputBorder}`,
+    borderRadius: '8px',
+    fontSize: '14px',
+    fontFamily: designTokens.typography.fontFamily,
+    boxSizing: 'border-box',
+    color: colors.textPrimary,
+    outline: 'none',
+  };
+
+  const renderLoginForm = (onSubmit: (e: React.FormEvent) => void, title: string, onCancel: () => void) => (
+    <div style={{
+      marginTop: '24px',
+      padding: '24px',
+      backgroundColor: colors.card,
+      borderRadius: '12px',
+      border: `1px solid ${colors.cardBorder}`,
+      textAlign: 'left',
+    }}>
+      <h3 style={{
+        fontSize: '18px',
+        fontWeight: '600',
+        color: colors.textPrimary,
+        margin: '0 0 16px 0',
+        textAlign: 'center',
+      }}>
+        {title}
+      </h3>
+
+      <form onSubmit={onSubmit}>
+        <div style={{ marginBottom: '14px' }}>
+          <label style={{
+            display: 'block',
+            fontSize: '13px',
+            fontWeight: '500',
+            color: colors.textSecondary,
+            marginBottom: '6px',
+          }}>
+            Email
+          </label>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@example.com"
+            required
+            style={inputStyle}
+          />
+        </div>
+
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{
+            display: 'block',
+            fontSize: '13px',
+            fontWeight: '500',
+            color: colors.textSecondary,
+            marginBottom: '6px',
+          }}>
+            Password
+          </label>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="••••••••"
+            required
+            style={inputStyle}
+          />
+        </div>
+
+        {error && (
+          <div style={{
+            padding: '10px 12px',
+            backgroundColor: colors.errorBg,
+            border: `1px solid ${colors.errorBorder}`,
+            borderRadius: '8px',
+            color: colors.error,
+            fontSize: '13px',
+            marginBottom: '14px',
+          }}>
+            {error}
+          </div>
+        )}
+
+        <button
+          type="submit"
+          disabled={loading || !email || !password}
+          style={{
+            width: '100%',
+            padding: '12px',
+            backgroundColor: loading || !email || !password ? colors.inputBg : colors.gold,
+            color: loading || !email || !password ? colors.textMuted : colors.bg,
+            border: 'none',
+            borderRadius: '8px',
+            fontSize: '15px',
+            fontWeight: '600',
+            cursor: loading || !email || !password ? 'not-allowed' : 'pointer',
+            fontFamily: designTokens.typography.fontFamily,
+          }}
+        >
+          {loading ? 'Signing in...' : 'Sign In'}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            onCancel();
+            setEmail('');
+            setPassword('');
+            setError('');
+          }}
+          style={{
+            width: '100%',
+            marginTop: '8px',
+            padding: '10px',
+            backgroundColor: 'transparent',
+            color: colors.textMuted,
+            border: 'none',
+            fontSize: '14px',
+            cursor: 'pointer',
+            fontFamily: designTokens.typography.fontFamily,
+          }}
+        >
+          Cancel
+        </button>
+      </form>
+    </div>
+  );
 
   return (
     <div style={{
@@ -62,114 +208,84 @@ export function LandingPage() {
       alignItems: 'center',
       justifyContent: 'flex-start',
       padding: '20px',
-      paddingTop: '40px',
-      backgroundColor: '#ffffff',
+      paddingTop: '60px',
+      backgroundColor: colors.bg,
       fontFamily: designTokens.typography.fontFamily,
       overflowY: 'auto',
       overflowX: 'hidden',
     }}>
       <div style={{
-        maxWidth: '600px',
+        maxWidth: '420px',
         width: '100%',
         textAlign: 'center',
         paddingBottom: '40px',
       }}>
         {/* Logo */}
-        <div style={{
-          width: '80px',
-          height: '80px',
-          borderRadius: '50%',
-          backgroundColor: designTokens.colors.primary.blue,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          margin: '0 auto 24px',
-        }}>
-          <Music size={40} color="#ffffff" />
-        </div>
+        <img
+          src="/logo.png"
+          alt="CoreTet"
+          style={{
+            width: '80px',
+            height: '80px',
+            margin: '0 auto 20px',
+            display: 'block',
+          }}
+        />
 
         {/* Title */}
         <h1 style={{
-          fontSize: '48px',
+          fontSize: '36px',
           fontWeight: '700',
-          color: designTokens.colors.neutral.charcoal,
-          margin: '0 0 16px 0',
+          color: colors.textPrimary,
+          margin: '0 0 8px 0',
         }}>
           CoreTet
         </h1>
 
         {/* Tagline */}
         <p style={{
-          fontSize: '20px',
-          color: designTokens.colors.neutral.darkGray,
-          margin: '0 0 32px 0',
-          lineHeight: '1.6',
+          fontSize: '16px',
+          color: colors.textSecondary,
+          margin: '0 0 24px 0',
+          lineHeight: '1.5',
         }}>
-          Collaborate on music with your band
+          Music collaboration for your band
         </p>
 
         {/* Beta Badge */}
         <div style={{
           display: 'inline-block',
-          padding: '8px 16px',
-          backgroundColor: '#ebf8ff',
-          border: `1px solid ${designTokens.colors.primary.blue}`,
+          padding: '6px 14px',
+          backgroundColor: colors.card,
+          border: `1px solid ${colors.gold}`,
           borderRadius: '20px',
-          marginBottom: '32px',
+          marginBottom: '24px',
         }}>
           <span style={{
-            color: designTokens.colors.primary.blue,
-            fontSize: '14px',
+            color: colors.gold,
+            fontSize: '13px',
             fontWeight: '600',
           }}>
-            🚀 Currently in Private Beta
+            Currently in Private Beta
           </span>
         </div>
 
         {/* Description */}
         <p style={{
-          fontSize: '16px',
-          color: designTokens.colors.neutral.darkGray,
-          margin: '0 0 40px 0',
-          lineHeight: '1.8',
+          fontSize: '15px',
+          color: colors.textMuted,
+          margin: '0 0 32px 0',
+          lineHeight: '1.6',
         }}>
-          CoreTet is a collaborative music platform for bands and ensembles.
           Upload tracks, rate music together, and build shared playlists.
           Currently available for TestFlight beta testers.
         </p>
 
-        {/* TestFlight Info */}
-        <div style={{
-          padding: '24px',
-          backgroundColor: '#f7fafc',
-          borderRadius: '12px',
-          border: '1px solid #e2e8f0',
-        }}>
-          <h3 style={{
-            fontSize: '18px',
-            fontWeight: '600',
-            color: designTokens.colors.neutral.charcoal,
-            margin: '0 0 12px 0',
-          }}>
-            Beta Testing on iOS
-          </h3>
-          <p style={{
-            fontSize: '14px',
-            color: designTokens.colors.neutral.darkGray,
-            margin: 0,
-            lineHeight: '1.6',
-          }}>
-            CoreTet is currently available exclusively to invited TestFlight beta testers.
-            All content is private and requires authentication to access.
-          </p>
-        </div>
-
         {/* Login Buttons */}
         {!showUserLogin && !showAdminLogin && (
           <div style={{
-            marginTop: '32px',
             display: 'flex',
-            gap: '16px',
+            gap: '12px',
             justifyContent: 'center',
             flexWrap: 'wrap',
           }}>
@@ -177,11 +293,11 @@ export function LandingPage() {
               onClick={() => setShowUserLogin(true)}
               style={{
                 padding: '12px 24px',
-                backgroundColor: designTokens.colors.primary.blue,
+                backgroundColor: colors.gold,
                 border: 'none',
                 borderRadius: '8px',
-                color: '#ffffff',
-                fontSize: '14px',
+                color: colors.bg,
+                fontSize: '15px',
                 fontWeight: '600',
                 cursor: 'pointer',
                 fontFamily: designTokens.typography.fontFamily,
@@ -194,10 +310,10 @@ export function LandingPage() {
               style={{
                 padding: '12px 24px',
                 backgroundColor: 'transparent',
-                border: `1px solid ${designTokens.colors.neutral.lightGray}`,
+                border: `1px solid ${colors.cardBorder}`,
                 borderRadius: '8px',
-                color: designTokens.colors.neutral.darkGray,
-                fontSize: '14px',
+                color: colors.textSecondary,
+                fontSize: '15px',
                 cursor: 'pointer',
                 fontFamily: designTokens.typography.fontFamily,
               }}
@@ -208,284 +324,18 @@ export function LandingPage() {
         )}
 
         {/* User Login Form */}
-        {showUserLogin && (
-          <div style={{
-            marginTop: '32px',
-            padding: '24px',
-            backgroundColor: '#ffffff',
-            borderRadius: '12px',
-            border: '1px solid #e2e8f0',
-            textAlign: 'left',
-          }}>
-            <h3 style={{
-              fontSize: '18px',
-              fontWeight: '600',
-              color: designTokens.colors.neutral.charcoal,
-              margin: '0 0 16px 0',
-              textAlign: 'center',
-            }}>
-              Sign In
-            </h3>
-
-            <form onSubmit={handleUserLogin}>
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{
-                  display: 'block',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  color: designTokens.colors.neutral.charcoal,
-                  marginBottom: '6px',
-                }}>
-                  Email
-                </label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    fontFamily: designTokens.typography.fontFamily,
-                    boxSizing: 'border-box',
-                  }}
-                />
-              </div>
-
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{
-                  display: 'block',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  color: designTokens.colors.neutral.charcoal,
-                  marginBottom: '6px',
-                }}>
-                  Password
-                </label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    fontFamily: designTokens.typography.fontFamily,
-                    boxSizing: 'border-box',
-                  }}
-                />
-              </div>
-
-              {error && (
-                <div style={{
-                  padding: '12px',
-                  backgroundColor: '#fef2f2',
-                  border: '1px solid #fecaca',
-                  borderRadius: '6px',
-                  color: '#dc2626',
-                  fontSize: '14px',
-                  marginBottom: '16px',
-                }}>
-                  {error}
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={loading || !email || !password}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  backgroundColor: loading || !email || !password ? '#e2e8f0' : designTokens.colors.primary.blue,
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: loading || !email || !password ? 'not-allowed' : 'pointer',
-                  fontFamily: designTokens.typography.fontFamily,
-                }}
-              >
-                {loading ? 'Signing in...' : 'Sign In'}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setShowUserLogin(false);
-                  setEmail('');
-                  setPassword('');
-                  setError('');
-                }}
-                style={{
-                  width: '100%',
-                  marginTop: '8px',
-                  padding: '12px',
-                  backgroundColor: 'transparent',
-                  color: designTokens.colors.neutral.darkGray,
-                  border: 'none',
-                  fontSize: '14px',
-                  cursor: 'pointer',
-                  fontFamily: designTokens.typography.fontFamily,
-                }}
-              >
-                Cancel
-              </button>
-            </form>
-          </div>
-        )}
+        {showUserLogin && renderLoginForm(handleUserLogin, 'Sign In', () => setShowUserLogin(false))}
 
         {/* Admin Login Form */}
-        {showAdminLogin && (
-          <div style={{
-            marginTop: '32px',
-            padding: '24px',
-            backgroundColor: '#ffffff',
-            borderRadius: '12px',
-            border: '1px solid #e2e8f0',
-            textAlign: 'left',
-          }}>
-            <h3 style={{
-              fontSize: '18px',
-              fontWeight: '600',
-              color: designTokens.colors.neutral.charcoal,
-              margin: '0 0 16px 0',
-              textAlign: 'center',
-            }}>
-              Admin Access
-            </h3>
-
-            <form onSubmit={handleAdminLogin}>
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{
-                  display: 'block',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  color: designTokens.colors.neutral.charcoal,
-                  marginBottom: '6px',
-                }}>
-                  Email
-                </label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@example.com"
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    fontFamily: designTokens.typography.fontFamily,
-                    boxSizing: 'border-box',
-                  }}
-                />
-              </div>
-
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{
-                  display: 'block',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  color: designTokens.colors.neutral.charcoal,
-                  marginBottom: '6px',
-                }}>
-                  Password
-                </label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    fontFamily: designTokens.typography.fontFamily,
-                    boxSizing: 'border-box',
-                  }}
-                />
-              </div>
-
-              {error && (
-                <div style={{
-                  padding: '12px',
-                  backgroundColor: '#fef2f2',
-                  border: '1px solid #fecaca',
-                  borderRadius: '6px',
-                  color: '#dc2626',
-                  fontSize: '14px',
-                  marginBottom: '16px',
-                }}>
-                  {error}
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={loading || !email || !password}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  backgroundColor: loading || !email || !password ? '#e2e8f0' : designTokens.colors.primary.blue,
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  cursor: loading || !email || !password ? 'not-allowed' : 'pointer',
-                  fontFamily: designTokens.typography.fontFamily,
-                }}
-              >
-                {loading ? 'Signing in...' : 'Sign In'}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setShowAdminLogin(false);
-                  setEmail('');
-                  setPassword('');
-                  setError('');
-                }}
-                style={{
-                  width: '100%',
-                  marginTop: '8px',
-                  padding: '12px',
-                  backgroundColor: 'transparent',
-                  color: designTokens.colors.neutral.darkGray,
-                  border: 'none',
-                  fontSize: '14px',
-                  cursor: 'pointer',
-                  fontFamily: designTokens.typography.fontFamily,
-                }}
-              >
-                Cancel
-              </button>
-            </form>
-          </div>
-        )}
+        {showAdminLogin && renderLoginForm(handleAdminLogin, 'Admin Access', () => setShowAdminLogin(false))}
 
         {/* Footer */}
         <p style={{
-          fontSize: '14px',
-          color: designTokens.colors.neutral.gray,
+          fontSize: '13px',
+          color: colors.textDim,
           margin: '40px 0 0 0',
         }}>
-          © 2025 CoreTet. All rights reserved.
+          &copy; 2026 CoreTet. All rights reserved.
         </p>
       </div>
     </div>

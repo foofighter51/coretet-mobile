@@ -764,9 +764,11 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
       return;
     }
 
-    // Reset showAllTracks when switching away from library view
+    // Reset showAllTracks and viewMode when switching away from library view
     if (activeTab === 'playlists' && showAllTracks && newTab !== 'library') {
       setShowAllTracks(false);
+      setViewMode('list');
+      setCurrentSetList(null);
     }
 
     setActiveTab(newTab);
@@ -2376,8 +2378,8 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                   <TrackSkeleton count={5} />
                 ) : (
                   <div style={{ width: '100%', overflow: 'hidden' }}>
-                    {/* Playlist Header with Sort/Filter (visible on all screen sizes) */}
-                    {!isReordering && (
+                    {/* Playlist Header with Sort/Filter - hidden on mobile Library (controls moved to header bar) */}
+                    {!isReordering && !(showAllTracks && !isDesktop) && (
                       <PlaylistHeader
                         sortBy={playlistSortBy as SortField}
                         sortDirection={sortAscending ? 'asc' : 'desc'}
@@ -2621,97 +2623,6 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
               />
             ) : (
               <>
-                {/* Set Lists Header */}
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  marginBottom: designTokens.spacing.md,
-                }}>
-                  <h2 style={{
-                    fontSize: designTokens.typography.fontSizes.h2,
-                    fontWeight: designTokens.typography.fontWeights.bold,
-                    color: designTokens.colors.text.primary,
-                    margin: 0,
-                  }}>
-                    Set Lists
-                  </h2>
-
-                  {/* Sort Dropdown */}
-                  <DropdownMenu
-                    trigger={
-                      <button
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: designTokens.spacing.xs,
-                          padding: `${designTokens.spacing.xs} ${designTokens.spacing.sm}`,
-                          backgroundColor: 'transparent',
-                          border: `1px solid ${designTokens.colors.borders.default}`,
-                          borderRadius: designTokens.borderRadius.sm,
-                          color: designTokens.colors.text.secondary,
-                          fontSize: designTokens.typography.fontSizes.bodySmall,
-                          cursor: 'pointer',
-                        }}
-                      >
-                        <ArrowUpDown size={14} />
-                        {playlistListSortBy === 'created_at' ? 'Date' :
-                         playlistListSortBy === 'title' ? 'Name' : 'Tracks'}
-                        <span style={{ fontSize: '10px' }}>{playlistListSortAscending ? '↑' : '↓'}</span>
-                      </button>
-                    }
-                    align="right"
-                  >
-                    {[
-                      { field: 'created_at' as const, label: 'Date Created' },
-                      { field: 'title' as const, label: 'Name' },
-                      { field: 'track_count' as const, label: 'Track Count' },
-                    ].map((option) => (
-                      <button
-                        key={option.field}
-                        onClick={() => {
-                          if (option.field === playlistListSortBy) {
-                            setPlaylistListSortAscending(!playlistListSortAscending);
-                          } else {
-                            setPlaylistListSortBy(option.field);
-                            // Default direction: ASC for name, DESC for dates/counts
-                            setPlaylistListSortAscending(option.field === 'title');
-                          }
-                        }}
-                        style={{
-                          width: '100%',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
-                          backgroundColor: playlistListSortBy === option.field
-                            ? designTokens.colors.surface.active
-                            : 'transparent',
-                          border: 'none',
-                          color: designTokens.colors.text.primary,
-                          fontSize: designTokens.typography.fontSizes.bodySmall,
-                          cursor: 'pointer',
-                          textAlign: 'left',
-                        }}
-                      >
-                        <span>{option.label}</span>
-                        {playlistListSortBy === option.field && (
-                          <span style={{ color: designTokens.colors.primary.blue }}>
-                            {playlistListSortAscending ? '↑' : '↓'}
-                          </span>
-                        )}
-                      </button>
-                    ))}
-                  </DropdownMenu>
-                </div>
-                <p style={{
-                  fontSize: designTokens.typography.fontSizes.bodySmall,
-                  color: designTokens.colors.text.secondary,
-                  marginBottom: designTokens.spacing.lg,
-                }}>
-                  Organize tracks for performances, rehearsals, or listening sessions.
-                </p>
-
                 {/* Set Lists List */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: designTokens.spacing.md }}>
                   {displayedPlaylists.map((playlist) => (
@@ -2920,100 +2831,6 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
             padding: designTokens.spacing.md,
             paddingBottom: '100px',
           }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: designTokens.spacing.md,
-            }}>
-              <h2 style={{
-                fontSize: designTokens.typography.fontSizes.h2,
-                fontWeight: designTokens.typography.fontWeights.bold,
-                color: designTokens.colors.text.primary,
-                margin: 0,
-              }}>
-                Works
-              </h2>
-
-              {/* Sort Dropdown */}
-              {works.length > 0 && (
-                <DropdownMenu
-                  trigger={
-                    <button
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: designTokens.spacing.xs,
-                        padding: `${designTokens.spacing.xs} ${designTokens.spacing.sm}`,
-                        backgroundColor: 'transparent',
-                        border: `1px solid ${designTokens.colors.borders.default}`,
-                        borderRadius: designTokens.borderRadius.sm,
-                        color: designTokens.colors.text.secondary,
-                        fontSize: designTokens.typography.fontSizes.bodySmall,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      <ArrowUpDown size={14} />
-                      {workSortBy === 'created_at' ? 'Date' :
-                       workSortBy === 'name' ? 'Name' :
-                       workSortBy === 'updated_at' ? 'Updated' : 'Versions'}
-                      <span style={{ fontSize: '10px' }}>{workSortAscending ? '↑' : '↓'}</span>
-                    </button>
-                  }
-                  align="right"
-                >
-                  {[
-                    { field: 'created_at' as const, label: 'Date Created' },
-                    { field: 'name' as const, label: 'Name' },
-                    { field: 'updated_at' as const, label: 'Last Updated' },
-                    { field: 'version_count' as const, label: 'Versions' },
-                  ].map((option) => (
-                    <button
-                      key={option.field}
-                      onClick={() => {
-                        if (option.field === workSortBy) {
-                          setWorkSortAscending(!workSortAscending);
-                        } else {
-                          setWorkSortBy(option.field);
-                          // Default direction: ASC for name, DESC for dates/counts
-                          setWorkSortAscending(option.field === 'name');
-                        }
-                      }}
-                      style={{
-                        width: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
-                        backgroundColor: workSortBy === option.field
-                          ? designTokens.colors.surface.active
-                          : 'transparent',
-                        border: 'none',
-                        color: designTokens.colors.text.primary,
-                        fontSize: designTokens.typography.fontSizes.bodySmall,
-                        cursor: 'pointer',
-                        textAlign: 'left',
-                      }}
-                    >
-                      <span>{option.label}</span>
-                      {workSortBy === option.field && (
-                        <span style={{ color: designTokens.colors.primary.blue }}>
-                          {workSortAscending ? '↑' : '↓'}
-                        </span>
-                      )}
-                    </button>
-                  ))}
-                </DropdownMenu>
-              )}
-            </div>
-            <p style={{
-              fontSize: designTokens.typography.fontSizes.bodySmall,
-              color: designTokens.colors.text.secondary,
-              marginBottom: designTokens.spacing.lg,
-            }}>
-              Your songs organized by project. Each work contains all versions of a song.
-            </p>
-
             {loadingWorks ? (
               <div style={{ display: 'flex', justifyContent: 'center', padding: designTokens.spacing.xl }}>
                 <InlineSpinner size={24} />
@@ -3159,7 +2976,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
           padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
         }}>
           {/* Left: CoreTet Circle Logo or Back Button */}
-          {(activeTab === 'playlists' || activeTab === 'playlists') && viewMode === 'detail' ? (
+          {activeTab === 'playlists' && viewMode === 'detail' && !showAllTracks ? (
             <button
               onClick={handleBackToList}
               style={{
@@ -3205,7 +3022,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
 
           {/* Center: Action Button */}
           <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: designTokens.spacing.xs }}>
-            {/* Action Buttons */}
+            {/* Set Lists list view: New button + Sort */}
             {activeTab === 'playlists' && viewMode === 'list' && (
               <div style={{ display: 'flex', gap: designTokens.spacing.sm, alignItems: 'center' }}>
                 <button
@@ -3227,55 +3044,297 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
                   <Plus size={16} />
                   New
                 </button>
+                <DropdownMenu
+                  trigger={
+                    <button
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: designTokens.spacing.xs,
+                        padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
+                        backgroundColor: 'transparent',
+                        border: `1px solid ${designTokens.colors.borders.default}`,
+                        borderRadius: designTokens.borderRadius.xxl,
+                        color: designTokens.colors.text.secondary,
+                        fontSize: designTokens.typography.fontSizes.bodySmall,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <ArrowUpDown size={14} />
+                      {playlistListSortBy === 'created_at' ? 'Date' :
+                       playlistListSortBy === 'title' ? 'Name' : 'Tracks'}
+                      <span style={{ fontSize: '10px' }}>{playlistListSortAscending ? '↑' : '↓'}</span>
+                    </button>
+                  }
+                  align="right"
+                >
+                  {[
+                    { field: 'created_at' as const, label: 'Date Created' },
+                    { field: 'title' as const, label: 'Name' },
+                    { field: 'track_count' as const, label: 'Track Count' },
+                  ].map((option) => (
+                    <button
+                      key={option.field}
+                      onClick={() => {
+                        if (option.field === playlistListSortBy) {
+                          setPlaylistListSortAscending(!playlistListSortAscending);
+                        } else {
+                          setPlaylistListSortBy(option.field);
+                          setPlaylistListSortAscending(option.field === 'title');
+                        }
+                      }}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
+                        backgroundColor: playlistListSortBy === option.field
+                          ? designTokens.colors.surface.active
+                          : 'transparent',
+                        border: 'none',
+                        color: designTokens.colors.text.primary,
+                        fontSize: designTokens.typography.fontSizes.bodySmall,
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                      }}
+                    >
+                      <span>{option.label}</span>
+                      {playlistListSortBy === option.field && (
+                        <span style={{ color: designTokens.colors.primary.blue }}>
+                          {playlistListSortAscending ? '↑' : '↓'}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </DropdownMenu>
+              </div>
+            )}
+            {/* Works list view: New button + Sort */}
+            {activeTab === 'works' && !selectedWork && (
+              <div style={{ display: 'flex', gap: designTokens.spacing.sm, alignItems: 'center' }}>
                 <button
-                  onClick={() => {
-                    setShowAllTracks(true);
-                    setViewMode('detail');
-                    setCurrentSetList(null);
-                  }}
+                  onClick={() => setShowCreateWork(true)}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: designTokens.spacing.xs,
                     padding: `${designTokens.spacing.sm} ${designTokens.spacing.lg}`,
-                    backgroundColor: 'transparent',
-                    color: designTokens.colors.text.primary,
-                    border: `1px solid ${designTokens.colors.borders.default}`,
+                    backgroundColor: designTokens.colors.primary.blue,
+                    color: designTokens.colors.text.inverse,
+                    border: 'none',
                     borderRadius: designTokens.borderRadius.xxl,
                     fontSize: designTokens.typography.fontSizes.bodySmall,
                     fontWeight: designTokens.typography.fontWeights.medium,
                     cursor: 'pointer',
                   }}
                 >
-                  <Music size={16} />
-                  View All
+                  <Plus size={16} />
+                  New
                 </button>
+                {works.length > 0 && (
+                  <DropdownMenu
+                    trigger={
+                      <button
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: designTokens.spacing.xs,
+                          padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
+                          backgroundColor: 'transparent',
+                          border: `1px solid ${designTokens.colors.borders.default}`,
+                          borderRadius: designTokens.borderRadius.xxl,
+                          color: designTokens.colors.text.secondary,
+                          fontSize: designTokens.typography.fontSizes.bodySmall,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <ArrowUpDown size={14} />
+                        {workSortBy === 'created_at' ? 'Date' :
+                         workSortBy === 'name' ? 'Name' :
+                         workSortBy === 'updated_at' ? 'Updated' : 'Versions'}
+                        <span style={{ fontSize: '10px' }}>{workSortAscending ? '↑' : '↓'}</span>
+                      </button>
+                    }
+                    align="right"
+                  >
+                    {[
+                      { field: 'created_at' as const, label: 'Date Created' },
+                      { field: 'name' as const, label: 'Name' },
+                      { field: 'updated_at' as const, label: 'Last Updated' },
+                      { field: 'version_count' as const, label: 'Versions' },
+                    ].map((option) => (
+                      <button
+                        key={option.field}
+                        onClick={() => {
+                          if (option.field === workSortBy) {
+                            setWorkSortAscending(!workSortAscending);
+                          } else {
+                            setWorkSortBy(option.field);
+                            setWorkSortAscending(option.field === 'name');
+                          }
+                        }}
+                        style={{
+                          width: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
+                          backgroundColor: workSortBy === option.field
+                            ? designTokens.colors.surface.active
+                            : 'transparent',
+                          border: 'none',
+                          color: designTokens.colors.text.primary,
+                          fontSize: designTokens.typography.fontSizes.bodySmall,
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                        }}
+                      >
+                        <span>{option.label}</span>
+                        {workSortBy === option.field && (
+                          <span style={{ color: designTokens.colors.primary.blue }}>
+                            {workSortAscending ? '↑' : '↓'}
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </DropdownMenu>
+                )}
               </div>
             )}
-            {(activeTab === 'playlists' || activeTab === 'playlists') && viewMode === 'detail' && (
+            {/* Library view: Sort + Filter in header */}
+            {showAllTracks && (
+              <div style={{ display: 'flex', gap: designTokens.spacing.sm, alignItems: 'center' }}>
+                <DropdownMenu
+                  trigger={
+                    <button
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: designTokens.spacing.xs,
+                        padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
+                        backgroundColor: 'transparent',
+                        border: `1px solid ${designTokens.colors.borders.default}`,
+                        borderRadius: designTokens.borderRadius.xxl,
+                        color: designTokens.colors.text.secondary,
+                        fontSize: designTokens.typography.fontSizes.bodySmall,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <ArrowUpDown size={14} />
+                      {playlistSortBy === 'position' ? 'Order' :
+                       playlistSortBy === 'name' ? 'Name' :
+                       playlistSortBy === 'duration' ? 'Duration' : 'Rating'}
+                      <span style={{ fontSize: '10px' }}>{sortAscending ? '↑' : '↓'}</span>
+                    </button>
+                  }
+                  align="right"
+                >
+                  {([
+                    { field: 'position' as const, label: 'Order' },
+                    { field: 'name' as const, label: 'Name' },
+                    { field: 'duration' as const, label: 'Duration' },
+                    { field: 'rating' as const, label: 'Rating' },
+                  ]).map((option) => (
+                    <button
+                      key={option.field}
+                      onClick={() => {
+                        if (option.field === playlistSortBy) {
+                          setSortAscending(!sortAscending);
+                        } else {
+                          setPlaylistSortBy(option.field);
+                          setSortAscending(true);
+                        }
+                      }}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
+                        backgroundColor: playlistSortBy === option.field
+                          ? designTokens.colors.surface.active
+                          : 'transparent',
+                        border: 'none',
+                        color: designTokens.colors.text.primary,
+                        fontSize: designTokens.typography.fontSizes.bodySmall,
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                      }}
+                    >
+                      <span>{option.label}</span>
+                      {playlistSortBy === option.field && (
+                        <span style={{ color: designTokens.colors.primary.blue }}>
+                          {sortAscending ? '↑' : '↓'}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </DropdownMenu>
+                <DropdownMenu
+                  trigger={
+                    <button
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: designTokens.spacing.xs,
+                        padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
+                        backgroundColor: 'transparent',
+                        border: `1px solid ${ratingFilter !== 'all' ? designTokens.colors.primary.blue : designTokens.colors.borders.default}`,
+                        borderRadius: designTokens.borderRadius.xxl,
+                        color: ratingFilter !== 'all' ? designTokens.colors.primary.blue : designTokens.colors.text.secondary,
+                        fontSize: designTokens.typography.fontSizes.bodySmall,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <Filter size={14} />
+                      Filter
+                      {ratingFilter !== 'all' && (
+                        <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: designTokens.colors.primary.blue }} />
+                      )}
+                    </button>
+                  }
+                  align="right"
+                >
+                  {([
+                    { value: 'all' as const, label: 'All' },
+                    { value: 'loved_by_me' as const, label: 'Loved by Me' },
+                    { value: 'loved_by_multiple' as const, label: 'Loved by Band' },
+                    { value: 'liked_by_me' as const, label: 'Liked by Me' },
+                    { value: 'liked_by_multiple' as const, label: 'Liked by Band' },
+                    { value: 'unrated' as const, label: 'Unrated' },
+                  ]).map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={() => setRatingFilter(option.value)}
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: `${designTokens.spacing.sm} ${designTokens.spacing.md}`,
+                        backgroundColor: ratingFilter === option.value
+                          ? designTokens.colors.surface.active
+                          : 'transparent',
+                        border: 'none',
+                        color: designTokens.colors.text.primary,
+                        fontSize: designTokens.typography.fontSizes.bodySmall,
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                      }}
+                    >
+                      <span>{option.label}</span>
+                      {ratingFilter === option.value && (
+                        <Check size={14} color={designTokens.colors.primary.blue} />
+                      )}
+                    </button>
+                  ))}
+                </DropdownMenu>
+              </div>
+            )}
+            {activeTab === 'playlists' && viewMode === 'detail' && !showAllTracks && (
               <div style={{ display: 'flex', gap: designTokens.spacing.xs, alignItems: 'center' }}>
-                {showAllTracks ? (
-                  <>
-                    <h2 style={{
-                      fontSize: designTokens.typography.fontSizes.h3,
-                      fontWeight: designTokens.typography.fontWeights.semibold,
-                      color: designTokens.colors.text.primary,
-                      margin: 0,
-                    }}>
-                      All Tracks
-                    </h2>
-                    <SortButton
-                      currentSort={playlistSortBy}
-                      sortAscending={sortAscending}
-                      onSort={handleSortChange}
-                      showReorder={false}
-                    />
-                    <FilterButton
-                      activeFilter={ratingFilter}
-                      onFilterChange={setRatingFilter}
-                    />
-                  </>
-                ) : (userRole === 'admin' || userRole === 'owner') && isEditingTracks ? (
+                {(userRole === 'admin' || userRole === 'owner') && isEditingTracks ? (
                   <>
                     <button
                       onClick={handleToggleEditMode}
@@ -3346,7 +3405,7 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
           {/* Right: Header action buttons */}
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
             {/* Playlist menu button (detail view, band admin only) */}
-            {(activeTab === 'playlists' || activeTab === 'playlists') && viewMode === 'detail' && (userRole === 'admin' || userRole === 'owner') && !isEditingTracks && !showAllTracks && (
+            {activeTab === 'playlists' && viewMode === 'detail' && !showAllTracks && (userRole === 'admin' || userRole === 'owner') && !isEditingTracks && (
               <DropdownMenu
                 trigger={
                   <button
@@ -3482,9 +3541,9 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
               </DropdownMenu>
             )}
 
-            {/* Settings button (always visible) */}
+            {/* Settings/Menu button (always visible) - opens MobileMoreSheet */}
             <button
-              onClick={() => setShowSettings(true)}
+              onClick={() => setShowMobileMoreSheet(true)}
               style={{
                 width: designTokens.spacing.xxl,
                 height: designTokens.spacing.xxl,
@@ -3569,7 +3628,6 @@ export function MainDashboard({ currentUser }: MainDashboardProps) {
         <TabBar
           activeTab={showAllTracks ? 'library' : activeTab}
           onTabChange={handleTabChange}
-          onMorePress={() => setShowMobileMoreSheet(true)}
         />
       )}
 
