@@ -15,9 +15,13 @@ html, body {
   width: 100%;
 }
 
-/* Allow scrolling for admin pages */
-body:has([data-admin-page]) {
+/* Allow scrolling for admin and landing pages */
+html:has([data-admin-page]),
+html:has([data-landing-page]),
+body:has([data-admin-page]),
+body:has([data-landing-page]) {
   overflow: auto;
+  height: auto;
 }
 
 #root {
@@ -25,8 +29,9 @@ body:has([data-admin-page]) {
   overflow: hidden; /* Keep hidden for mobile app */
 }
 
-/* Allow scrolling on admin pages only */
-#root:has([data-admin-page]) {
+/* Allow scrolling on admin and landing pages */
+#root:has([data-admin-page]),
+#root:has([data-landing-page]) {
   min-height: 100vh;
   height: auto;
   overflow: visible;

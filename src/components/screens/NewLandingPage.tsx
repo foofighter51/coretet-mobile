@@ -95,7 +95,7 @@ export function NewLandingPage() {
   };
 
   return (
-    <div style={{
+    <div data-landing-page style={{
       minHeight: '100vh',
       backgroundColor: colors.bg,
       fontFamily: designTokens.typography.fontFamily,

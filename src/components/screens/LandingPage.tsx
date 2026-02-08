@@ -200,7 +200,7 @@ export function LandingPage() {
   );
 
   return (
-    <div style={{
+    <div data-landing-page style={{
       minHeight: '100vh',
       height: '100vh',
       display: 'flex',
